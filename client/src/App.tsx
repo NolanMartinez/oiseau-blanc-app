@@ -7,6 +7,8 @@ import { Subscribers } from './pages/admin/Subscribers';
 import { Reviews } from './pages/admin/Reviews';
 import { Subscribe } from './pages/public/Subscribe';
 import { Review } from './pages/public/Review';
+import { SurveyPage } from './pages/public/SurveyPage';
+import { Surveys } from './pages/admin/Surveys';
 
 function App() {
   return (
@@ -16,6 +18,7 @@ function App() {
           {/* Panel public */}
           <Route path="/" element={<Subscribe />} />
           <Route path="/avis" element={<Review />} />
+          <Route path="/sondages" element={<SurveyPage />} />
 
           {/* Panel admin */}
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
@@ -24,6 +27,7 @@ function App() {
           <Route path="/admin/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/admin/subscribers" element={<PrivateRoute><Subscribers /></PrivateRoute>} />
           <Route path="/admin/reviews" element={<PrivateRoute><Reviews /></PrivateRoute>} />
+          <Route path="/admin/surveys" element={<PrivateRoute><Surveys /></PrivateRoute>} />
 
           {/* 404 */}
           <Route path="*" element={<div className="p-8 text-center">Page introuvable</div>} />

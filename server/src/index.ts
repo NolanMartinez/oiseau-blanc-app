@@ -8,6 +8,8 @@ import subscriberPublicRoutes from './routes/subscriber.public.routes';
 import subscriberAdminRoutes from './routes/subscriber.admin.routes';
 import reviewPublicRoutes from './routes/review.public.routes';
 import reviewAdminRoutes from './routes/review.admin.routes';
+import surveyPublicRoutes from './routes/survey.public.routes';
+import surveyAdminRoutes from './routes/survey.admin.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -25,6 +27,8 @@ app.use('/api/v1/public', subscriberPublicRoutes);
 app.use('/api/v1/public', reviewPublicRoutes);
 app.use('/api/v1/admin/subscribers', subscriberAdminRoutes);
 app.use('/api/v1/admin/reviews', reviewAdminRoutes);
+app.use('/api/v1/public', surveyPublicRoutes);
+app.use('/api/v1/admin/surveys', surveyAdminRoutes);
 
 app.listen(PORT, () => {
   logger.info(`Serveur démarré sur le port ${PORT}`);
