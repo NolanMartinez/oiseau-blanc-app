@@ -1,12 +1,18 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Star, CheckCircle, Lock } from 'lucide-react';
+import { Star, CheckCircle, Lock, ShoppingBag } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
 import { userApi } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext';
-import { MOCK_DISHES } from '../../utils/mockDishes';
 
 const LABELS: Record<number, string> = { 1: 'Mauvais', 2: 'Moyen', 3: 'Bien', 4: 'Très bien', 5: 'Excellent !' };
+
+interface Purchase {
+  dishId: string;
+  dishName: string;
+  frigoName: string;
+  hasReview: boolean;
+}
 
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hovered, setHovered] = useState(0);
@@ -37,12 +43,23 @@ export function AvisPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [purchasesLoading, setPurchasesLoading] = useState(false);
   const [dishId, setDishId] = useState(params.get('dish') ?? '');
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!subscriber) return;
+    setPurchasesLoading(true);
+    userApi.get('/public/user/purchases')
+      .then((res) => setPurchases(res.data.purchases))
+      .catch(() => setPurchases([]))
+      .finally(() => setPurchasesLoading(false));
+  }, [subscriber]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -97,6 +114,26 @@ export function AvisPage() {
     );
   }
 
+  // Connecté mais aucun achat
+  if (!purchasesLoading && purchases.length === 0) {
+    return (
+      <AppLayout title="Mon avis">
+        <div className="bg-white px-4 pt-5 pb-5">
+          <h1 className="text-2xl font-black text-gray-900 leading-tight">Notez un plat</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center px-6 pt-12 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-5">
+            <ShoppingBag size={26} className="text-gray-400" />
+          </div>
+          <h2 className="text-xl font-black text-gray-900 mb-2">Aucun plat pris</h2>
+          <p className="text-sm text-gray-500 max-w-xs">
+            Vous pourrez noter un plat après l'avoir pris dans l'un de nos frigos.
+          </p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   // Succès
   if (success) {
     return (
@@ -130,17 +167,28 @@ export function AvisPage() {
         {/* Plat */}
         <div className="bg-white mt-2 px-4 py-5">
           <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Quel plat ?</p>
-          <select
-            value={dishId}
-            onChange={(e) => setDishId(e.target.value)}
-            className="w-full py-3 px-3 rounded-xl text-sm text-gray-800 focus:outline-none"
-            style={{ background: '#f2f2f2', border: 'none' }}
-          >
-            <option value="">Sélectionner un plat…</option>
-            {MOCK_DISHES.map((dish) => (
-              <option key={dish.id} value={dish.id}>{dish.name} — {dish.category}</option>
-            ))}
-          </select>
+          {purchasesLoading ? (
+            <p className="text-sm text-gray-400">Chargement de vos plats…</p>
+          ) : (
+            <select
+              value={dishId}
+              onChange={(e) => setDishId(e.target.value)}
+              className="w-full py-3 px-3 rounded-xl text-sm text-gray-800 focus:outline-none"
+              style={{ background: '#f2f2f2', border: 'none' }}
+            >
+              <option value="">Sélectionner un plat…</option>
+              {purchases.map((p) => (
+                <option key={p.dishId} value={p.dishId}>
+                  {p.dishName}{p.hasReview ? ' ✓' : ''}
+                </option>
+              ))}
+            </select>
+          )}
+          {dishId && purchases.find((p) => p.dishId === dishId)?.hasReview && (
+            <p className="text-xs text-amber-500 mt-2 font-medium">
+              Vous avez déjà noté ce plat — votre avis sera mis à jour.
+            </p>
+          )}
         </div>
 
         {/* Note */}

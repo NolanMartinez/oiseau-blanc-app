@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Thermometer, Star } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
-import api from '../../services/api';
+import api, { userApi } from '../../services/api';
+import { useUserAuth } from '../../context/UserAuthContext';
 
 interface Dish {
   id: string;
@@ -34,9 +35,11 @@ function StockBadge({ stock }: { stock: number }) {
 export function FrigoDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { subscriber } = useUserAuth();
   const [fridge, setFridge] = useState<Fridge | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [purchasedDishIds, setPurchasedDishIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!id) return;
@@ -45,6 +48,16 @@ export function FrigoDetail() {
       .catch((err) => { if (err?.response?.status === 404) setNotFound(true); })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!subscriber) { setPurchasedDishIds(new Set()); return; }
+    userApi.get('/public/user/purchases')
+      .then((res) => {
+        const ids = new Set<string>(res.data.purchases.map((p: { dishId: string }) => p.dishId));
+        setPurchasedDishIds(ids);
+      })
+      .catch(() => setPurchasedDishIds(new Set()));
+  }, [subscriber]);
 
   if (loading) {
     return (
@@ -119,7 +132,7 @@ export function FrigoDetail() {
                         </p>
                       )}
                       <StockBadge stock={dish.stock} />
-                      {dish.stock > 0 && (
+                      {purchasedDishIds.has(dish.id) && (
                         <button
                           onClick={() => navigate(`/app/avis?dish=${dish.id}`)}
                           className="flex items-center gap-1 mt-2 text-xs font-bold"

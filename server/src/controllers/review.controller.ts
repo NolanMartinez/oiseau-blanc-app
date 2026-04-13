@@ -21,9 +21,15 @@ export async function createReview(req: Request, res: Response): Promise<void> {
 
   const { dish_id, rating, comment } = result.data;
 
-  // TODO (Bicom) : valider que le subscriber a bien acheté ce plat
-  // Une fois l'API Bicom connectée, vérifier ici l'historique d'achats
-  // et retourner 403 si dish_id n'est pas dans les transactions du subscriber.
+  // Vérifie que le subscriber a bien acheté ce plat
+  // TODO (Bicom) : remplacer par l'historique Bicom une fois l'API connectée
+  const hasPurchased = await prisma.purchase.findFirst({
+    where: { subscriberId, dishId: dish_id },
+  });
+  if (!hasPurchased) {
+    res.status(403).json({ error: 'Vous ne pouvez noter que les plats que vous avez pris.' });
+    return;
+  }
 
   // Mise à jour si avis existant, sinon création
   const existing = await prisma.review.findFirst({

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { MOCK_FRIDGES } from '../src/services/bicom.mock';
 
 const prisma = new PrismaClient();
 
@@ -28,12 +29,32 @@ async function main() {
     },
   });
 
+  // Ajoute quelques achats de test (3 premiers plats du premier frigo)
+  const fridge = MOCK_FRIDGES[0];
+  const testDishes = fridge.dishes.slice(0, 3);
+
+  for (const dish of testDishes) {
+    const existing = await prisma.purchase.findFirst({
+      where: { subscriberId: subscriber.id, dishId: dish.id },
+    });
+    if (!existing) {
+      await prisma.purchase.create({
+        data: { subscriberId: subscriber.id, dishId: dish.id, frigoId: fridge.id },
+      });
+    }
+  }
+
   console.log('');
-  console.log('✅ Utilisateur client créé');
-  console.log('─────────────────────────────');
+  console.log('✅ Utilisateur client créé avec achats de test');
+  console.log('─────────────────────────────────────────────');
   console.log(`  Email   : ${email}`);
   console.log(`  Code OTP: ${code}`);
-  console.log('─────────────────────────────');
+  console.log('');
+  console.log('  Plats achetés (pour tester les avis) :');
+  for (const dish of testDishes) {
+    console.log(`    · ${dish.name} (${fridge.name})`);
+  }
+  console.log('─────────────────────────────────────────────');
   console.log('  → Ouvrez /app/login');
   console.log(`  → Entrez : ${email}`);
   console.log(`  → Code   : ${code}`);

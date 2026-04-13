@@ -5,6 +5,8 @@ export interface Subscriber {
   id: string;
   email: string | null;
   phone: string | null;
+  consentEmail: boolean;
+  consentPush: boolean;
 }
 
 interface UserAuthContextType {

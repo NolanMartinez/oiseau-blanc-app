@@ -106,6 +106,31 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
   });
 }
 
+const updateMeSchema = z.object({
+  consentEmail: z.boolean().optional(),
+  consentPush: z.boolean().optional(),
+  phone: z.string().min(6).optional().nullable(),
+});
+
+// PATCH /public/user/me
+export async function updateMe(req: Request, res: Response): Promise<void> {
+  const subscriberId = (req as SubscriberRequest).subscriberId;
+
+  const result = updateMeSchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: result.error.flatten() });
+    return;
+  }
+
+  const subscriber = await prisma.subscriber.update({
+    where: { id: subscriberId },
+    data: result.data,
+    select: { id: true, email: true, phone: true, consentEmail: true, consentPush: true },
+  });
+
+  res.json({ subscriber });
+}
+
 // GET /public/user/me
 export async function getMe(req: Request, res: Response): Promise<void> {
   const subscriberId = (req as SubscriberRequest).subscriberId;
