@@ -36,6 +36,7 @@ model Subscriber {
   reviews             Review[]
   preferenceResponses PreferenceResponse[]
   menuVoteResponses   MenuVoteResponse[]
+  purchases           Purchase[]
 
   @@map("subscribers")
 }
@@ -102,4 +103,29 @@ model MenuVoteResponse {
   subscriber Subscriber @relation(fields: [subscriberId], references: [id])
 
   @@map("menu_vote_responses")
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  contact   String
+  code      String
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([contact])
+  @@map("otp_codes")
+}
+
+model Purchase {
+  id           String     @id @default(uuid())
+  subscriberId String     @map("subscriber_id")
+  dishId       String     @map("dish_id")
+  frigoId      String     @map("frigo_id")
+  purchasedAt  DateTime   @default(now()) @map("purchased_at")
+
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@index([subscriberId])
+  @@map("purchases")
 }

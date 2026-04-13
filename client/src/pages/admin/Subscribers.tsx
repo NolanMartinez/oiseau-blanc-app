@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Mail, Phone, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Mail, Phone, Trash2, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
 
@@ -20,10 +20,20 @@ interface PageData {
   pages: number;
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function Subscribers() {
   const [data, setData] = useState<PageData | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   async function fetchSubscribers(p: number) {
     setLoading(true);
@@ -43,14 +53,34 @@ export function Subscribers() {
     fetchSubscribers(page);
   }
 
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await api.get('/admin/subscribers/export', { responseType: 'blob' });
+      downloadBlob(res.data as Blob, 'abonnes.csv');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <AdminLayout title="Abonnés">
-      {/* Compteur */}
-      {data && (
-        <p className="text-sm text-gray-500 mb-4">
-          {data.total} abonné{data.total > 1 ? 's' : ''} au total
-        </p>
-      )}
+      {/* Compteur + export */}
+      <div className="flex items-center justify-between mb-4">
+        {data ? (
+          <p className="text-sm text-gray-500">
+            {data.total} abonné{data.total > 1 ? 's' : ''} au total
+          </p>
+        ) : <span />}
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+        >
+          <Download size={14} />
+          {exporting ? 'Export…' : 'Exporter CSV'}
+        </button>
+      </div>
 
       {/* Tableau */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

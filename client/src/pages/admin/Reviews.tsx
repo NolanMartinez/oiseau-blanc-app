@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Star, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Trash2, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
 import { MOCK_DISHES } from '../../utils/mockDishes';
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface Review {
   id: string;
@@ -43,6 +52,7 @@ export function Reviews() {
   const [data, setData] = useState<PageData | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   async function fetchReviews(p: number) {
     setLoading(true);
@@ -62,23 +72,43 @@ export function Reviews() {
     fetchReviews(page);
   }
 
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await api.get('/admin/reviews/export', { responseType: 'blob' });
+      downloadBlob(res.data as Blob, 'avis.csv');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <AdminLayout title="Avis">
-      {/* Stats */}
-      {data && (
-        <div className="flex items-center gap-6 mb-4">
-          <p className="text-sm text-gray-500">
-            {data.total} avis au total
-          </p>
-          {data.average !== null && (
-            <div className="flex items-center gap-2">
-              <Stars rating={Math.round(data.average)} />
-              <span className="text-sm font-semibold text-gray-700">{data.average}/5</span>
-              <span className="text-sm text-gray-400">moyenne générale</span>
-            </div>
+      {/* Stats + export */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-6">
+          {data && (
+            <>
+              <p className="text-sm text-gray-500">{data.total} avis au total</p>
+              {data.average !== null && (
+                <div className="flex items-center gap-2">
+                  <Stars rating={Math.round(data.average)} />
+                  <span className="text-sm font-semibold text-gray-700">{data.average}/5</span>
+                  <span className="text-sm text-gray-400">moyenne générale</span>
+                </div>
+              )}
+            </>
           )}
         </div>
-      )}
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+        >
+          <Download size={14} />
+          {exporting ? 'Export…' : 'Exporter CSV'}
+        </button>
+      </div>
 
       {/* Tableau */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

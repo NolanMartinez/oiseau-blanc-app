@@ -10,6 +10,13 @@ import reviewPublicRoutes from './routes/review.public.routes';
 import reviewAdminRoutes from './routes/review.admin.routes';
 import surveyPublicRoutes from './routes/survey.public.routes';
 import surveyAdminRoutes from './routes/survey.admin.routes';
+import votePublicRoutes from './routes/vote.public.routes';
+import voteAdminRoutes from './routes/vote.admin.routes';
+import dashboardRoutes from './routes/dashboard.routes';
+import frigoAdminRoutes from './routes/frigo.admin.routes';
+import frigoPublicRoutes from './routes/frigo.public.routes';
+import userAuthRoutes from './routes/userAuth.routes';
+import purchaseRoutes from './routes/purchase.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -29,6 +36,13 @@ app.use('/api/v1/admin/subscribers', subscriberAdminRoutes);
 app.use('/api/v1/admin/reviews', reviewAdminRoutes);
 app.use('/api/v1/public', surveyPublicRoutes);
 app.use('/api/v1/admin/surveys', surveyAdminRoutes);
+app.use('/api/v1/public', votePublicRoutes);
+app.use('/api/v1/admin/votes', voteAdminRoutes);
+app.use('/api/v1/admin/dashboard', dashboardRoutes);
+app.use('/api/v1/admin/frigos', frigoAdminRoutes);
+app.use('/api/v1/public', frigoPublicRoutes);
+app.use('/api/v1/public/user/auth', userAuthRoutes);
+app.use('/api/v1/public/user/purchases', purchaseRoutes);
 
 app.listen(PORT, () => {
   logger.info(`Serveur démarré sur le port ${PORT}`);

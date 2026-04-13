@@ -1,45 +1,36 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma';
+import type { SubscriberRequest } from '../middleware/userAuth';
 
 const createReviewSchema = z.object({
-  email: z.string().email().optional(),
-  phone: z.string().min(6).optional(),
   dish_id: z.string().min(1),
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(500).optional(),
-}).refine((data) => data.email || data.phone, {
-  message: 'Un email ou un numéro de téléphone est requis',
 });
 
-// POST /api/v1/public/reviews
+// POST /api/v1/public/reviews — requiert auth subscriber + achat préalable
 export async function createReview(req: Request, res: Response): Promise<void> {
+  const subscriberId = (req as SubscriberRequest).subscriberId;
+
   const result = createReviewSchema.safeParse(req.body);
   if (!result.success) {
     res.status(400).json({ error: result.error.flatten() });
     return;
   }
 
-  const { email, phone, dish_id, rating, comment } = result.data;
+  const { dish_id, rating, comment } = result.data;
 
-  // Trouve ou crée le subscriber
-  let subscriber = email
-    ? await prisma.subscriber.findUnique({ where: { email } })
-    : null;
+  // TODO (Bicom) : valider que le subscriber a bien acheté ce plat
+  // Une fois l'API Bicom connectée, vérifier ici l'historique d'achats
+  // et retourner 403 si dish_id n'est pas dans les transactions du subscriber.
 
-  if (!subscriber) {
-    subscriber = await prisma.subscriber.create({
-      data: { email, phone },
-    });
-  }
-
-  // Vérifie si cet abonné a déjà noté ce plat
+  // Mise à jour si avis existant, sinon création
   const existing = await prisma.review.findFirst({
-    where: { subscriberId: subscriber.id, dishId: dish_id },
+    where: { subscriberId, dishId: dish_id },
   });
 
   if (existing) {
-    // Met à jour l'avis existant
     const updated = await prisma.review.update({
       where: { id: existing.id },
       data: { rating, comment },
@@ -49,12 +40,7 @@ export async function createReview(req: Request, res: Response): Promise<void> {
   }
 
   const review = await prisma.review.create({
-    data: {
-      subscriberId: subscriber.id,
-      dishId: dish_id,
-      rating,
-      comment,
-    },
+    data: { subscriberId, dishId: dish_id, rating, comment },
   });
 
   res.status(201).json({ message: 'Avis enregistré', review });
@@ -105,4 +91,37 @@ export async function deleteReview(req: Request, res: Response): Promise<void> {
   const id = req.params['id'] as string;
   await prisma.review.delete({ where: { id } });
   res.status(204).send();
+}
+
+// GET /api/v1/admin/reviews/export
+export async function exportReviews(_req: Request, res: Response): Promise<void> {
+  const reviews = await prisma.review.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: { subscriber: { select: { email: true, phone: true } } },
+  });
+
+  // Carte id → nom depuis le mock Bicom (import inline pour éviter la dépendance circulaire)
+  const { MOCK_FRIDGES } = await import('../services/bicom.mock');
+  const dishNameMap: Record<string, string> = {};
+  for (const fridge of MOCK_FRIDGES) {
+    for (const dish of fridge.dishes) {
+      dishNameMap[dish.id] = dish.name;
+    }
+  }
+
+  const escape = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+  const header = ['Plat', 'Note', 'Commentaire', 'Email/Téléphone', 'Date'].map(escape).join(',');
+  const rows = reviews.map((r) =>
+    [
+      dishNameMap[r.dishId] ?? r.dishId,
+      String(r.rating),
+      r.comment ?? '',
+      r.subscriber.email ?? r.subscriber.phone ?? '',
+      new Date(r.createdAt).toLocaleDateString('fr-FR'),
+    ].map(escape).join(','),
+  );
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="avis.csv"');
+  res.send('\uFEFF' + [header, ...rows].join('\r\n'));
 }

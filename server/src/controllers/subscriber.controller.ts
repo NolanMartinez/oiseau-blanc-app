@@ -82,3 +82,27 @@ export async function deleteSubscriber(req: Request, res: Response): Promise<voi
   await prisma.subscriber.delete({ where: { id } });
   res.status(204).send();
 }
+
+// GET /api/v1/admin/subscribers/export
+export async function exportSubscribers(_req: Request, res: Response): Promise<void> {
+  const subscribers = await prisma.subscriber.findMany({
+    orderBy: { createdAt: 'desc' },
+    select: { email: true, phone: true, consentEmail: true, consentPush: true, createdAt: true },
+  });
+
+  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  const header = ['Email', 'Téléphone', 'Consent Email', 'Consent Push', 'Inscrit le'].map(escape).join(',');
+  const rows = subscribers.map((s) =>
+    [
+      s.email ?? '',
+      s.phone ?? '',
+      s.consentEmail ? 'Oui' : 'Non',
+      s.consentPush ? 'Oui' : 'Non',
+      new Date(s.createdAt).toLocaleDateString('fr-FR'),
+    ].map(escape).join(','),
+  );
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="abonnes.csv"');
+  res.send('\uFEFF' + [header, ...rows].join('\r\n'));
+}
