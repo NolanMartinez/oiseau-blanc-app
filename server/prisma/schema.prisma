@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+model Subscriber {
+  id           String   @id @default(uuid())
+  email        String?  @unique
+  phone        String?
+  consentEmail Boolean  @default(false) @map("consent_email")
+  consentPush  Boolean  @default(false) @map("consent_push")
+  pushToken    String?  @map("push_token")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  reviews             Review[]
+  preferenceResponses PreferenceResponse[]
+  menuVoteResponses   MenuVoteResponse[]
+
+  @@map("subscribers")
+}
+
+model Review {
+  id           String     @id @default(uuid())
+  subscriberId String     @map("subscriber_id")
+  dishId       String     @map("dish_id")
+  rating       Int
+  comment      String?
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id])
+
+  @@map("reviews")
+}
+
+model PreferenceSurvey {
+  id        String   @id @default(uuid())
+  title     String
+  questions Json
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  responses PreferenceResponse[]
+
+  @@map("preference_surveys")
+}
+
+model PreferenceResponse {
+  id         String           @id @default(uuid())
+  surveyId   String           @map("survey_id")
+  subscriberId String         @map("subscriber_id")
+  answers    Json
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  survey     PreferenceSurvey @relation(fields: [surveyId], references: [id])
+  subscriber Subscriber       @relation(fields: [subscriberId], references: [id])
+
+  @@map("preference_responses")
+}
+
+model MenuVote {
+  id           String   @id @default(uuid())
+  title        String
+  options      Json
+  voteDeadline DateTime @map("vote_deadline")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  responses MenuVoteResponse[]
+
+  @@map("menu_votes")
+}
+
+model MenuVoteResponse {
+  id              String   @id @default(uuid())
+  menuVoteId      String   @map("menu_vote_id")
+  subscriberId    String   @map("subscriber_id")
+  selectedOptions Json     @map("selected_options")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  menuVote   MenuVote   @relation(fields: [menuVoteId], references: [id])
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id])
+
+  @@map("menu_vote_responses")
+}
