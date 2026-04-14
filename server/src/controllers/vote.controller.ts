@@ -37,6 +37,16 @@ export async function createVote(req: Request, res: Response): Promise<void> {
       voteDeadline: result.data.voteDeadline,
     },
   });
+
+  // Notification push automatique
+  const { broadcastPush } = await import('../services/push.service');
+  broadcastPush({
+    title: "Nouveau vote menu",
+    body: `Votez pour : ${result.data.title}`,
+    url: '/app/votes',
+    tag: 'vote',
+  }).catch(() => {});
+
   res.status(201).json({ vote });
 }
 

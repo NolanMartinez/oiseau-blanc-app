@@ -1,0 +1,26 @@
+{
+  "name": "L'Oiseau Blanc",
+  "short_name": "Oiseau Blanc",
+  "description": "Consultez les frigos connectés L'Oiseau Blanc Traiteur",
+  "start_url": "/app/carte",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f1e8",
+  "theme_color": "#1a3d2b",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

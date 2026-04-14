@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { ClipboardList, CheckCircle, ArrowLeft } from 'lucide-react';
+import { ClipboardList, CheckCircle, ArrowLeft, ChevronRight } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
 import api from '../../services/api';
 
@@ -32,33 +32,49 @@ function QuestionField({ question, value, onChange }: {
         onChange={(e) => onChange(e.target.value)}
         rows={3}
         placeholder="Votre réponse (optionnel)…"
-        className="w-full rounded-xl px-3 py-3 text-sm text-gray-800 focus:outline-none resize-none"
-        style={{ background: '#f2f2f2', border: 'none' }}
+        className="w-full rounded-2xl px-5 py-4 text-[14px] focus:outline-none resize-none"
+        style={{
+          background: 'var(--ivory)',
+          border: '1px solid var(--line)',
+          color: 'var(--ink)',
+          fontFamily: 'inherit',
+        }}
       />
     );
   }
 
   if (question.type === 'rating') {
-    const LABELS: Record<number, string> = { 1: 'Mauvais', 2: 'Moyen', 3: 'Bien', 4: 'Très bien', 5: 'Excellent' };
+    const LABELS: Record<number, string> = { 1: 'Décevant', 2: 'Moyen', 3: 'Bien', 4: 'Très bien', 5: 'Excellent' };
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(n)}
-            className="w-12 h-12 rounded-xl text-sm font-black transition-all"
-            style={
-              value === n
-                ? { background: '#1a3d2b', color: 'white' }
-                : { background: '#f2f2f2', color: '#6b7280' }
-            }
-          >
-            {n}
-          </button>
-        ))}
+        {[1, 2, 3, 4, 5].map((n) => {
+          const active = value === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              className="font-serif transition-all"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 16,
+                fontSize: 18,
+                fontWeight: 600,
+                background: active ? 'var(--forest)' : 'var(--ivory)',
+                color: active ? 'var(--ivory)' : 'var(--ink-soft)',
+                border: active ? 'none' : '1px solid var(--line)',
+              }}
+            >
+              {n}
+            </button>
+          );
+        })}
         {value != null && (
-          <span className="text-sm font-bold ml-1" style={{ color: '#1a3d2b' }}>
+          <span
+            className="font-serif ml-2 text-[16px]"
+            style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+          >
             {LABELS[value as number]}
           </span>
         )}
@@ -69,35 +85,41 @@ function QuestionField({ question, value, onChange }: {
   if (question.type === 'choice') {
     return (
       <div className="space-y-2">
-        {(question.options ?? []).map((option) => (
-          <label
-            key={option}
-            className="flex items-center gap-3 cursor-pointer rounded-2xl px-4 py-4 transition-all"
-            style={
-              value === option
-                ? { background: '#e8f0ea', border: '2px solid #1a3d2b' }
-                : { background: '#f7f7f7', border: '2px solid transparent' }
-            }
-          >
-            <input
-              type="radio"
-              name={question.id}
-              value={option}
-              checked={value === option}
-              onChange={() => onChange(option)}
-              className="sr-only"
-            />
-            <div
-              className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-              style={{ borderColor: value === option ? '#1a3d2b' : '#d1d5db' }}
+        {(question.options ?? []).map((option) => {
+          const active = value === option;
+          return (
+            <label
+              key={option}
+              className="flex items-center gap-3 cursor-pointer rounded-2xl px-5 py-4 transition-all"
+              style={{
+                background: active ? 'var(--forest-soft)' : 'var(--ivory)',
+                border: `1px solid ${active ? 'var(--forest)' : 'var(--line)'}`,
+              }}
             >
-              {value === option && (
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#1a3d2b' }} />
-              )}
-            </div>
-            <span className="text-sm font-semibold text-gray-800">{option}</span>
-          </label>
-        ))}
+              <input
+                type="radio"
+                name={question.id}
+                value={option}
+                checked={active}
+                onChange={() => onChange(option)}
+                className="sr-only"
+              />
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{
+                  border: `2px solid ${active ? 'var(--forest)' : 'var(--line)'}`,
+                }}
+              >
+                {active && (
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--forest)' }} />
+                )}
+              </div>
+              <span className="text-[14px]" style={{ color: 'var(--ink)', fontWeight: 500 }}>
+                {option}
+              </span>
+            </label>
+          );
+        })}
       </div>
     );
   }
@@ -111,12 +133,11 @@ function QuestionField({ question, value, onChange }: {
           return (
             <label
               key={option}
-              className="flex items-center gap-3 cursor-pointer rounded-2xl px-4 py-4 transition-all"
-              style={
-                checked
-                  ? { background: '#e8f0ea', border: '2px solid #1a3d2b' }
-                  : { background: '#f7f7f7', border: '2px solid transparent' }
-              }
+              className="flex items-center gap-3 cursor-pointer rounded-2xl px-5 py-4 transition-all"
+              style={{
+                background: checked ? 'var(--forest-soft)' : 'var(--ivory)',
+                border: `1px solid ${checked ? 'var(--forest)' : 'var(--line)'}`,
+              }}
             >
               <input
                 type="checkbox"
@@ -127,16 +148,21 @@ function QuestionField({ question, value, onChange }: {
                 className="sr-only"
               />
               <div
-                className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
-                style={{ background: checked ? '#1a3d2b' : '#e5e7eb' }}
+                className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: checked ? 'var(--forest)' : 'transparent',
+                  border: `2px solid ${checked ? 'var(--forest)' : 'var(--line)'}`,
+                }}
               >
                 {checked && (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M2 6l3 3 5-5" stroke="var(--ivory)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
               </div>
-              <span className="text-sm font-semibold text-gray-800">{option}</span>
+              <span className="text-[14px]" style={{ color: 'var(--ink)', fontWeight: 500 }}>
+                {option}
+              </span>
             </label>
           );
         })}
@@ -183,13 +209,24 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
 
   if (success) {
     return (
-      <div className="flex flex-col items-center justify-center px-6 pt-20 text-center">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-5">
-          <CheckCircle className="text-green-600" size={32} />
+      <div className="flex flex-col items-center justify-center px-6 pt-24 text-center fade-up">
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
+          style={{ background: 'var(--forest-soft)' }}
+        >
+          <CheckCircle size={28} style={{ color: 'var(--forest)' }} />
         </div>
-        <h2 className="text-2xl font-black text-gray-900 mb-2">Merci !</h2>
-        <p className="text-sm text-gray-500 mb-8">Vos retours nous aident à améliorer nos services.</p>
-        <button onClick={onBack} className="text-sm font-bold underline" style={{ color: '#1a3d2b' }}>
+        <h2 className="font-serif-display text-[40px] leading-none mb-4" style={{ color: 'var(--ink)' }}>
+          Merci
+        </h2>
+        <p className="text-[14px] leading-relaxed mb-10" style={{ color: 'var(--ink-soft)' }}>
+          Vos retours nous aident à améliorer nos services.
+        </p>
+        <button
+          onClick={onBack}
+          className="text-[13px] underline"
+          style={{ color: 'var(--forest)', fontWeight: 600 }}
+        >
           Voir les autres sondages
         </button>
       </div>
@@ -197,75 +234,120 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
   }
 
   return (
-    <div>
+    <div className="fade-up">
       {/* Header */}
-      <div className="bg-white px-4 pt-4 pb-5" style={{ borderBottom: '1px solid #f4f4f4' }}>
+      <div className="px-6 pt-6 pb-6">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm font-semibold text-gray-400 mb-3"
+          className="flex items-center gap-1.5 text-[12px] mb-4"
+          style={{ color: 'var(--ink-faint)', fontWeight: 500 }}
         >
-          <ArrowLeft size={15} />Retour
+          <ArrowLeft size={13} /> Retour
         </button>
-        <h2 className="text-xl font-black text-gray-900 leading-tight">{survey.title}</h2>
-        <p className="text-xs text-gray-400 mt-1">
+        <p
+          className="text-[10px] uppercase tracking-[0.22em] mb-3"
+          style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+        >
+          Sondage
+        </p>
+        <h2 className="font-serif-display text-[32px] leading-[1.05]" style={{ color: 'var(--ink)' }}>
+          {survey.title}
+        </h2>
+        <p className="text-[12px] mt-2" style={{ color: 'var(--ink-faint)' }}>
           {survey.questions.length} question{survey.questions.length !== 1 ? 's' : ''}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-8">
         {/* Questions */}
         {survey.questions.map((q, i) => (
-          <div key={q.id} className="bg-white mt-2 px-4 py-5">
-            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
+          <section key={q.id}>
+            <p
+              className="text-[11px] uppercase tracking-[0.18em] mb-2"
+              style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+            >
               Question {i + 1}
-              {q.type !== 'text' && <span className="text-red-400 ml-1 normal-case">*</span>}
+              {q.type !== 'text' && (
+                <span style={{ color: 'var(--terracotta)', marginLeft: 4 }}>·</span>
+              )}
             </p>
-            <p className="text-sm font-bold text-gray-900 mb-3">{q.label}</p>
+            <p
+              className="font-serif text-[18px] mb-4"
+              style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em', lineHeight: 1.3 }}
+            >
+              {q.label}
+            </p>
             <QuestionField
               question={q}
               value={answers[q.id]}
               onChange={(v) => setAnswers((p) => ({ ...p, [q.id]: v }))}
             />
-          </div>
+          </section>
         ))}
 
         {/* Contact */}
-        <div className="bg-white mt-2 px-4 py-5">
-          <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Votre contact</p>
-          <p className="text-xs text-gray-400 mb-3">Email ou téléphone requis</p>
+        <section>
+          <p
+            className="text-[11px] uppercase tracking-[0.18em] mb-1"
+            style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+          >
+            Vos coordonnées
+          </p>
+          <p className="text-[12px] mb-4" style={{ color: 'var(--ink-faint)' }}>
+            Email ou téléphone requis
+          </p>
           <div className="space-y-2">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="votre@email.fr"
-              className="w-full py-3 px-4 rounded-xl text-sm text-gray-800 focus:outline-none"
-              style={{ background: '#f2f2f2', border: 'none' }}
+              className="w-full py-4 px-5 rounded-2xl text-[14px] focus:outline-none"
+              style={{
+                background: 'var(--ivory)',
+                border: '1px solid var(--line)',
+                color: 'var(--ink)',
+              }}
             />
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="06 00 00 00 00"
-              className="w-full py-3 px-4 rounded-xl text-sm text-gray-800 focus:outline-none"
-              style={{ background: '#f2f2f2', border: 'none' }}
+              className="w-full py-4 px-5 rounded-2xl text-[14px] focus:outline-none"
+              style={{
+                background: 'var(--ivory)',
+                border: '1px solid var(--line)',
+                color: 'var(--ink)',
+              }}
             />
           </div>
-        </div>
+        </section>
 
-        {/* Floating submit */}
+        {/* Submit flottant */}
         <div
-          className="sticky bottom-0 z-10 px-4 pt-10 pb-5"
-          style={{ background: 'linear-gradient(to bottom, transparent, #f4f4f4 45%)' }}
+          className="sticky bottom-0 z-10 -mx-6 px-6 pt-10 pb-5"
+          style={{ background: 'linear-gradient(to bottom, transparent, var(--cream) 45%)' }}
         >
           {error && (
-            <p className="text-sm font-medium text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-3">{error}</p>
+            <p
+              className="text-[13px] rounded-xl px-4 py-3 mb-3"
+              style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}
+            >
+              {error}
+            </p>
           )}
           <button
             type="submit"
             disabled={loading}
-            className="w-full text-white font-black rounded-2xl py-4 text-sm disabled:opacity-50"
-            style={{ background: '#1a3d2b', boxShadow: '0 6px 20px rgba(26,61,43,0.35)' }}
+            className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99]"
+            style={{
+              background: 'var(--forest)',
+              color: 'var(--ivory)',
+              fontWeight: 600,
+              letterSpacing: '0.02em',
+              boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+            }}
           >
             {loading ? 'Envoi…' : 'Envoyer mes réponses'}
           </button>
@@ -291,50 +373,80 @@ export function SondagesPage() {
       {selected ? (
         <SurveyForm survey={selected} onBack={() => setSelected(null)} />
       ) : (
-        <>
-          {/* Page header */}
-          <div className="bg-white px-4 pt-5 pb-5">
-            <h1 className="text-2xl font-black text-gray-900 leading-tight">Sondages</h1>
-            <p className="text-sm text-gray-500 mt-1">Partagez vos retours pour améliorer nos services.</p>
+        <div className="fade-up">
+          <div className="px-6 pt-8 pb-6">
+            <p
+              className="text-[10px] uppercase tracking-[0.22em] mb-3"
+              style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+            >
+              Votre avis compte
+            </p>
+            <h1
+              className="font-serif-display text-[38px] leading-[1.02] mb-3"
+              style={{ color: 'var(--ink)' }}
+            >
+              Sondages
+            </h1>
+            <p className="text-[14px] leading-relaxed" style={{ color: 'var(--ink-soft)' }}>
+              Partagez vos retours pour améliorer nos services.
+            </p>
           </div>
 
-          <div className="px-4 pt-4 pb-6">
+          <div className="px-6 pb-10">
             {loading ? (
-              <p className="text-sm text-gray-400 text-center py-12">Chargement…</p>
+              <p className="text-[13px] text-center py-12" style={{ color: 'var(--ink-faint)' }}>
+                Chargement…
+              </p>
             ) : surveys.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                  <ClipboardList size={20} className="text-gray-300" />
+              <div
+                className="rounded-3xl py-16 text-center"
+                style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+              >
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ background: 'var(--forest-soft)' }}
+                >
+                  <ClipboardList size={20} style={{ color: 'var(--forest)' }} />
                 </div>
-                <p className="text-sm font-bold text-gray-400">Aucun sondage disponible</p>
-                <p className="text-xs text-gray-300 mt-1">Revenez bientôt !</p>
+                <p className="font-serif text-[18px]" style={{ color: 'var(--ink)', fontWeight: 600 }}>
+                  Aucun sondage
+                </p>
+                <p className="text-[12px] mt-1" style={{ color: 'var(--ink-faint)' }}>
+                  Revenez bientôt
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {surveys.map((survey) => (
-                  <div
+                  <button
                     key={survey.id}
-                    className="bg-white rounded-2xl px-4 py-4 flex items-center justify-between gap-3"
+                    onClick={() => setSelected(survey)}
+                    className="w-full text-left rounded-3xl p-5 flex items-center gap-4 transition-all hover:scale-[0.995]"
+                    style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-black text-gray-900 text-sm">{survey.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p
+                        className="font-serif text-[17px] leading-tight"
+                        style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em' }}
+                      >
+                        {survey.title}
+                      </p>
+                      <p className="text-[11px] mt-1.5" style={{ color: 'var(--ink-faint)' }}>
                         {survey.questions.length} question{survey.questions.length !== 1 ? 's' : ''}
                       </p>
                     </div>
-                    <button
-                      onClick={() => setSelected(survey)}
-                      className="flex-shrink-0 text-white text-xs font-black px-4 py-2.5 rounded-xl"
-                      style={{ background: '#1a3d2b' }}
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'var(--forest)' }}
                     >
-                      Répondre
-                    </button>
-                  </div>
+                      <ChevronRight size={16} style={{ color: 'var(--ivory)' }} />
+                    </div>
+                  </button>
                 ))}
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
     </AppLayout>
   );

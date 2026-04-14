@@ -1,7 +1,87 @@
 @import "tailwindcss";
 
-body {
+:root {
+  /* Palette — éditorial premium */
+  --cream: #f6f1e8;
+  --cream-light: #faf7f0;
+  --ivory: #fdfbf6;
+  --forest: #1a3d2b;
+  --forest-light: #2d5a42;
+  --forest-soft: #e8efe9;
+  --terracotta: #c06b3f;
+  --terracotta-soft: #f5e8dd;
+  --ink: #1c1c1c;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #9a9a9a;
+  --line: #ebe4d4;
+  --line-soft: #f0ead9;
+}
+
+html, body {
   margin: 0;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  padding: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+.font-serif {
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+}
+
+.font-serif-display {
+  font-family: 'Fraunces', Georgia, serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+/* Scrollbar discrète */
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Inputs : pas de bordure par défaut */
+input, textarea, select, button { font-family: inherit; }
+button { cursor: pointer; }
+
+/* Animation douce pour fade-ins */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.4s ease-out; }
+
+/* Leaflet popups — override default style pour coller au thème crème */
+.leaflet-popup-content-wrapper {
+  background: var(--ivory) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 12px 32px rgba(28, 28, 28, 0.14) !important;
+  border: 1px solid var(--line) !important;
+  padding: 4px !important;
+}
+.leaflet-popup-content {
+  margin: 14px 16px !important;
+  font-family: 'Inter', sans-serif !important;
+}
+.leaflet-popup-tip {
+  background: var(--ivory) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+}
+.leaflet-popup-close-button {
+  color: var(--ink-faint) !important;
+  padding: 8px 8px 0 0 !important;
+}
+
+/* Focus visible accessible */
+:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

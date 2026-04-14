@@ -75,113 +75,159 @@ export function LoginPage() {
   return (
     <AppLayout back title="Connexion">
       {step === 'contact' ? (
-        <>
-          <div className="bg-white px-4 pt-5 pb-5">
-            <h1 className="text-2xl font-black text-gray-900 leading-tight">Identifiez-vous</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Entrez votre email ou téléphone — nous vous enverrons un code de vérification.
-            </p>
-          </div>
+        <div className="px-6 pt-10 pb-6 fade-up">
+          <p className="text-[11px] uppercase tracking-[0.22em] font-semibold mb-3" style={{ color: 'var(--terracotta)' }}>
+            Bienvenue
+          </p>
+          <h1 className="font-serif-display text-[40px] leading-[1.05] mb-3" style={{ color: 'var(--ink)' }}>
+            Identifiez-<br />vous
+          </h1>
+          <p className="text-[15px] leading-relaxed mb-10" style={{ color: 'var(--ink-soft)', maxWidth: '28ch' }}>
+            Nous vous enverrons un code à 6 chiffres pour confirmer votre identité.
+          </p>
 
-          <form onSubmit={handleRequestOtp}>
-            <div className="bg-white mt-2 px-4 py-5">
-              <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
+          <form onSubmit={handleRequestOtp} className="space-y-6">
+            <div>
+              <label className="text-[11px] uppercase tracking-[0.18em] font-semibold block mb-3" style={{ color: 'var(--ink-faint)' }}>
                 Email ou téléphone
-              </p>
+              </label>
               <input
                 type="text"
                 value={contact}
                 onChange={(e) => setContact(e.target.value)}
-                placeholder="votre@email.fr ou 06 00 00 00 00"
+                placeholder="votre@email.fr"
                 autoFocus
-                className="w-full py-3 px-4 rounded-xl text-sm text-gray-800 focus:outline-none"
-                style={{ background: '#f2f2f2', border: 'none' }}
+                className="w-full py-4 px-5 rounded-2xl text-[15px] focus:outline-none transition-all"
+                style={{
+                  background: 'var(--cream-light)',
+                  border: '1px solid var(--line)',
+                  color: 'var(--ink)',
+                }}
               />
             </div>
 
-            <div
-              className="sticky bottom-0 z-10 px-4 pt-10 pb-5"
-              style={{ background: 'linear-gradient(to bottom, transparent, #f4f4f4 45%)' }}
-            >
-              {error && (
-                <p className="text-sm font-medium text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-3">{error}</p>
-              )}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full text-white font-black rounded-2xl py-4 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ background: '#1a3d2b', boxShadow: '0 6px 20px rgba(26,61,43,0.35)' }}
+            {error && (
+              <p
+                className="text-[13px] rounded-xl px-4 py-3"
+                style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}
               >
-                {loading ? 'Envoi…' : <>Recevoir un code <ArrowRight size={16} /></>}
-              </button>
-            </div>
-          </form>
-        </>
-      ) : (
-        <>
-          <div className="bg-white px-4 pt-5 pb-5">
-            <h1 className="text-2xl font-black text-gray-900 leading-tight">Code de vérification</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Entrez le code à 6 chiffres envoyé à <span className="font-semibold text-gray-700">{contact}</span>.
-            </p>
-            {devCode && (
-              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                <p className="text-xs font-semibold text-amber-700">Mode dev — code : <span className="font-black text-lg">{devCode}</span></p>
-              </div>
+                {error}
+              </p>
             )}
-          </div>
 
-          <form onSubmit={handleVerifyOtp}>
-            <div className="bg-white mt-2 px-4 py-5">
-              <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Votre code</p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99] flex items-center justify-center gap-2"
+              style={{
+                background: 'var(--forest)',
+                color: 'var(--ivory)',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+                boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+              }}
+            >
+              {loading ? 'Envoi…' : <>Recevoir le code <ArrowRight size={16} /></>}
+            </button>
+          </form>
+        </div>
+      ) : (
+        <div className="px-6 pt-10 pb-6 fade-up">
+          <p className="text-[11px] uppercase tracking-[0.22em] font-semibold mb-3" style={{ color: 'var(--terracotta)' }}>
+            Vérification
+          </p>
+          <h1 className="font-serif-display text-[40px] leading-[1.05] mb-3" style={{ color: 'var(--ink)' }}>
+            Votre<br />code
+          </h1>
+          <p className="text-[15px] leading-relaxed mb-2" style={{ color: 'var(--ink-soft)' }}>
+            Code envoyé à
+          </p>
+          <p className="text-[15px] font-semibold mb-8" style={{ color: 'var(--ink)' }}>
+            {contact}
+          </p>
+
+          {devCode && (
+            <div
+              className="rounded-2xl px-5 py-4 mb-6 flex items-center justify-between"
+              style={{ background: 'var(--terracotta-soft)', border: '1px dashed var(--terracotta)' }}
+            >
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--terracotta)' }}>
+                  Mode dev
+                </p>
+                <p className="font-serif text-xl font-bold tracking-wider" style={{ color: 'var(--ink)' }}>
+                  {devCode}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleVerifyOtp} className="space-y-6">
+            <div>
+              <label className="text-[11px] uppercase tracking-[0.18em] font-semibold block mb-3" style={{ color: 'var(--ink-faint)' }}>
+                Code à 6 chiffres
+              </label>
               <input
                 type="text"
                 inputMode="numeric"
                 maxLength={6}
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="000000"
+                placeholder="••••••"
                 autoFocus
-                className="w-full py-3 px-4 rounded-xl text-2xl font-black text-gray-900 tracking-[0.4em] text-center focus:outline-none"
-                style={{ background: '#f2f2f2', border: 'none' }}
+                className="w-full py-5 px-5 rounded-2xl font-serif text-3xl tracking-[0.5em] text-center focus:outline-none"
+                style={{
+                  background: 'var(--cream-light)',
+                  border: '1px solid var(--line)',
+                  color: 'var(--ink)',
+                  fontWeight: 600,
+                }}
               />
               <button
                 type="button"
                 onClick={handleResend}
                 disabled={loading}
-                className="flex items-center gap-1.5 text-xs font-semibold mt-3 mx-auto disabled:opacity-40"
-                style={{ color: '#1a3d2b' }}
+                className="flex items-center gap-1.5 text-[12px] mt-4 mx-auto disabled:opacity-40"
+                style={{ color: 'var(--forest)', fontWeight: 600 }}
               >
-                <RefreshCw size={12} />
+                <RefreshCw size={11} />
                 Renvoyer le code
               </button>
             </div>
 
-            <div
-              className="sticky bottom-0 z-10 px-4 pt-10 pb-5"
-              style={{ background: 'linear-gradient(to bottom, transparent, #f4f4f4 45%)' }}
+            {error && (
+              <p
+                className="text-[13px] rounded-xl px-4 py-3"
+                style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}
+              >
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || code.length !== 6}
+              className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99]"
+              style={{
+                background: 'var(--forest)',
+                color: 'var(--ivory)',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+                boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+              }}
             >
-              {error && (
-                <p className="text-sm font-medium text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-3">{error}</p>
-              )}
-              <button
-                type="submit"
-                disabled={loading || code.length !== 6}
-                className="w-full text-white font-black rounded-2xl py-4 text-sm disabled:opacity-50"
-                style={{ background: '#1a3d2b', boxShadow: '0 6px 20px rgba(26,61,43,0.35)' }}
-              >
-                {loading ? 'Vérification…' : 'Confirmer'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setStep('contact'); setCode(''); setError(''); }}
-                className="w-full flex items-center justify-center gap-1.5 mt-3 text-sm font-semibold text-gray-400"
-              >
-                <ArrowLeft size={14} /> Changer de contact
-              </button>
-            </div>
+              {loading ? 'Vérification…' : 'Confirmer'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setStep('contact'); setCode(''); setError(''); }}
+              className="w-full flex items-center justify-center gap-1.5 text-[13px]"
+              style={{ color: 'var(--ink-faint)', fontWeight: 500 }}
+            >
+              <ArrowLeft size={13} /> Changer de contact
+            </button>
           </form>
-        </>
+        </div>
       )}
     </AppLayout>
   );

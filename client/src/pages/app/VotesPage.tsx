@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Vote, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Vote, CheckCircle, ArrowLeft, ChevronRight, Clock } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
 import api from '../../services/api';
 
@@ -12,7 +12,7 @@ interface MenuVote {
 
 function formatDeadline(d: string) {
   return new Date(d).toLocaleString('fr-FR', {
-    day: '2-digit', month: 'long', year: 'numeric',
+    day: '2-digit', month: 'long',
     hour: '2-digit', minute: '2-digit',
   });
 }
@@ -50,14 +50,36 @@ function VoteForm({ vote, onBack }: { vote: MenuVote; onBack: () => void }) {
 
   if (success) {
     return (
-      <div className="flex flex-col items-center justify-center px-6 pt-20 text-center">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-5">
-          <CheckCircle className="text-green-600" size={32} />
+      <div className="flex flex-col items-center justify-center px-6 pt-24 text-center fade-up">
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
+          style={{ background: 'var(--forest-soft)' }}
+        >
+          <CheckCircle size={28} style={{ color: 'var(--forest)' }} />
         </div>
-        <h2 className="text-2xl font-black text-gray-900 mb-2">Vote enregistré !</h2>
-        <p className="text-sm text-gray-500 mb-1">Vous avez voté pour</p>
-        <p className="text-sm font-bold text-gray-900 mb-8">« {selectedOption} »</p>
-        <button onClick={onBack} className="text-sm font-bold underline" style={{ color: '#1a3d2b' }}>
+        <p
+          className="text-[10px] uppercase tracking-[0.22em] mb-3"
+          style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+        >
+          Vote enregistré
+        </p>
+        <h2 className="font-serif-display text-[34px] leading-none mb-4" style={{ color: 'var(--ink)' }}>
+          Merci
+        </h2>
+        <p className="text-[13px] mb-1" style={{ color: 'var(--ink-soft)' }}>
+          Vous avez voté pour
+        </p>
+        <p
+          className="font-serif text-[20px] mb-10"
+          style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em' }}
+        >
+          « {selectedOption} »
+        </p>
+        <button
+          onClick={onBack}
+          className="text-[13px] underline"
+          style={{ color: 'var(--forest)', fontWeight: 600 }}
+        >
           Voir les autres votes
         </button>
       </div>
@@ -65,93 +87,145 @@ function VoteForm({ vote, onBack }: { vote: MenuVote; onBack: () => void }) {
   }
 
   return (
-    <div>
+    <div className="fade-up">
       {/* Header */}
-      <div className="bg-white px-4 pt-4 pb-5" style={{ borderBottom: '1px solid #f4f4f4' }}>
+      <div className="px-6 pt-6 pb-6">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm font-semibold text-gray-400 mb-3"
+          className="flex items-center gap-1.5 text-[12px] mb-4"
+          style={{ color: 'var(--ink-faint)', fontWeight: 500 }}
         >
-          <ArrowLeft size={15} />Retour
+          <ArrowLeft size={13} /> Retour
         </button>
-        <h2 className="text-xl font-black text-gray-900 leading-tight">{vote.title}</h2>
-        <p className="text-xs text-gray-400 mt-1">Vote jusqu'au {formatDeadline(vote.voteDeadline)}</p>
+        <p
+          className="text-[10px] uppercase tracking-[0.22em] mb-3"
+          style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+        >
+          Vote menu
+        </p>
+        <h2 className="font-serif-display text-[32px] leading-[1.05]" style={{ color: 'var(--ink)' }}>
+          {vote.title}
+        </h2>
+        <div className="flex items-center gap-1.5 mt-3 text-[12px]" style={{ color: 'var(--ink-faint)' }}>
+          <Clock size={12} />
+          <span>Jusqu'au {formatDeadline(vote.voteDeadline)}</span>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-8">
         {/* Options */}
-        <div className="bg-white mt-2 px-4 py-5">
-          <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Votre choix</p>
+        <section>
+          <p
+            className="text-[11px] uppercase tracking-[0.18em] mb-4"
+            style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+          >
+            Votre choix
+          </p>
           <div className="space-y-2">
-            {vote.options.map((option) => (
-              <label
-                key={option}
-                className="flex items-center gap-3 cursor-pointer rounded-2xl px-4 py-4 transition-all"
-                style={
-                  selectedOption === option
-                    ? { background: '#e8f0ea', border: '2px solid #1a3d2b' }
-                    : { background: '#f7f7f7', border: '2px solid transparent' }
-                }
-              >
-                <input
-                  type="radio"
-                  name="option"
-                  value={option}
-                  checked={selectedOption === option}
-                  onChange={() => setSelectedOption(option)}
-                  className="sr-only"
-                />
-                <div
-                  className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                  style={{ borderColor: selectedOption === option ? '#1a3d2b' : '#d1d5db' }}
+            {vote.options.map((option) => {
+              const active = selectedOption === option;
+              return (
+                <label
+                  key={option}
+                  className="flex items-center gap-3 cursor-pointer rounded-2xl px-5 py-5 transition-all"
+                  style={{
+                    background: active ? 'var(--forest-soft)' : 'var(--ivory)',
+                    border: `1px solid ${active ? 'var(--forest)' : 'var(--line)'}`,
+                  }}
                 >
-                  {selectedOption === option && (
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#1a3d2b' }} />
-                  )}
-                </div>
-                <span className="text-sm font-bold text-gray-800">{option}</span>
-              </label>
-            ))}
+                  <input
+                    type="radio"
+                    name="option"
+                    value={option}
+                    checked={active}
+                    onChange={() => setSelectedOption(option)}
+                    className="sr-only"
+                  />
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{
+                      border: `2px solid ${active ? 'var(--forest)' : 'var(--line)'}`,
+                    }}
+                  >
+                    {active && (
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--forest)' }} />
+                    )}
+                  </div>
+                  <span
+                    className="font-serif text-[16px]"
+                    style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em' }}
+                  >
+                    {option}
+                  </span>
+                </label>
+              );
+            })}
           </div>
-        </div>
+        </section>
 
         {/* Contact */}
-        <div className="bg-white mt-2 px-4 py-5">
-          <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Votre contact</p>
-          <p className="text-xs text-gray-400 mb-3">Email ou téléphone requis</p>
+        <section>
+          <p
+            className="text-[11px] uppercase tracking-[0.18em] mb-1"
+            style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+          >
+            Vos coordonnées
+          </p>
+          <p className="text-[12px] mb-4" style={{ color: 'var(--ink-faint)' }}>
+            Email ou téléphone requis
+          </p>
           <div className="space-y-2">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="votre@email.fr"
-              className="w-full py-3 px-4 rounded-xl text-sm text-gray-800 focus:outline-none"
-              style={{ background: '#f2f2f2', border: 'none' }}
+              className="w-full py-4 px-5 rounded-2xl text-[14px] focus:outline-none"
+              style={{
+                background: 'var(--ivory)',
+                border: '1px solid var(--line)',
+                color: 'var(--ink)',
+              }}
             />
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="06 00 00 00 00"
-              className="w-full py-3 px-4 rounded-xl text-sm text-gray-800 focus:outline-none"
-              style={{ background: '#f2f2f2', border: 'none' }}
+              className="w-full py-4 px-5 rounded-2xl text-[14px] focus:outline-none"
+              style={{
+                background: 'var(--ivory)',
+                border: '1px solid var(--line)',
+                color: 'var(--ink)',
+              }}
             />
           </div>
-        </div>
+        </section>
 
-        {/* Floating submit */}
+        {/* Submit flottant */}
         <div
-          className="sticky bottom-0 z-10 px-4 pt-10 pb-5"
-          style={{ background: 'linear-gradient(to bottom, transparent, #f4f4f4 45%)' }}
+          className="sticky bottom-0 z-10 -mx-6 px-6 pt-10 pb-5"
+          style={{ background: 'linear-gradient(to bottom, transparent, var(--cream) 45%)' }}
         >
           {error && (
-            <p className="text-sm font-medium text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-3">{error}</p>
+            <p
+              className="text-[13px] rounded-xl px-4 py-3 mb-3"
+              style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}
+            >
+              {error}
+            </p>
           )}
           <button
             type="submit"
             disabled={loading}
-            className="w-full text-white font-black rounded-2xl py-4 text-sm disabled:opacity-50"
-            style={{ background: '#1a3d2b', boxShadow: '0 6px 20px rgba(26,61,43,0.35)' }}
+            className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99]"
+            style={{
+              background: 'var(--forest)',
+              color: 'var(--ivory)',
+              fontWeight: 600,
+              letterSpacing: '0.02em',
+              boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+            }}
           >
             {loading ? 'Envoi…' : 'Valider mon vote'}
           </button>
@@ -177,49 +251,85 @@ export function VotesPage() {
       {selected ? (
         <VoteForm vote={selected} onBack={() => setSelected(null)} />
       ) : (
-        <>
-          {/* Page header */}
-          <div className="bg-white px-4 pt-5 pb-5">
-            <h1 className="text-2xl font-black text-gray-900 leading-tight">Votes menus</h1>
-            <p className="text-sm text-gray-500 mt-1">Dites-nous quels plats vous aimeriez retrouver.</p>
+        <div className="fade-up">
+          <div className="px-6 pt-8 pb-6">
+            <p
+              className="text-[10px] uppercase tracking-[0.22em] mb-3"
+              style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+            >
+              À vous de choisir
+            </p>
+            <h1
+              className="font-serif-display text-[38px] leading-[1.02] mb-3"
+              style={{ color: 'var(--ink)' }}
+            >
+              Votes menus
+            </h1>
+            <p className="text-[14px] leading-relaxed" style={{ color: 'var(--ink-soft)' }}>
+              Dites-nous quels plats vous aimeriez retrouver.
+            </p>
           </div>
 
-          <div className="px-4 pt-4 pb-6">
+          <div className="px-6 pb-10">
             {loading ? (
-              <p className="text-sm text-gray-400 text-center py-12">Chargement…</p>
+              <p className="text-[13px] text-center py-12" style={{ color: 'var(--ink-faint)' }}>
+                Chargement…
+              </p>
             ) : votes.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                  <Vote size={20} className="text-gray-300" />
+              <div
+                className="rounded-3xl py-16 text-center"
+                style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+              >
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ background: 'var(--forest-soft)' }}
+                >
+                  <Vote size={20} style={{ color: 'var(--forest)' }} />
                 </div>
-                <p className="text-sm font-bold text-gray-400">Aucun vote en cours</p>
-                <p className="text-xs text-gray-300 mt-1">Revenez bientôt !</p>
+                <p className="font-serif text-[18px]" style={{ color: 'var(--ink)', fontWeight: 600 }}>
+                  Aucun vote en cours
+                </p>
+                <p className="text-[12px] mt-1" style={{ color: 'var(--ink-faint)' }}>
+                  Revenez bientôt
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {votes.map((vote) => (
-                  <div key={vote.id} className="bg-white rounded-2xl px-4 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-black text-gray-900 text-sm">{vote.title}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {vote.options.length} options · jusqu'au {formatDeadline(vote.voteDeadline)}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setSelected(vote)}
-                        className="flex-shrink-0 text-white text-xs font-black px-4 py-2.5 rounded-xl"
-                        style={{ background: '#1a3d2b' }}
+                  <button
+                    key={vote.id}
+                    onClick={() => setSelected(vote)}
+                    className="w-full text-left rounded-3xl p-5 flex items-center gap-4 transition-all hover:scale-[0.995]"
+                    style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="font-serif text-[17px] leading-tight"
+                        style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em' }}
                       >
-                        Voter
-                      </button>
+                        {vote.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2 text-[11px]" style={{ color: 'var(--ink-faint)' }}>
+                        <span>{vote.options.length} options</span>
+                        <span>·</span>
+                        <span className="flex items-center gap-1">
+                          <Clock size={10} />
+                          {formatDeadline(vote.voteDeadline)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'var(--forest)' }}
+                    >
+                      <ChevronRight size={16} style={{ color: 'var(--ivory)' }} />
+                    </div>
+                  </button>
                 ))}
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
     </AppLayout>
   );

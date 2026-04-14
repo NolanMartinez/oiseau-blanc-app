@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Thermometer, Star } from 'lucide-react';
+import { Thermometer, Star, MapPin } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
 import api, { userApi } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext';
@@ -25,11 +25,34 @@ interface Fridge {
 }
 
 function StockBadge({ stock }: { stock: number }) {
-  if (stock === 0)
-    return <span className="text-xs font-semibold text-red-500">Rupture de stock</span>;
-  if (stock <= 2)
-    return <span className="text-xs font-semibold text-orange-500">{stock} restant{stock > 1 ? 's' : ''}</span>;
-  return <span className="text-xs font-semibold" style={{ color: '#1a3d2b' }}>{stock} en stock</span>;
+  if (stock === 0) {
+    return (
+      <span
+        className="text-[10px] uppercase tracking-wider"
+        style={{ color: '#c53838', fontWeight: 600 }}
+      >
+        Épuisé
+      </span>
+    );
+  }
+  if (stock <= 2) {
+    return (
+      <span
+        className="text-[10px] uppercase tracking-wider"
+        style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+      >
+        Plus que {stock}
+      </span>
+    );
+  }
+  return (
+    <span
+      className="text-[10px] uppercase tracking-wider"
+      style={{ color: 'var(--forest)', fontWeight: 600 }}
+    >
+      Disponible
+    </span>
+  );
 }
 
 export function FrigoDetail() {
@@ -62,7 +85,9 @@ export function FrigoDetail() {
   if (loading) {
     return (
       <AppLayout back>
-        <div className="flex items-center justify-center h-40 text-sm text-gray-400">Chargement…</div>
+        <div className="flex items-center justify-center h-40 text-sm" style={{ color: 'var(--ink-faint)' }}>
+          Chargement…
+        </div>
       </AppLayout>
     );
   }
@@ -70,9 +95,13 @@ export function FrigoDetail() {
   if (notFound || !fridge) {
     return (
       <AppLayout back>
-        <div className="flex flex-col items-center justify-center h-40 gap-2">
-          <p className="text-sm text-gray-500">Frigo introuvable.</p>
-          <button onClick={() => navigate('/app/carte')} className="text-sm font-bold underline" style={{ color: '#1a3d2b' }}>
+        <div className="flex flex-col items-center justify-center h-60 gap-3">
+          <p style={{ color: 'var(--ink-soft)' }}>Frigo introuvable.</p>
+          <button
+            onClick={() => navigate('/app/carte')}
+            className="text-sm underline"
+            style={{ color: 'var(--forest)', fontWeight: 600 }}
+          >
             Retour à la carte
           </button>
         </div>
@@ -86,65 +115,121 @@ export function FrigoDetail() {
   }
 
   return (
-    <AppLayout back title={fridge.name}>
-      {/* Info banner */}
-      <div className="flex items-center gap-4 px-4 py-3" style={{ background: '#1a3d2b' }}>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full" style={{ background: fridge.online ? '#4ade80' : '#6b7280' }} />
-          <span className="text-xs font-semibold" style={{ color: fridge.online ? '#4ade80' : '#9ca3af' }}>
+    <AppLayout back>
+      {/* Hero éditorial */}
+      <div className="px-6 pt-8 pb-6 fade-up">
+        <div className="flex items-center gap-2 mb-3">
+          <div
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: fridge.online ? 'var(--forest)' : '#a8a291' }}
+          />
+          <p
+            className="text-[10px] uppercase tracking-[0.2em]"
+            style={{
+              color: fridge.online ? 'var(--forest)' : 'var(--ink-faint)',
+              fontWeight: 600,
+            }}
+          >
             {fridge.online ? 'En ligne' : 'Hors ligne'}
-          </span>
+          </p>
+          {fridge.online && fridge.temperature !== null && (
+            <>
+              <span style={{ color: 'var(--ink-faint)' }}>·</span>
+              <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--ink-faint)' }}>
+                <Thermometer size={11} />
+                {fridge.temperature}°C
+              </span>
+            </>
+          )}
         </div>
-        {fridge.online && fridge.temperature !== null && (
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
-            <Thermometer size={12} />{fridge.temperature}°C
-          </span>
-        )}
-        <span className="text-xs ml-auto" style={{ color: 'rgba(255,255,255,0.45)' }}>
-          {fridge.location}
+        <h1
+          className="font-serif-display text-[42px] leading-[1.02] mb-3"
+          style={{ color: 'var(--ink)' }}
+        >
+          {fridge.name}
+        </h1>
+        <div className="flex items-center gap-1.5 text-[13px]" style={{ color: 'var(--ink-soft)' }}>
+          <MapPin size={13} />
+          <span>{fridge.location}</span>
+        </div>
+      </div>
+
+      {/* Séparateur décoratif */}
+      <div className="px-6 mb-2 flex items-center gap-3">
+        <div className="flex-1 h-px" style={{ background: 'var(--line)' }} />
+        <span
+          className="text-[10px] uppercase tracking-[0.22em]"
+          style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+        >
+          La carte
         </span>
+        <div className="flex-1 h-px" style={{ background: 'var(--line)' }} />
       </div>
 
       {/* Dish list */}
-      <div className="pb-6">
+      <div className="pb-10">
         {fridge.dishes.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-12">Aucun plat dans ce frigo.</p>
+          <p className="text-[13px] text-center py-16" style={{ color: 'var(--ink-faint)' }}>
+            Aucun plat dans ce frigo.
+          </p>
         ) : (
           Object.entries(byCategory).map(([category, dishes]) => (
-            <div key={category} className="mt-5">
-              <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-4 mb-2">
+            <div key={category} className="mt-6">
+              <p
+                className="px-6 mb-3 text-[11px] uppercase tracking-[0.22em]"
+                style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+              >
                 {category}
               </p>
-              <div className="bg-white">
-                {dishes.map((dish, i) => (
+              <div className="px-6 space-y-3">
+                {dishes.map((dish) => (
                   <div
                     key={dish.id}
-                    className="px-4 py-4 flex items-start gap-4"
-                    style={i !== 0 ? { borderTop: '1px solid #f4f4f4' } : {}}
+                    className="rounded-3xl p-5 transition-all"
+                    style={{
+                      background: 'var(--ivory)',
+                      border: '1px solid var(--line)',
+                      opacity: dish.stock === 0 ? 0.55 : 1,
+                    }}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-black text-sm mb-1 ${dish.stock === 0 ? 'text-gray-300' : 'text-gray-900'}`}>
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <h3
+                        className="font-serif text-[18px] leading-tight flex-1"
+                        style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em' }}
+                      >
                         {dish.name}
+                      </h3>
+                      <span
+                        className="font-serif text-[18px] flex-shrink-0"
+                        style={{ color: 'var(--forest)', fontWeight: 600 }}
+                      >
+                        {dish.price.toFixed(2).replace('.', ',')} €
+                      </span>
+                    </div>
+
+                    {dish.allergens.length > 0 && (
+                      <p className="text-[11px] mb-3" style={{ color: 'var(--ink-faint)' }}>
+                        Allergènes · {dish.allergens.join(', ')}
                       </p>
-                      {dish.allergens.length > 0 && (
-                        <p className="text-[11px] text-gray-400 mb-1.5">
-                          Allergènes : {dish.allergens.join(', ')}
-                        </p>
-                      )}
+                    )}
+
+                    <div className="flex items-center justify-between">
                       <StockBadge stock={dish.stock} />
                       {purchasedDishIds.has(dish.id) && (
                         <button
                           onClick={() => navigate(`/app/avis?dish=${dish.id}`)}
-                          className="flex items-center gap-1 mt-2 text-xs font-bold"
-                          style={{ color: '#1a3d2b' }}
+                          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full transition-all hover:scale-95"
+                          style={{
+                            color: 'var(--terracotta)',
+                            background: 'var(--terracotta-soft)',
+                            fontWeight: 600,
+                          }}
                         >
-                          <Star size={11} /> Donner un avis
+                          <Star size={11} fill="var(--terracotta)" strokeWidth={0} />
+                          Noter ce plat
                         </button>
                       )}
                     </div>
-                    <span className={`font-black text-base flex-shrink-0 ${dish.stock === 0 ? 'text-gray-300' : 'text-gray-900'}`}>
-                      {dish.price.toFixed(2)} €
-                    </span>
                   </div>
                 ))}
               </div>

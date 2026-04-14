@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { logger } from './utils/logger';
+import { initVapid } from './services/push.service';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import subscriberPublicRoutes from './routes/subscriber.public.routes';
@@ -17,11 +18,25 @@ import frigoAdminRoutes from './routes/frigo.admin.routes';
 import frigoPublicRoutes from './routes/frigo.public.routes';
 import userAuthRoutes from './routes/userAuth.routes';
 import purchaseRoutes from './routes/purchase.routes';
+import pushPublicRoutes from './routes/push.public.routes';
+import pushAdminRoutes from './routes/push.admin.routes';
+
+initVapid();
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
 
-app.use(cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:5173' }));
+app.use(cors({
+  origin: (origin, cb) => {
+    const allowed = process.env.CLIENT_URL ?? 'http://localhost:5173';
+    // Autorise localhost et toute IP du réseau local (192.168.x.x, 10.x.x.x, etc.)
+    if (!origin || origin === allowed || /^http:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(origin)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`CORS: origine non autorisée — ${origin}`));
+    }
+  },
+}));
 app.use(express.json());
 
 app.get('/api/v1/health', (_req, res) => {
@@ -43,6 +58,8 @@ app.use('/api/v1/admin/frigos', frigoAdminRoutes);
 app.use('/api/v1/public', frigoPublicRoutes);
 app.use('/api/v1/public/user/auth', userAuthRoutes);
 app.use('/api/v1/public/user/purchases', purchaseRoutes);
+app.use('/api/v1/public/user/push', pushPublicRoutes);
+app.use('/api/v1/admin/notifications', pushAdminRoutes);
 
 app.listen(PORT, () => {
   logger.info(`Serveur démarré sur le port ${PORT}`);

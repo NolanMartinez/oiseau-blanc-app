@@ -1,9 +1,39 @@
 import { useState, useEffect } from 'react';
-import { Lock, LogOut, Mail, Phone } from 'lucide-react';
+import { Lock, LogOut, Mail, Phone, Bell, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../../components/app/AppLayout';
 import { userApi } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext';
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className="relative flex-shrink-0 transition-all"
+      style={{
+        width: 46,
+        height: 28,
+        borderRadius: 999,
+        background: checked ? 'var(--forest)' : 'var(--line)',
+        border: 'none',
+      }}
+      aria-pressed={checked}
+    >
+      <div
+        className="absolute top-1 transition-all"
+        style={{
+          left: checked ? 21 : 3,
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          background: 'var(--ivory)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+        }}
+      />
+    </button>
+  );
+}
 
 export function ProfilPage() {
   const { subscriber, isLoading: authLoading, logout } = useUserAuth();
@@ -39,7 +69,9 @@ export function ProfilPage() {
   if (authLoading) {
     return (
       <AppLayout title="Mon profil">
-        <div className="flex items-center justify-center h-40 text-sm text-gray-400">Chargement…</div>
+        <div className="flex items-center justify-center h-40 text-sm" style={{ color: 'var(--ink-faint)' }}>
+          Chargement…
+        </div>
       </AppLayout>
     );
   }
@@ -47,21 +79,29 @@ export function ProfilPage() {
   if (!subscriber) {
     return (
       <AppLayout title="Mon profil">
-        <div className="bg-white px-4 pt-5 pb-5">
-          <h1 className="text-2xl font-black text-gray-900 leading-tight">Mon profil</h1>
-        </div>
-        <div className="flex flex-col items-center justify-center px-6 pt-12 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-5">
-            <Lock size={26} className="text-gray-400" />
+        <div className="flex flex-col items-center justify-center px-6 pt-20 text-center fade-up">
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
+            style={{ background: 'var(--forest-soft)' }}
+          >
+            <Lock size={22} style={{ color: 'var(--forest)' }} />
           </div>
-          <h2 className="text-xl font-black text-gray-900 mb-2">Identifiez-vous</h2>
-          <p className="text-sm text-gray-500 mb-8 max-w-xs">
+          <h2 className="font-serif-display text-[34px] leading-none mb-4" style={{ color: 'var(--ink)' }}>
+            Identifiez-vous
+          </h2>
+          <p className="text-[14px] leading-relaxed mb-10 max-w-xs" style={{ color: 'var(--ink-soft)' }}>
             Connectez-vous pour accéder à votre profil et vos préférences.
           </p>
           <button
             onClick={() => navigate('/app/login?next=/app/profil')}
-            className="px-8 py-3.5 text-white font-black rounded-2xl text-sm"
-            style={{ background: '#1a3d2b', boxShadow: '0 6px 20px rgba(26,61,43,0.35)' }}
+            className="px-10 py-4 rounded-full text-[13px] transition-all hover:scale-[0.98]"
+            style={{
+              background: 'var(--forest)',
+              color: 'var(--ivory)',
+              fontWeight: 600,
+              letterSpacing: '0.02em',
+              boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+            }}
           >
             Se connecter
           </button>
@@ -70,102 +110,152 @@ export function ProfilPage() {
     );
   }
 
+  const initial = (subscriber.email ?? subscriber.phone ?? '?').charAt(0).toUpperCase();
+
   return (
     <AppLayout title="Mon profil">
-      <div className="bg-white px-4 pt-5 pb-5">
-        <h1 className="text-2xl font-black text-gray-900 leading-tight">Mon profil</h1>
-      </div>
-
-      {/* Identifiant */}
-      <div className="bg-white mt-2 px-4 py-5">
-        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Mon compte</p>
-        <div className="flex items-center gap-3 py-2">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#e8f0ea' }}>
-            {subscriber.email ? (
-              <Mail size={16} style={{ color: '#1a3d2b' }} />
-            ) : (
-              <Phone size={16} style={{ color: '#1a3d2b' }} />
-            )}
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900">{subscriber.email ?? subscriber.phone}</p>
-            <p className="text-xs text-gray-400">Votre identifiant de connexion</p>
-          </div>
+      {/* Hero avatar + identifiant */}
+      <div className="px-6 pt-10 pb-8 flex flex-col items-center text-center fade-up">
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
+          style={{
+            background: 'var(--forest)',
+            color: 'var(--ivory)',
+          }}
+        >
+          <span
+            className="font-serif text-[30px]"
+            style={{ fontWeight: 600, letterSpacing: '-0.02em' }}
+          >
+            {initial}
+          </span>
+        </div>
+        <p
+          className="text-[10px] uppercase tracking-[0.22em] mb-2"
+          style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+        >
+          Membre
+        </p>
+        <p
+          className="font-serif text-[20px]"
+          style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em' }}
+        >
+          {subscriber.email ?? subscriber.phone}
+        </p>
+        <div className="flex items-center gap-1.5 mt-1 text-[12px]" style={{ color: 'var(--ink-faint)' }}>
+          {subscriber.email ? <Mail size={11} /> : <Phone size={11} />}
+          <span>Identifiant de connexion</span>
         </div>
       </div>
 
-      {/* Préférences notifications */}
-      <div className="bg-white mt-2 px-4 py-5">
-        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Notifications</p>
+      {/* Séparateur */}
+      <div className="px-6 mb-4 flex items-center gap-3">
+        <div className="flex-1 h-px" style={{ background: 'var(--line)' }} />
+        <span
+          className="text-[10px] uppercase tracking-[0.22em]"
+          style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+        >
+          Préférences
+        </span>
+        <div className="flex-1 h-px" style={{ background: 'var(--line)' }} />
+      </div>
 
-        <label className="flex items-start gap-4 cursor-pointer py-1" onClick={() => setConsentEmail((v) => !v)}>
+      {/* Notifications */}
+      <div className="px-6 space-y-3">
+        <div
+          className="rounded-2xl p-5 flex items-center gap-4"
+          style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+        >
           <div
-            className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
-            style={{ background: consentEmail ? '#1a3d2b' : '#e5e7eb' }}
+            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: 'var(--forest-soft)' }}
           >
-            {consentEmail && (
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
+            <Mail size={16} style={{ color: 'var(--forest)' }} />
           </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900">Notifications par email</p>
-            <p className="text-xs text-gray-400 mt-0.5">Menus du jour, nouveautés, promotions</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-[14px]" style={{ color: 'var(--ink)', fontWeight: 600 }}>
+              Notifications par email
+            </p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-faint)' }}>
+              Menus du jour, nouveautés
+            </p>
           </div>
-        </label>
+          <Toggle checked={consentEmail} onChange={setConsentEmail} />
+        </div>
 
-        <div className="my-3" style={{ borderTop: '1px solid #f4f4f4' }} />
-
-        <label className="flex items-start gap-4 cursor-pointer py-1" onClick={() => setConsentPush((v) => !v)}>
+        <div
+          className="rounded-2xl p-5 flex items-center gap-4"
+          style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+        >
           <div
-            className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
-            style={{ background: consentPush ? '#1a3d2b' : '#e5e7eb' }}
+            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: 'var(--forest-soft)' }}
           >
-            {consentPush && (
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
+            <Bell size={16} style={{ color: 'var(--forest)' }} />
           </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900">Notifications push</p>
-            <p className="text-xs text-gray-400 mt-0.5">Alertes en temps réel sur votre navigateur</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-[14px]" style={{ color: 'var(--ink)', fontWeight: 600 }}>
+              Notifications push
+            </p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-faint)' }}>
+              Alertes en temps réel
+            </p>
           </div>
-        </label>
+          <Toggle checked={consentPush} onChange={setConsentPush} />
+        </div>
       </div>
 
       {/* Déconnexion */}
-      <div className="bg-white mt-2 px-4 py-2">
+      <div className="px-6 mt-6">
         <button
           onClick={() => { logout(); navigate('/app/carte'); }}
-          className="flex items-center gap-3 w-full py-3 text-left"
+          className="w-full rounded-2xl p-5 flex items-center gap-4 transition-all hover:scale-[0.99]"
+          style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
         >
-          <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-red-50">
-            <LogOut size={16} className="text-red-400" />
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: '#fdf1ef' }}
+          >
+            <LogOut size={16} style={{ color: '#c53838' }} />
           </div>
-          <p className="text-sm font-bold text-red-400">Se déconnecter</p>
+          <p className="text-[14px] text-left flex-1" style={{ color: '#c53838', fontWeight: 600 }}>
+            Se déconnecter
+          </p>
         </button>
       </div>
 
-      {/* Floating save */}
+      {/* Save button */}
       <div
-        className="sticky bottom-0 z-10 px-4 pt-10 pb-5"
-        style={{ background: 'linear-gradient(to bottom, transparent, #f4f4f4 45%)' }}
+        className="sticky bottom-0 z-10 px-6 pt-10 pb-6 mt-6"
+        style={{ background: 'linear-gradient(to bottom, transparent, var(--cream) 45%)' }}
       >
         {error && (
-          <p className="text-sm font-medium text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-3">{error}</p>
+          <p
+            className="text-[13px] rounded-xl px-4 py-3 mb-3"
+            style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}
+          >
+            {error}
+          </p>
         )}
         {saved && (
-          <p className="text-sm font-medium text-green-700 bg-green-50 rounded-xl px-4 py-3 mb-3 text-center">
-            Préférences enregistrées
-          </p>
+          <div
+            className="text-[13px] rounded-xl px-4 py-3 mb-3 flex items-center gap-2 justify-center"
+            style={{ background: 'var(--forest-soft)', color: 'var(--forest)', fontWeight: 600 }}
+          >
+            <Check size={14} /> Préférences enregistrées
+          </div>
         )}
         <button
           onClick={handleSave}
           disabled={loading}
-          className="w-full text-white font-black rounded-2xl py-4 text-sm disabled:opacity-50"
-          style={{ background: '#1a3d2b', boxShadow: '0 6px 20px rgba(26,61,43,0.35)' }}
+          className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99]"
+          style={{
+            background: 'var(--forest)',
+            color: 'var(--ivory)',
+            fontWeight: 600,
+            letterSpacing: '0.02em',
+            boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+          }}
         >
           {loading ? 'Enregistrement…' : 'Enregistrer'}
         </button>

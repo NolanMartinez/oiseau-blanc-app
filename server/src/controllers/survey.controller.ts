@@ -44,6 +44,18 @@ export async function createSurvey(req: Request, res: Response): Promise<void> {
       active: result.data.active,
     },
   });
+
+  // Notification push si le sondage est actif dès la création
+  if (result.data.active) {
+    const { broadcastPush } = await import('../services/push.service');
+    broadcastPush({
+      title: "Nouveau sondage disponible",
+      body: result.data.title,
+      url: '/app/sondages',
+      tag: 'sondage',
+    }).catch(() => {});
+  }
+
   res.status(201).json({ survey });
 }
 
