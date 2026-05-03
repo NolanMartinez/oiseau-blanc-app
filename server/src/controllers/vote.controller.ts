@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 
 const createVoteSchema = z.object({
@@ -148,7 +149,7 @@ export async function castVote(req: Request, res: Response): Promise<void> {
   }
 
   const response = await prisma.menuVoteResponse.create({
-    data: { menuVoteId: voteId, subscriberId: subscriber.id, selectedOptions: [selectedOption] as object[] },
+    data: { menuVoteId: voteId, subscriberId: subscriber.id, selectedOptions: [selectedOption] as unknown as Prisma.InputJsonValue },
   });
 
   res.status(201).json({ message: 'Vote enregistré', response });
