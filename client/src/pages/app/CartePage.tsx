@@ -118,14 +118,14 @@ export function CartePage() {
     <AppLayout mapMode>
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
         <MapContainer
-          center={[48.8566, 2.3522]}
-          zoom={12}
+          center={[50.3575, 3.5233]}
+          zoom={13}
           style={{ width: '100%', height: '100%', background: '#fafafa' }}
           zoomControl={false}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
           <LocationFly />
           {fridges.map((fridge) => (
