@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Star, CheckCircle, Mail, Phone } from 'lucide-react';
 import api from '../../services/api';
 import { MOCK_DISHES } from '../../utils/mockDishes';

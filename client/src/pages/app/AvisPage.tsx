@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Star, CheckCircle, Lock, ShoppingBag, ChevronDown } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';

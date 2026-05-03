@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Bell, Mail, Phone, CheckCircle } from 'lucide-react';
 import api from '../../services/api';
 

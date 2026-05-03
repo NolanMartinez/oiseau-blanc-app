@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { ClipboardList, CheckCircle, ArrowLeft, ChevronRight } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
 import api from '../../services/api';

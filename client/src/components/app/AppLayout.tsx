@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { MapPin, Star, ClipboardList, Vote, User, ArrowLeft, Bell, BellOff } from 'lucide-react';
 import { useUserAuth } from '../../context/UserAuthContext';
@@ -17,17 +17,6 @@ interface AppLayoutProps {
   title?: string;
   mapMode?: boolean;
   back?: boolean;
-}
-
-function FriggoMark({ size = 22 }: { size?: number }) {
-  // Letter F — style Friggo (sans heavy, coins arrondis), blanc sur fond vert
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="7" y="6.5" width="6" height="20" rx="1.6" fill="#ffffff" />
-      <rect x="7" y="6.5" width="19" height="6" rx="1.6" fill="#ffffff" />
-      <rect x="7" y="14" width="15" height="5.4" rx="1.6" fill="#ffffff" />
-    </svg>
-  );
 }
 
 // Wordmark Friggo (Frig bleu + go vert)

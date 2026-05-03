@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, BarChart2, X, CheckCircle, ClipboardList } from 'lucide-react';
+import { Plus, Pencil, Trash2, BarChart2, X, ClipboardList } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
 

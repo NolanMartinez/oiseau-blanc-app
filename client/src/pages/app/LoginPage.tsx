@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
 import { AppLayout, FriggoWordmark } from '../../components/app/AppLayout';

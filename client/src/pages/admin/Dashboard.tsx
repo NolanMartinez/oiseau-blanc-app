@@ -89,7 +89,7 @@ export function Dashboard() {
   ];
 
   // Filtre les ticks pour n'afficher qu'environ 6 dates sur 30 jours
-  function tickFilter(date: string, index: number, data: DayPoint[]) {
+  function tickFilter(_date: string, index: number, data: DayPoint[]) {
     const step = Math.ceil(data.length / 6);
     return index % step === 0 || index === data.length - 1;
   }
