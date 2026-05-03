@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import path from 'path';
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import { logger } from './utils/logger';
@@ -62,9 +63,9 @@ app.use('/api/v1/public/user/purchases', purchaseRoutes);
 app.use('/api/v1/public/user/push', pushPublicRoutes);
 app.use('/api/v1/admin/notifications', pushAdminRoutes);
 
-// En production : servir le build React
-if (process.env.NODE_ENV === 'production') {
-  const clientDist = path.join(__dirname, '../../client/dist');
+// Servir le build React si le dossier dist existe
+const clientDist = path.join(__dirname, '../../client/dist');
+if (fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
   app.get('*', (_req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
