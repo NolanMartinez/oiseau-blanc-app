@@ -64,7 +64,8 @@ app.use('/api/v1/public/user/push', pushPublicRoutes);
 app.use('/api/v1/admin/notifications', pushAdminRoutes);
 
 // Servir le build React si le dossier dist existe
-const clientDist = path.join(__dirname, '../../client/dist');
+const clientDist = path.join(process.cwd(), 'client', 'dist');
+logger.info(`[static] clientDist = ${clientDist} | exists = ${fs.existsSync(clientDist)}`);
 if (fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
   app.get('*', (_req, res) => {
