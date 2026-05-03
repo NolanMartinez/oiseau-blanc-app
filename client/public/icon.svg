@@ -1,11 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Fond vert -->
-  <rect width="512" height="512" rx="112" fill="#1a3d2b"/>
-  <!-- Oiseau stylisé centré -->
-  <path
-    d="M120 296 C 168 200, 232 168, 296 184 C 336 192, 364 216, 372 256 C 348 248, 320 248, 292 256 C 328 272, 356 304, 356 344 C 320 328, 268 320, 228 324 C 188 328, 152 312, 120 296 Z"
-    fill="#faf7f0"
-  />
-  <!-- Oeil -->
-  <circle cx="358" cy="216" r="10" fill="#1a3d2b"/>
+  <rect width="512" height="512" rx="112" fill="#319966"/>
+  <!-- F glyph en blanc, style Friggo (heavy rounded sans) -->
+  <rect x="110" y="100" width="92" height="312" rx="24" fill="#ffffff"/>
+  <rect x="110" y="100" width="300" height="92" rx="24" fill="#ffffff"/>
+  <rect x="110" y="216" width="240" height="80" rx="24" fill="#ffffff"/>
 </svg>

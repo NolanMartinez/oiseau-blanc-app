@@ -33,8 +33,8 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
               size={38}
               strokeWidth={1.4}
               style={{
-                color: active ? 'var(--terracotta)' : 'var(--line)',
-                fill: active ? 'var(--terracotta)' : 'transparent',
+                color: active ? 'var(--yellow)' : 'var(--line)',
+                fill: active ? 'var(--yellow)' : 'transparent',
                 transition: 'all 0.2s',
               }}
             />
@@ -102,32 +102,31 @@ export function AvisPage() {
       <AppLayout title="Mon avis">
         <div className="flex flex-col items-center justify-center px-6 pt-20 text-center fade-up">
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
-            style={{ background: 'var(--forest-soft)' }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+            style={{ background: 'var(--green-soft)' }}
           >
-            <Lock size={22} style={{ color: 'var(--forest)' }} />
+            <Lock size={22} style={{ color: 'var(--green)' }} />
           </div>
           <p
-            className="text-[10px] uppercase tracking-[0.22em] mb-3"
-            style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+            className="text-[10px] uppercase tracking-[0.05em] mb-3"
+            style={{ color: 'var(--green)', fontWeight: 700 }}
           >
             Réservé aux clients
           </p>
-          <h2 className="font-serif-display text-[34px] leading-none mb-4" style={{ color: 'var(--ink)' }}>
+          <h2 className="text-titre mb-4" style={{ color: 'var(--ink)' }}>
             Identifiez-vous
           </h2>
-          <p className="text-[14px] leading-relaxed mb-10 max-w-xs" style={{ color: 'var(--ink-soft)' }}>
+          <p className="text-texte mb-10 max-w-xs" style={{ color: 'var(--ink-soft)' }}>
             Connectez-vous pour noter les plats que vous avez pris dans nos frigos.
           </p>
           <button
             onClick={() => navigate('/app/login?next=/app/avis')}
-            className="px-10 py-4 rounded-full text-[13px] transition-all hover:scale-[0.98]"
+            className="text-cta px-10 py-4 rounded-full transition-all hover:scale-[0.98]"
             style={{
-              background: 'var(--forest)',
-              color: 'var(--ivory)',
-              fontWeight: 600,
-              letterSpacing: '0.02em',
-              boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+              background: 'var(--green)',
+              color: '#ffffff',
+              fontWeight: 700,
+              boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
             }}
           >
             Se connecter
@@ -143,15 +142,15 @@ export function AvisPage() {
       <AppLayout title="Mon avis">
         <div className="flex flex-col items-center justify-center px-6 pt-20 text-center fade-up">
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
-            style={{ background: 'var(--terracotta-soft)' }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+            style={{ background: 'var(--peach-soft)' }}
           >
-            <ShoppingBag size={22} style={{ color: 'var(--terracotta)' }} />
+            <ShoppingBag size={22} style={{ color: '#c47b30' }} />
           </div>
-          <h2 className="font-serif-display text-[34px] leading-none mb-4" style={{ color: 'var(--ink)' }}>
+          <h2 className="text-titre mb-4" style={{ color: 'var(--ink)' }}>
             Aucun plat pris
           </h2>
-          <p className="text-[14px] leading-relaxed max-w-xs" style={{ color: 'var(--ink-soft)' }}>
+          <p className="text-texte max-w-xs" style={{ color: 'var(--ink-soft)' }}>
             Vous pourrez noter un plat après l'avoir pris dans l'un de nos frigos.
           </p>
         </div>
@@ -165,27 +164,27 @@ export function AvisPage() {
       <AppLayout title="Mon avis">
         <div className="flex flex-col items-center justify-center px-6 pt-24 text-center fade-up">
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
-            style={{ background: 'var(--forest-soft)' }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+            style={{ background: 'var(--green-soft)' }}
           >
-            <CheckCircle size={28} style={{ color: 'var(--forest)' }} />
+            <CheckCircle size={28} style={{ color: 'var(--green)' }} />
           </div>
           <p
-            className="text-[10px] uppercase tracking-[0.22em] mb-3"
-            style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+            className="text-[10px] uppercase tracking-[0.05em] mb-3"
+            style={{ color: 'var(--green)', fontWeight: 700 }}
           >
             Avis enregistré
           </p>
-          <h2 className="font-serif-display text-[40px] leading-none mb-4" style={{ color: 'var(--ink)' }}>
+          <h2 className="text-titre-gros mb-4" style={{ color: 'var(--ink)' }}>
             Merci
           </h2>
-          <p className="text-[14px] leading-relaxed mb-10" style={{ color: 'var(--ink-soft)' }}>
+          <p className="text-texte mb-10" style={{ color: 'var(--ink-soft)' }}>
             Votre retour nous aide à améliorer nos plats.
           </p>
           <button
             onClick={() => { setSuccess(false); setRating(0); setComment(''); setDishId(''); }}
             className="text-[13px] underline"
-            style={{ color: 'var(--forest)', fontWeight: 600 }}
+            style={{ color: 'var(--green)', fontWeight: 700 }}
           >
             Donner un autre avis
           </button>
@@ -200,18 +199,18 @@ export function AvisPage() {
     <AppLayout title="Mon avis">
       <div className="px-6 pt-8 pb-4 fade-up">
         <p
-          className="text-[10px] uppercase tracking-[0.22em] mb-3"
-          style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+          className="text-[10px] uppercase tracking-[0.05em] mb-3"
+          style={{ color: 'var(--green)', fontWeight: 700 }}
         >
           Votre expérience
         </p>
         <h1
-          className="font-serif-display text-[38px] leading-[1.02] mb-3"
+          className="text-titre-gros mb-3"
           style={{ color: 'var(--ink)' }}
         >
           Notez un plat
         </h1>
-        <p className="text-[14px] leading-relaxed" style={{ color: 'var(--ink-soft)' }}>
+        <p className="text-texte" style={{ color: 'var(--ink-soft)' }}>
           Partagez votre retour avec la communauté.
         </p>
       </div>
@@ -220,8 +219,8 @@ export function AvisPage() {
         {/* Plat */}
         <section>
           <label
-            className="text-[11px] uppercase tracking-[0.18em] block mb-3"
-            style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+            className="text-[11px] uppercase tracking-[0.05em] block mb-3"
+            style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
           >
             Quel plat ?
           </label>
@@ -234,7 +233,7 @@ export function AvisPage() {
                 onChange={(e) => setDishId(e.target.value)}
                 className="w-full py-4 px-5 pr-12 rounded-2xl text-[14px] focus:outline-none appearance-none"
                 style={{
-                  background: 'var(--ivory)',
+                  background: '#ffffff',
                   border: '1px solid var(--line)',
                   color: 'var(--ink)',
                   fontWeight: 500,
@@ -261,7 +260,7 @@ export function AvisPage() {
             </div>
           )}
           {currentPurchase?.hasReview && (
-            <p className="text-[12px] mt-3" style={{ color: 'var(--terracotta)', fontWeight: 500 }}>
+            <p className="text-[12px] mt-3" style={{ color: '#a17600', fontWeight: 600 }}>
               Vous avez déjà noté ce plat — votre avis sera mis à jour.
             </p>
           )}
@@ -270,16 +269,16 @@ export function AvisPage() {
         {/* Note */}
         <section>
           <label
-            className="text-[11px] uppercase tracking-[0.18em] block mb-4"
-            style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+            className="text-[11px] uppercase tracking-[0.05em] block mb-4"
+            style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
           >
             Votre note
           </label>
           <StarRating value={rating} onChange={setRating} />
           {rating > 0 && (
             <p
-              className="font-serif mt-4 text-[18px]"
-              style={{ color: 'var(--terracotta)', fontWeight: 600, letterSpacing: '-0.015em' }}
+              className="mt-4 text-[18px]"
+              style={{ color: 'var(--ink)', fontWeight: 800 }}
             >
               {LABELS[rating]}
             </p>
@@ -289,8 +288,8 @@ export function AvisPage() {
         {/* Commentaire */}
         <section>
           <label
-            className="text-[11px] uppercase tracking-[0.18em] block mb-3"
-            style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+            className="text-[11px] uppercase tracking-[0.05em] block mb-3"
+            style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
           >
             Commentaire · optionnel
           </label>
@@ -302,7 +301,7 @@ export function AvisPage() {
             placeholder="Partagez votre expérience…"
             className="w-full rounded-2xl px-5 py-4 text-[14px] focus:outline-none resize-none"
             style={{
-              background: 'var(--ivory)',
+              background: '#ffffff',
               border: '1px solid var(--line)',
               color: 'var(--ink)',
               fontFamily: 'inherit',
@@ -329,13 +328,12 @@ export function AvisPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99]"
+            className="text-cta w-full rounded-full py-4 disabled:opacity-50 transition-all hover:scale-[0.99]"
             style={{
-              background: 'var(--forest)',
-              color: 'var(--ivory)',
-              fontWeight: 600,
-              letterSpacing: '0.02em',
-              boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+              background: 'var(--green)',
+              color: '#ffffff',
+              fontWeight: 700,
+              boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
             }}
           >
             {loading ? 'Envoi…' : 'Envoyer mon avis'}

@@ -19,16 +19,33 @@ interface AppLayoutProps {
   back?: boolean;
 }
 
-function BirdLogo({ size = 22 }: { size?: number }) {
-  // Oiseau stylisé minimaliste
+function FriggoMark({ size = 22 }: { size?: number }) {
+  // Letter F — style Friggo (sans heavy, coins arrondis), blanc sur fond vert
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M4 18 C 8 10, 14 7, 20 9 C 24 10, 27 13, 28 17 C 25 16, 22 16, 19 17 C 23 19, 26 22, 26 26 C 22 24, 17 23, 13 24 C 9 24, 6 22, 4 18 Z"
-        fill="currentColor"
-      />
-      <circle cx="24" cy="13" r="0.9" fill="var(--cream)" />
+      <rect x="7" y="6.5" width="6" height="20" rx="1.6" fill="#ffffff" />
+      <rect x="7" y="6.5" width="19" height="6" rx="1.6" fill="#ffffff" />
+      <rect x="7" y="14" width="15" height="5.4" rx="1.6" fill="#ffffff" />
     </svg>
+  );
+}
+
+// Wordmark Friggo (Frig bleu + go vert)
+export function FriggoWordmark({ size = 17 }: { size?: number }) {
+  return (
+    <span
+      style={{
+        fontFamily: "'Sonny Vol 2', 'Onest', sans-serif",
+        fontWeight: 900,
+        fontSize: size,
+        letterSpacing: '-0.02em',
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ color: 'var(--blue)' }}>Frig</span>
+      <span style={{ color: 'var(--green)' }}>go</span>
+    </span>
   );
 }
 
@@ -53,14 +70,14 @@ function BellButton() {
       }
       className="w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0 transition-all"
       style={{
-        background: isSubscribed ? 'var(--forest)' : 'var(--cream-light)',
-        border: `1px solid ${isSubscribed ? 'var(--forest)' : 'var(--line)'}`,
+        background: isSubscribed ? 'var(--green)' : '#ffffff',
+        border: `1px solid ${isSubscribed ? 'var(--green)' : 'var(--line)'}`,
         opacity: isDenied || isLoading ? 0.5 : 1,
       }}
       aria-label={isSubscribed ? 'Désactiver les notifications' : 'Activer les notifications'}
     >
       {isSubscribed
-        ? <Bell size={16} style={{ color: 'var(--ivory)' }} strokeWidth={2} />
+        ? <Bell size={16} style={{ color: '#ffffff' }} strokeWidth={2} />
         : isDenied
         ? <BellOff size={16} style={{ color: 'var(--ink-faint)' }} strokeWidth={1.8} />
         : <Bell size={16} style={{ color: 'var(--ink-faint)' }} strokeWidth={1.8} />
@@ -77,48 +94,28 @@ export function AppLayout({ children, title, mapMode = false, back = false }: Ap
       {/* Header */}
       <header
         className="flex-shrink-0 h-16 flex items-center px-5 gap-3 z-20"
-        style={{ background: 'var(--cream)', borderBottom: '1px solid var(--line)' }}
+        style={{ background: '#ffffff', borderBottom: '1px solid var(--line)' }}
       >
         {back ? (
           <button
             onClick={() => navigate(-1)}
             className="w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0 transition-all hover:scale-95"
-            style={{ background: 'var(--cream-light)', border: '1px solid var(--line)' }}
+            style={{ background: '#ffffff', border: '1px solid var(--line)' }}
             aria-label="Retour"
           >
             <ArrowLeft size={17} strokeWidth={2} style={{ color: 'var(--ink)' }} />
           </button>
         ) : (
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: 'var(--forest)', color: 'var(--ivory)' }}
-          >
-            <BirdLogo size={20} />
-          </div>
+          <FriggoWordmark size={24} />
         )}
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          {title ? (
+          {title && (
             <span
-              className="font-serif text-[17px] truncate leading-tight"
-              style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.02em' }}
+              className="text-[16px] truncate leading-tight"
+              style={{ color: 'var(--ink)', fontWeight: 800 }}
             >
               {title}
             </span>
-          ) : (
-            <>
-              <span
-                className="text-[10px] uppercase tracking-[0.22em] leading-none"
-                style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
-              >
-                Traiteur
-              </span>
-              <span
-                className="font-serif text-[17px] leading-tight mt-0.5"
-                style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.02em' }}
-              >
-                L'Oiseau Blanc
-              </span>
-            </>
           )}
         </div>
         <BellButton />
@@ -136,7 +133,7 @@ export function AppLayout({ children, title, mapMode = false, back = false }: Ap
       <nav
         className="flex-shrink-0 flex z-20"
         style={{
-          background: 'var(--cream)',
+          background: '#ffffff',
           borderTop: '1px solid var(--line)',
           paddingBottom: 'env(safe-area-inset-bottom, 0)',
         }}
@@ -148,19 +145,19 @@ export function AppLayout({ children, title, mapMode = false, back = false }: Ap
                 {isActive && (
                   <div
                     className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full"
-                    style={{ background: 'var(--forest)' }}
+                    style={{ background: 'var(--green)' }}
                   />
                 )}
                 <Icon
                   size={20}
                   strokeWidth={isActive ? 2.2 : 1.6}
-                  style={{ color: isActive ? 'var(--forest)' : 'var(--ink-faint)' }}
+                  style={{ color: isActive ? 'var(--green)' : 'var(--ink-faint)' }}
                 />
                 <span
-                  className="text-[10px] leading-none tracking-wide"
+                  className="text-cta-navbar"
                   style={{
-                    color: isActive ? 'var(--forest)' : 'var(--ink-faint)',
-                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? 'var(--green)' : 'var(--ink-faint)',
+                    fontWeight: isActive ? 700 : 500,
                   }}
                 >
                   {label}

@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
-import { AppLayout } from '../../components/app/AppLayout';
+import { AppLayout, FriggoWordmark } from '../../components/app/AppLayout';
 import { userApi } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext';
 import type { Subscriber } from '../../context/UserAuthContext';
@@ -76,19 +76,25 @@ export function LoginPage() {
     <AppLayout back title="Connexion">
       {step === 'contact' ? (
         <div className="px-6 pt-10 pb-6 fade-up">
-          <p className="text-[11px] uppercase tracking-[0.22em] font-semibold mb-3" style={{ color: 'var(--terracotta)' }}>
-            Bienvenue
-          </p>
-          <h1 className="font-serif-display text-[40px] leading-[1.05] mb-3" style={{ color: 'var(--ink)' }}>
+          <div className="mb-6">
+            <FriggoWordmark size={36} />
+            <p
+              className="text-[12px] mt-1"
+              style={{ color: '#d49b00', fontWeight: 700, letterSpacing: '0.01em' }}
+            >
+              C'est bien fait, pour vous
+            </p>
+          </div>
+          <h1 className="text-titre-gros mb-3" style={{ color: 'var(--ink)' }}>
             Identifiez-<br />vous
           </h1>
-          <p className="text-[15px] leading-relaxed mb-10" style={{ color: 'var(--ink-soft)', maxWidth: '28ch' }}>
+          <p className="text-texte mb-10" style={{ color: 'var(--ink-soft)', maxWidth: '28ch' }}>
             Nous vous enverrons un code à 6 chiffres pour confirmer votre identité.
           </p>
 
           <form onSubmit={handleRequestOtp} className="space-y-6">
             <div>
-              <label className="text-[11px] uppercase tracking-[0.18em] font-semibold block mb-3" style={{ color: 'var(--ink-faint)' }}>
+              <label className="text-[11px] uppercase tracking-[0.05em] font-semibold block mb-3" style={{ color: 'var(--ink-faint)' }}>
                 Email ou téléphone
               </label>
               <input
@@ -99,7 +105,7 @@ export function LoginPage() {
                 autoFocus
                 className="w-full py-4 px-5 rounded-2xl text-[15px] focus:outline-none transition-all"
                 style={{
-                  background: 'var(--cream-light)',
+                  background: '#ffffff',
                   border: '1px solid var(--line)',
                   color: 'var(--ink)',
                 }}
@@ -118,13 +124,12 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99] flex items-center justify-center gap-2"
+              className="text-cta w-full rounded-full py-4 disabled:opacity-50 transition-all hover:scale-[0.99] flex items-center justify-center gap-2"
               style={{
-                background: 'var(--forest)',
-                color: 'var(--ivory)',
-                fontWeight: 600,
-                letterSpacing: '0.02em',
-                boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+                background: 'var(--green)',
+                color: '#ffffff',
+                fontWeight: 700,
+                boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
               }}
             >
               {loading ? 'Envoi…' : <>Recevoir le code <ArrowRight size={16} /></>}
@@ -133,13 +138,13 @@ export function LoginPage() {
         </div>
       ) : (
         <div className="px-6 pt-10 pb-6 fade-up">
-          <p className="text-[11px] uppercase tracking-[0.22em] font-semibold mb-3" style={{ color: 'var(--terracotta)' }}>
+          <p className="text-[11px] uppercase tracking-[0.05em] font-semibold mb-3" style={{ color: 'var(--green)' }}>
             Vérification
           </p>
-          <h1 className="font-serif-display text-[40px] leading-[1.05] mb-3" style={{ color: 'var(--ink)' }}>
+          <h1 className="text-titre-gros mb-3" style={{ color: 'var(--ink)' }}>
             Votre<br />code
           </h1>
-          <p className="text-[15px] leading-relaxed mb-2" style={{ color: 'var(--ink-soft)' }}>
+          <p className="text-texte mb-2" style={{ color: 'var(--ink-soft)' }}>
             Code envoyé à
           </p>
           <p className="text-[15px] font-semibold mb-8" style={{ color: 'var(--ink)' }}>
@@ -149,13 +154,13 @@ export function LoginPage() {
           {devCode && (
             <div
               className="rounded-2xl px-5 py-4 mb-6 flex items-center justify-between"
-              style={{ background: 'var(--terracotta-soft)', border: '1px dashed var(--terracotta)' }}
+              style={{ background: 'var(--yellow-soft)', border: '1px dashed var(--yellow)' }}
             >
               <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--terracotta)' }}>
+                <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: '#a17600' }}>
                   Mode dev
                 </p>
-                <p className="font-serif text-xl font-bold tracking-wider" style={{ color: 'var(--ink)' }}>
+                <p className="text-xl tracking-wider" style={{ color: 'var(--ink)', fontWeight: 800 }}>
                   {devCode}
                 </p>
               </div>
@@ -164,7 +169,7 @@ export function LoginPage() {
 
           <form onSubmit={handleVerifyOtp} className="space-y-6">
             <div>
-              <label className="text-[11px] uppercase tracking-[0.18em] font-semibold block mb-3" style={{ color: 'var(--ink-faint)' }}>
+              <label className="text-[11px] uppercase tracking-[0.05em] font-semibold block mb-3" style={{ color: 'var(--ink-faint)' }}>
                 Code à 6 chiffres
               </label>
               <input
@@ -175,12 +180,12 @@ export function LoginPage() {
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••••"
                 autoFocus
-                className="w-full py-5 px-5 rounded-2xl font-serif text-3xl tracking-[0.5em] text-center focus:outline-none"
+                className="w-full py-5 px-5 rounded-2xl text-3xl tracking-[0.5em] text-center focus:outline-none"
                 style={{
-                  background: 'var(--cream-light)',
+                  background: '#ffffff',
                   border: '1px solid var(--line)',
                   color: 'var(--ink)',
-                  fontWeight: 600,
+                  fontWeight: 800,
                 }}
               />
               <button
@@ -188,7 +193,7 @@ export function LoginPage() {
                 onClick={handleResend}
                 disabled={loading}
                 className="flex items-center gap-1.5 text-[12px] mt-4 mx-auto disabled:opacity-40"
-                style={{ color: 'var(--forest)', fontWeight: 600 }}
+                style={{ color: 'var(--green)', fontWeight: 600 }}
               >
                 <RefreshCw size={11} />
                 Renvoyer le code
@@ -207,13 +212,12 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading || code.length !== 6}
-              className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99]"
+              className="text-cta w-full rounded-full py-4 disabled:opacity-50 transition-all hover:scale-[0.99]"
               style={{
-                background: 'var(--forest)',
-                color: 'var(--ivory)',
-                fontWeight: 600,
-                letterSpacing: '0.02em',
-                boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+                background: 'var(--green)',
+                color: '#ffffff',
+                fontWeight: 700,
+                boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
               }}
             >
               {loading ? 'Vérification…' : 'Confirmer'}

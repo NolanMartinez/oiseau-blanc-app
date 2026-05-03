@@ -29,7 +29,7 @@ function StockBadge({ stock }: { stock: number }) {
     return (
       <span
         className="text-[10px] uppercase tracking-wider"
-        style={{ color: '#c53838', fontWeight: 600 }}
+        style={{ color: '#c53838', fontWeight: 700 }}
       >
         Épuisé
       </span>
@@ -39,7 +39,7 @@ function StockBadge({ stock }: { stock: number }) {
     return (
       <span
         className="text-[10px] uppercase tracking-wider"
-        style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+        style={{ color: '#a17600', fontWeight: 700 }}
       >
         Plus que {stock}
       </span>
@@ -48,7 +48,7 @@ function StockBadge({ stock }: { stock: number }) {
   return (
     <span
       className="text-[10px] uppercase tracking-wider"
-      style={{ color: 'var(--forest)', fontWeight: 600 }}
+      style={{ color: 'var(--green)', fontWeight: 700 }}
     >
       Disponible
     </span>
@@ -116,18 +116,18 @@ export function FrigoDetail() {
 
   return (
     <AppLayout back>
-      {/* Hero éditorial */}
+      {/* Hero */}
       <div className="px-6 pt-8 pb-6 fade-up">
         <div className="flex items-center gap-2 mb-3">
           <div
             className="w-1.5 h-1.5 rounded-full"
-            style={{ background: fridge.online ? 'var(--forest)' : '#a8a291' }}
+            style={{ background: fridge.online ? 'var(--green)' : '#bdbdbd' }}
           />
           <p
-            className="text-[10px] uppercase tracking-[0.2em]"
+            className="text-[10px] uppercase tracking-[0.05em]"
             style={{
-              color: fridge.online ? 'var(--forest)' : 'var(--ink-faint)',
-              fontWeight: 600,
+              color: fridge.online ? 'var(--green)' : 'var(--ink-faint)',
+              fontWeight: 700,
             }}
           >
             {fridge.online ? 'En ligne' : 'Hors ligne'}
@@ -143,7 +143,7 @@ export function FrigoDetail() {
           )}
         </div>
         <h1
-          className="font-serif-display text-[42px] leading-[1.02] mb-3"
+          className="text-titre-gros mb-3"
           style={{ color: 'var(--ink)' }}
         >
           {fridge.name}
@@ -158,8 +158,8 @@ export function FrigoDetail() {
       <div className="px-6 mb-2 flex items-center gap-3">
         <div className="flex-1 h-px" style={{ background: 'var(--line)' }} />
         <span
-          className="text-[10px] uppercase tracking-[0.22em]"
-          style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+          className="text-[10px] uppercase tracking-[0.05em]"
+          style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
         >
           La carte
         </span>
@@ -176,8 +176,8 @@ export function FrigoDetail() {
           Object.entries(byCategory).map(([category, dishes]) => (
             <div key={category} className="mt-6">
               <p
-                className="px-6 mb-3 text-[11px] uppercase tracking-[0.22em]"
-                style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+                className="px-6 mb-3 text-[11px] uppercase tracking-[0.05em]"
+                style={{ color: 'var(--green)', fontWeight: 700 }}
               >
                 {category}
               </p>
@@ -187,21 +187,21 @@ export function FrigoDetail() {
                     key={dish.id}
                     className="rounded-3xl p-5 transition-all"
                     style={{
-                      background: 'var(--ivory)',
+                      background: '#ffffff',
                       border: '1px solid var(--line)',
                       opacity: dish.stock === 0 ? 0.55 : 1,
                     }}
                   >
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <h3
-                        className="font-serif text-[18px] leading-tight flex-1"
-                        style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em' }}
+                        className="text-[18px] leading-tight flex-1"
+                        style={{ color: 'var(--ink)', fontWeight: 800 }}
                       >
                         {dish.name}
                       </h3>
                       <span
-                        className="font-serif text-[18px] flex-shrink-0"
-                        style={{ color: 'var(--forest)', fontWeight: 600 }}
+                        className="text-[18px] flex-shrink-0"
+                        style={{ color: 'var(--green)', fontWeight: 800 }}
                       >
                         {dish.price.toFixed(2).replace('.', ',')} €
                       </span>
@@ -220,12 +220,12 @@ export function FrigoDetail() {
                           onClick={() => navigate(`/app/avis?dish=${dish.id}`)}
                           className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full transition-all hover:scale-95"
                           style={{
-                            color: 'var(--terracotta)',
-                            background: 'var(--terracotta-soft)',
-                            fontWeight: 600,
+                            color: '#a17600',
+                            background: 'var(--yellow-soft)',
+                            fontWeight: 700,
                           }}
                         >
-                          <Star size={11} fill="var(--terracotta)" strokeWidth={0} />
+                          <Star size={11} fill="#f5b400" strokeWidth={0} />
                           Noter ce plat
                         </button>
                       )}

@@ -1,13 +1,13 @@
 {
-  "name": "L'Oiseau Blanc",
-  "short_name": "Oiseau Blanc",
-  "description": "Consultez les frigos connectés L'Oiseau Blanc Traiteur",
+  "name": "Friggo",
+  "short_name": "Friggo",
+  "description": "Friggo — c'est bien fait, pour vous. Consultez les frigos connectés et donnez votre avis.",
   "start_url": "/app/carte",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f6f1e8",
-  "theme_color": "#1a3d2b",
+  "background_color": "#ffffff",
+  "theme_color": "#319966",
   "lang": "fr",
   "icons": [
     {

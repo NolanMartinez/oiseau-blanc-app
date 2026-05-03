@@ -15,7 +15,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
         width: 46,
         height: 28,
         borderRadius: 999,
-        background: checked ? 'var(--forest)' : 'var(--line)',
+        background: checked ? 'var(--green)' : 'var(--line)',
         border: 'none',
       }}
       aria-pressed={checked}
@@ -27,7 +27,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
           width: 22,
           height: 22,
           borderRadius: '50%',
-          background: 'var(--ivory)',
+          background: '#ffffff',
           boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
         }}
       />
@@ -81,26 +81,25 @@ export function ProfilPage() {
       <AppLayout title="Mon profil">
         <div className="flex flex-col items-center justify-center px-6 pt-20 text-center fade-up">
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
-            style={{ background: 'var(--forest-soft)' }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+            style={{ background: 'var(--green-soft)' }}
           >
-            <Lock size={22} style={{ color: 'var(--forest)' }} />
+            <Lock size={22} style={{ color: 'var(--green)' }} />
           </div>
-          <h2 className="font-serif-display text-[34px] leading-none mb-4" style={{ color: 'var(--ink)' }}>
+          <h2 className="text-titre mb-4" style={{ color: 'var(--ink)' }}>
             Identifiez-vous
           </h2>
-          <p className="text-[14px] leading-relaxed mb-10 max-w-xs" style={{ color: 'var(--ink-soft)' }}>
+          <p className="text-texte mb-10 max-w-xs" style={{ color: 'var(--ink-soft)' }}>
             Connectez-vous pour accéder à votre profil et vos préférences.
           </p>
           <button
             onClick={() => navigate('/app/login?next=/app/profil')}
-            className="px-10 py-4 rounded-full text-[13px] transition-all hover:scale-[0.98]"
+            className="text-cta px-10 py-4 rounded-full transition-all hover:scale-[0.98]"
             style={{
-              background: 'var(--forest)',
-              color: 'var(--ivory)',
-              fontWeight: 600,
-              letterSpacing: '0.02em',
-              boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+              background: 'var(--green)',
+              color: '#ffffff',
+              fontWeight: 700,
+              boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
             }}
           >
             Se connecter
@@ -117,28 +116,28 @@ export function ProfilPage() {
       {/* Hero avatar + identifiant */}
       <div className="px-6 pt-10 pb-8 flex flex-col items-center text-center fade-up">
         <div
-          className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
+          className="w-20 h-20 rounded-3xl flex items-center justify-center mb-4"
           style={{
-            background: 'var(--forest)',
-            color: 'var(--ivory)',
+            background: 'var(--green)',
+            color: '#ffffff',
           }}
         >
           <span
-            className="font-serif text-[30px]"
-            style={{ fontWeight: 600, letterSpacing: '-0.02em' }}
+            className="text-[30px]"
+            style={{ fontWeight: 800 }}
           >
             {initial}
           </span>
         </div>
         <p
-          className="text-[10px] uppercase tracking-[0.22em] mb-2"
-          style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+          className="text-[10px] uppercase tracking-[0.05em] mb-2"
+          style={{ color: 'var(--green)', fontWeight: 700 }}
         >
           Membre
         </p>
         <p
-          className="font-serif text-[20px]"
-          style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em' }}
+          className="text-[20px]"
+          style={{ color: 'var(--ink)', fontWeight: 800 }}
         >
           {subscriber.email ?? subscriber.phone}
         </p>
@@ -152,8 +151,8 @@ export function ProfilPage() {
       <div className="px-6 mb-4 flex items-center gap-3">
         <div className="flex-1 h-px" style={{ background: 'var(--line)' }} />
         <span
-          className="text-[10px] uppercase tracking-[0.22em]"
-          style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+          className="text-[10px] uppercase tracking-[0.05em]"
+          style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
         >
           Préférences
         </span>
@@ -164,16 +163,16 @@ export function ProfilPage() {
       <div className="px-6 space-y-3">
         <div
           className="rounded-2xl p-5 flex items-center gap-4"
-          style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+          style={{ background: '#ffffff', border: '1px solid var(--line)' }}
         >
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: 'var(--forest-soft)' }}
+            className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'var(--blue-soft)' }}
           >
-            <Mail size={16} style={{ color: 'var(--forest)' }} />
+            <Mail size={16} style={{ color: '#2a93c7' }} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[14px]" style={{ color: 'var(--ink)', fontWeight: 600 }}>
+            <p className="text-[14px]" style={{ color: 'var(--ink)', fontWeight: 700 }}>
               Notifications par email
             </p>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-faint)' }}>
@@ -185,16 +184,16 @@ export function ProfilPage() {
 
         <div
           className="rounded-2xl p-5 flex items-center gap-4"
-          style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+          style={{ background: '#ffffff', border: '1px solid var(--line)' }}
         >
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: 'var(--forest-soft)' }}
+            className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'var(--green-soft)' }}
           >
-            <Bell size={16} style={{ color: 'var(--forest)' }} />
+            <Bell size={16} style={{ color: 'var(--green)' }} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[14px]" style={{ color: 'var(--ink)', fontWeight: 600 }}>
+            <p className="text-[14px]" style={{ color: 'var(--ink)', fontWeight: 700 }}>
               Notifications push
             </p>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-faint)' }}>
@@ -210,15 +209,15 @@ export function ProfilPage() {
         <button
           onClick={() => { logout(); navigate('/app/carte'); }}
           className="w-full rounded-2xl p-5 flex items-center gap-4 transition-all hover:scale-[0.99]"
-          style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+          style={{ background: '#ffffff', border: '1px solid var(--line)' }}
         >
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
             style={{ background: '#fdf1ef' }}
           >
             <LogOut size={16} style={{ color: '#c53838' }} />
           </div>
-          <p className="text-[14px] text-left flex-1" style={{ color: '#c53838', fontWeight: 600 }}>
+          <p className="text-[14px] text-left flex-1" style={{ color: '#c53838', fontWeight: 700 }}>
             Se déconnecter
           </p>
         </button>
@@ -240,7 +239,7 @@ export function ProfilPage() {
         {saved && (
           <div
             className="text-[13px] rounded-xl px-4 py-3 mb-3 flex items-center gap-2 justify-center"
-            style={{ background: 'var(--forest-soft)', color: 'var(--forest)', fontWeight: 600 }}
+            style={{ background: 'var(--green-soft)', color: 'var(--green)', fontWeight: 700 }}
           >
             <Check size={14} /> Préférences enregistrées
           </div>
@@ -248,13 +247,12 @@ export function ProfilPage() {
         <button
           onClick={handleSave}
           disabled={loading}
-          className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99]"
+          className="text-cta w-full rounded-full py-4 disabled:opacity-50 transition-all hover:scale-[0.99]"
           style={{
-            background: 'var(--forest)',
-            color: 'var(--ivory)',
-            fontWeight: 600,
-            letterSpacing: '0.02em',
-            boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+            background: 'var(--green)',
+            color: '#ffffff',
+            fontWeight: 700,
+            boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
           }}
         >
           {loading ? 'Enregistrement…' : 'Enregistrer'}

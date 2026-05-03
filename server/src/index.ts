@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import { logger } from './utils/logger';
@@ -60,6 +61,15 @@ app.use('/api/v1/public/user/auth', userAuthRoutes);
 app.use('/api/v1/public/user/purchases', purchaseRoutes);
 app.use('/api/v1/public/user/push', pushPublicRoutes);
 app.use('/api/v1/admin/notifications', pushAdminRoutes);
+
+// En production : servir le build React
+if (process.env.NODE_ENV === 'production') {
+  const clientDist = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientDist));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   logger.info(`Serveur démarré sur le port ${PORT}`);

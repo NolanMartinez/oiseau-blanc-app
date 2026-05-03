@@ -1,4 +1,4 @@
-// Service Worker — L'Oiseau Blanc Push Notifications
+// Service Worker — Friggo Push Notifications
 
 self.addEventListener('push', (event) => {
   if (!event.data) return;
@@ -7,21 +7,21 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: "L'Oiseau Blanc", body: event.data.text() };
+    data = { title: 'Friggo', body: event.data.text() };
   }
 
   const options = {
     body: data.body ?? '',
-    icon: '/favicon.svg',
-    badge: '/favicon.svg',
-    tag: data.tag ?? 'oiseau-blanc',
+    icon: '/icon.svg',
+    badge: '/icon.svg',
+    tag: data.tag ?? 'friggo',
     renotify: true,
     data: { url: data.url ?? '/' },
     actions: data.actions ?? [],
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title ?? "L'Oiseau Blanc", options)
+    self.registration.showNotification(data.title ?? 'Friggo', options)
   );
 });
 

@@ -28,7 +28,11 @@ export function AdminLogin() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-md p-8 w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-gray-800 mb-1">Administration</h1>
+        <h1 className="text-2xl mb-1" style={{ fontWeight: 900, letterSpacing: '-0.02em' }}>
+          <span style={{ color: '#70C8F2' }}>Frig</span>
+          <span style={{ color: '#319966' }}>go</span>
+          <span className="text-gray-800"> · Admin</span>
+        </h1>
         <p className="text-sm text-gray-500 mb-6">L'Oiseau Blanc Traiteur</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

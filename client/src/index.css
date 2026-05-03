@@ -1,20 +1,56 @@
 @import "tailwindcss";
 
+/*
+  Police principale : Sonny Vol 2 (Pangram Pangram, payante).
+  En attendant la licence, on charge Onest (Google Fonts) — quasi-identique
+  visuellement (même type-designer). Pour basculer sur Sonny Vol 2, déposer
+  les fichiers .woff2 dans /public/fonts puis ajouter ici :
+
+  @font-face {
+    font-family: 'Sonny Vol 2';
+    src: url('/fonts/SonnyVol2-Regular.woff2') format('woff2');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Sonny Vol 2';
+    src: url('/fonts/SonnyVol2-ExtraBold.woff2') format('woff2');
+    font-weight: 800; font-style: normal; font-display: swap;
+  }
+*/
+
 :root {
-  /* Palette — éditorial premium */
-  --cream: #f6f1e8;
-  --cream-light: #faf7f0;
-  --ivory: #fdfbf6;
-  --forest: #1a3d2b;
-  --forest-light: #2d5a42;
-  --forest-soft: #e8efe9;
-  --terracotta: #c06b3f;
-  --terracotta-soft: #f5e8dd;
-  --ink: #1c1c1c;
-  --ink-soft: #4a4a4a;
-  --ink-faint: #9a9a9a;
-  --line: #ebe4d4;
-  --line-soft: #f0ead9;
+  /* ─── Palette — d'après la maquette Figma ─────────────────────────────── */
+  --green:        #319966;  /* Color 1 — primaire, CTA, état actif      */
+  --blue:         #70C8F2;  /* Color 2 — accent secondaire              */
+  --yellow:       #FECB37;  /* Color 3 — accent / highlights            */
+  --mint:         #A3FFD1;  /* Color 4 — fonds doux, badges             */
+  --peach:        #FFD5AB;  /* Color 5 — fonds doux, badges             */
+  --black:        #000000;  /* Color 6 — texte                          */
+
+  /* Variantes utilitaires ─────────────────────────────────────────────── */
+  --green-soft:   #d6f4e3;
+  --green-tint:   #e8faf0;
+  --blue-soft:    #d8eefa;
+  --yellow-soft:  #fff4cc;
+  --peach-soft:   #ffeedd;
+
+  /* ─── Aliases — conservent les noms existants pour compat ──────────── */
+  --cream:        #fafafa;  /* fond global                              */
+  --cream-light:  #ffffff;  /* fond léger                               */
+  --ivory:        #ffffff;  /* cartes                                   */
+
+  --forest:       #319966;  /* alias historique → vert primaire         */
+  --forest-light: #4cb47e;
+  --forest-soft:  #d6f4e3;
+
+  --terracotta:      #f5b400;  /* alias → jaune (accent overlines)      */
+  --terracotta-soft: #fff4cc;
+
+  --ink:        #000000;
+  --ink-soft:   #3a3a3a;
+  --ink-faint:  #8c8c8c;
+  --line:       #e8e8e8;
+  --line-soft:  #f0f0f0;
 }
 
 html, body {
@@ -22,52 +58,91 @@ html, body {
   padding: 0;
   background: var(--cream);
   color: var(--ink);
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Sonny Vol 2', 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: 'ss01', 'cv11';
 }
 
-.font-serif {
-  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
-  font-optical-sizing: auto;
-  letter-spacing: -0.02em;
-}
-
+/* ─── Police par défaut partout (alias historiques) ─────────────────── */
+.font-serif,
 .font-serif-display {
-  font-family: 'Fraunces', Georgia, serif;
-  font-optical-sizing: auto;
+  font-family: 'Sonny Vol 2', 'Onest', system-ui, -apple-system, sans-serif;
+  font-weight: 800; /* ExtraBold pour titres, conforme à la maquette */
+  letter-spacing: 0;
+}
+
+/* ─── Échelle typographique Figma ───────────────────────────────────── */
+/* Titre gros — ExtraBold 38 / 41 */
+.text-titre-gros {
+  font-family: 'Sonny Vol 2', 'Onest', sans-serif;
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 41px;
+  letter-spacing: 0;
+}
+
+/* Titre — ExtraBold 25 / 24 */
+.text-titre {
+  font-family: 'Sonny Vol 2', 'Onest', sans-serif;
+  font-weight: 800;
+  font-size: 25px;
+  line-height: 24px;
+  letter-spacing: 0;
+}
+
+/* Texte — Book (400) 15 / 18 */
+.text-texte {
+  font-family: 'Sonny Vol 2', 'Onest', sans-serif;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+
+/* CTA — Regular 14, lh 29, tracking 5 % */
+.text-cta {
+  font-family: 'Sonny Vol 2', 'Onest', sans-serif;
   font-weight: 500;
-  letter-spacing: -0.035em;
+  font-size: 14px;
   line-height: 1;
+  letter-spacing: 0.05em;
+}
+
+/* CTA Navbar — 13 / 5 % */
+.text-cta-navbar {
+  font-family: 'Sonny Vol 2', 'Onest', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.05em;
 }
 
 /* Scrollbar discrète */
 ::-webkit-scrollbar { width: 0; height: 0; }
 
-/* Inputs : pas de bordure par défaut */
+/* Inputs / boutons héritent de la police */
 input, textarea, select, button { font-family: inherit; }
 button { cursor: pointer; }
 
 /* Animation douce pour fade-ins */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .fade-up { animation: fadeUp 0.4s ease-out; }
 
-/* Leaflet popups — override default style pour coller au thème crème */
+/* Leaflet popups — coller au thème blanc/vert */
 .leaflet-popup-content-wrapper {
   background: var(--ivory) !important;
   border-radius: 18px !important;
-  box-shadow: 0 12px 32px rgba(28, 28, 28, 0.14) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.10) !important;
   border: 1px solid var(--line) !important;
   padding: 4px !important;
 }
 .leaflet-popup-content {
   margin: 14px 16px !important;
-  font-family: 'Inter', sans-serif !important;
+  font-family: inherit !important;
 }
 .leaflet-popup-tip {
   background: var(--ivory) !important;
@@ -81,7 +156,7 @@ button { cursor: pointer; }
 
 /* Focus visible accessible */
 :focus-visible {
-  outline: 2px solid var(--forest);
+  outline: 2px solid var(--green);
   outline-offset: 2px;
   border-radius: 4px;
 }

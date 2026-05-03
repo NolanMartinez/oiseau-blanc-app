@@ -40,8 +40,9 @@ export function Sidebar() {
       {/* Logo */}
       <div className="px-6 py-5 border-b border-gray-700">
         <p className="text-xs text-gray-400 uppercase tracking-widest">Administration</p>
-        <h1 className="text-base font-semibold text-white leading-tight mt-1">
-          L'Oiseau Blanc
+        <h1 className="text-base leading-tight mt-1" style={{ fontWeight: 900, letterSpacing: '-0.02em' }}>
+          <span style={{ color: '#70C8F2' }}>Frig</span>
+          <span style={{ color: '#319966' }}>go</span>
         </h1>
       </div>
 

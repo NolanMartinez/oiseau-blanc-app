@@ -54,15 +54,15 @@ function QuestionField({ question, value, onChange }: {
               key={n}
               type="button"
               onClick={() => onChange(n)}
-              className="font-serif transition-all"
+              className="transition-all"
               style={{
                 width: 48,
                 height: 48,
                 borderRadius: 16,
                 fontSize: 18,
-                fontWeight: 600,
-                background: active ? 'var(--forest)' : 'var(--ivory)',
-                color: active ? 'var(--ivory)' : 'var(--ink-soft)',
+                fontWeight: 800,
+                background: active ? 'var(--green)' : '#ffffff',
+                color: active ? '#ffffff' : 'var(--ink-soft)',
                 border: active ? 'none' : '1px solid var(--line)',
               }}
             >
@@ -72,8 +72,8 @@ function QuestionField({ question, value, onChange }: {
         })}
         {value != null && (
           <span
-            className="font-serif ml-2 text-[16px]"
-            style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+            className="ml-2 text-[16px]"
+            style={{ color: 'var(--ink)', fontWeight: 800 }}
           >
             {LABELS[value as number]}
           </span>
@@ -92,8 +92,8 @@ function QuestionField({ question, value, onChange }: {
               key={option}
               className="flex items-center gap-3 cursor-pointer rounded-2xl px-5 py-4 transition-all"
               style={{
-                background: active ? 'var(--forest-soft)' : 'var(--ivory)',
-                border: `1px solid ${active ? 'var(--forest)' : 'var(--line)'}`,
+                background: active ? 'var(--green-soft)' : '#ffffff',
+                border: `1px solid ${active ? 'var(--green)' : 'var(--line)'}`,
               }}
             >
               <input
@@ -107,11 +107,11 @@ function QuestionField({ question, value, onChange }: {
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
                 style={{
-                  border: `2px solid ${active ? 'var(--forest)' : 'var(--line)'}`,
+                  border: `2px solid ${active ? 'var(--green)' : 'var(--line)'}`,
                 }}
               >
                 {active && (
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--forest)' }} />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--green)' }} />
                 )}
               </div>
               <span className="text-[14px]" style={{ color: 'var(--ink)', fontWeight: 500 }}>
@@ -135,8 +135,8 @@ function QuestionField({ question, value, onChange }: {
               key={option}
               className="flex items-center gap-3 cursor-pointer rounded-2xl px-5 py-4 transition-all"
               style={{
-                background: checked ? 'var(--forest-soft)' : 'var(--ivory)',
-                border: `1px solid ${checked ? 'var(--forest)' : 'var(--line)'}`,
+                background: checked ? 'var(--green-soft)' : '#ffffff',
+                border: `1px solid ${checked ? 'var(--green)' : 'var(--line)'}`,
               }}
             >
               <input
@@ -150,13 +150,13 @@ function QuestionField({ question, value, onChange }: {
               <div
                 className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
                 style={{
-                  background: checked ? 'var(--forest)' : 'transparent',
-                  border: `2px solid ${checked ? 'var(--forest)' : 'var(--line)'}`,
+                  background: checked ? 'var(--green)' : 'transparent',
+                  border: `2px solid ${checked ? 'var(--green)' : 'var(--line)'}`,
                 }}
               >
                 {checked && (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6l3 3 5-5" stroke="var(--ivory)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M2 6l3 3 5-5" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
               </div>
@@ -211,21 +211,21 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
     return (
       <div className="flex flex-col items-center justify-center px-6 pt-24 text-center fade-up">
         <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
-          style={{ background: 'var(--forest-soft)' }}
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+          style={{ background: 'var(--green-soft)' }}
         >
-          <CheckCircle size={28} style={{ color: 'var(--forest)' }} />
+          <CheckCircle size={28} style={{ color: 'var(--green)' }} />
         </div>
-        <h2 className="font-serif-display text-[40px] leading-none mb-4" style={{ color: 'var(--ink)' }}>
+        <h2 className="text-titre-gros mb-4" style={{ color: 'var(--ink)' }}>
           Merci
         </h2>
-        <p className="text-[14px] leading-relaxed mb-10" style={{ color: 'var(--ink-soft)' }}>
+        <p className="text-texte mb-10" style={{ color: 'var(--ink-soft)' }}>
           Vos retours nous aident à améliorer nos services.
         </p>
         <button
           onClick={onBack}
           className="text-[13px] underline"
-          style={{ color: 'var(--forest)', fontWeight: 600 }}
+          style={{ color: 'var(--green)', fontWeight: 700 }}
         >
           Voir les autres sondages
         </button>
@@ -245,12 +245,12 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
           <ArrowLeft size={13} /> Retour
         </button>
         <p
-          className="text-[10px] uppercase tracking-[0.22em] mb-3"
-          style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+          className="text-[10px] uppercase tracking-[0.05em] mb-3"
+          style={{ color: 'var(--green)', fontWeight: 700 }}
         >
           Sondage
         </p>
-        <h2 className="font-serif-display text-[32px] leading-[1.05]" style={{ color: 'var(--ink)' }}>
+        <h2 className="text-titre" style={{ color: 'var(--ink)' }}>
           {survey.title}
         </h2>
         <p className="text-[12px] mt-2" style={{ color: 'var(--ink-faint)' }}>
@@ -263,17 +263,17 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
         {survey.questions.map((q, i) => (
           <section key={q.id}>
             <p
-              className="text-[11px] uppercase tracking-[0.18em] mb-2"
-              style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+              className="text-[11px] uppercase tracking-[0.05em] mb-2"
+              style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
             >
               Question {i + 1}
               {q.type !== 'text' && (
-                <span style={{ color: 'var(--terracotta)', marginLeft: 4 }}>·</span>
+                <span style={{ color: 'var(--green)', marginLeft: 4 }}>·</span>
               )}
             </p>
             <p
-              className="font-serif text-[18px] mb-4"
-              style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em', lineHeight: 1.3 }}
+              className="text-[18px] mb-4"
+              style={{ color: 'var(--ink)', fontWeight: 800, lineHeight: 1.3 }}
             >
               {q.label}
             </p>
@@ -288,8 +288,8 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
         {/* Contact */}
         <section>
           <p
-            className="text-[11px] uppercase tracking-[0.18em] mb-1"
-            style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+            className="text-[11px] uppercase tracking-[0.05em] mb-1"
+            style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
           >
             Vos coordonnées
           </p>
@@ -304,7 +304,7 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
               placeholder="votre@email.fr"
               className="w-full py-4 px-5 rounded-2xl text-[14px] focus:outline-none"
               style={{
-                background: 'var(--ivory)',
+                background: '#ffffff',
                 border: '1px solid var(--line)',
                 color: 'var(--ink)',
               }}
@@ -316,7 +316,7 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
               placeholder="06 00 00 00 00"
               className="w-full py-4 px-5 rounded-2xl text-[14px] focus:outline-none"
               style={{
-                background: 'var(--ivory)',
+                background: '#ffffff',
                 border: '1px solid var(--line)',
                 color: 'var(--ink)',
               }}
@@ -340,13 +340,12 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-full py-4 text-[14px] disabled:opacity-50 transition-all hover:scale-[0.99]"
+            className="text-cta w-full rounded-full py-4 disabled:opacity-50 transition-all hover:scale-[0.99]"
             style={{
-              background: 'var(--forest)',
-              color: 'var(--ivory)',
-              fontWeight: 600,
-              letterSpacing: '0.02em',
-              boxShadow: '0 8px 24px rgba(26,61,43,0.22)',
+              background: 'var(--green)',
+              color: '#ffffff',
+              fontWeight: 700,
+              boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
             }}
           >
             {loading ? 'Envoi…' : 'Envoyer mes réponses'}
@@ -376,18 +375,18 @@ export function SondagesPage() {
         <div className="fade-up">
           <div className="px-6 pt-8 pb-6">
             <p
-              className="text-[10px] uppercase tracking-[0.22em] mb-3"
-              style={{ color: 'var(--terracotta)', fontWeight: 600 }}
+              className="text-[10px] uppercase tracking-[0.05em] mb-3"
+              style={{ color: 'var(--green)', fontWeight: 700 }}
             >
               Votre avis compte
             </p>
             <h1
-              className="font-serif-display text-[38px] leading-[1.02] mb-3"
+              className="text-titre-gros mb-3"
               style={{ color: 'var(--ink)' }}
             >
               Sondages
             </h1>
-            <p className="text-[14px] leading-relaxed" style={{ color: 'var(--ink-soft)' }}>
+            <p className="text-texte" style={{ color: 'var(--ink-soft)' }}>
               Partagez vos retours pour améliorer nos services.
             </p>
           </div>
@@ -400,15 +399,15 @@ export function SondagesPage() {
             ) : surveys.length === 0 ? (
               <div
                 className="rounded-3xl py-16 text-center"
-                style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+                style={{ background: '#ffffff', border: '1px solid var(--line)' }}
               >
                 <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-                  style={{ background: 'var(--forest-soft)' }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: 'var(--green-soft)' }}
                 >
-                  <ClipboardList size={20} style={{ color: 'var(--forest)' }} />
+                  <ClipboardList size={20} style={{ color: 'var(--green)' }} />
                 </div>
-                <p className="font-serif text-[18px]" style={{ color: 'var(--ink)', fontWeight: 600 }}>
+                <p className="text-[18px]" style={{ color: 'var(--ink)', fontWeight: 800 }}>
                   Aucun sondage
                 </p>
                 <p className="text-[12px] mt-1" style={{ color: 'var(--ink-faint)' }}>
@@ -422,12 +421,12 @@ export function SondagesPage() {
                     key={survey.id}
                     onClick={() => setSelected(survey)}
                     className="w-full text-left rounded-3xl p-5 flex items-center gap-4 transition-all hover:scale-[0.995]"
-                    style={{ background: 'var(--ivory)', border: '1px solid var(--line)' }}
+                    style={{ background: '#ffffff', border: '1px solid var(--line)' }}
                   >
                     <div className="flex-1 min-w-0">
                       <p
-                        className="font-serif text-[17px] leading-tight"
-                        style={{ color: 'var(--ink)', fontWeight: 600, letterSpacing: '-0.015em' }}
+                        className="text-[17px] leading-tight"
+                        style={{ color: 'var(--ink)', fontWeight: 800 }}
                       >
                         {survey.title}
                       </p>
@@ -436,10 +435,10 @@ export function SondagesPage() {
                       </p>
                     </div>
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'var(--forest)' }}
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'var(--green)' }}
                     >
-                      <ChevronRight size={16} style={{ color: 'var(--ivory)' }} />
+                      <ChevronRight size={16} style={{ color: '#ffffff' }} />
                     </div>
                   </button>
                 ))}
