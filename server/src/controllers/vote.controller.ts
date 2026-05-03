@@ -148,7 +148,7 @@ export async function castVote(req: Request, res: Response): Promise<void> {
   }
 
   const response = await prisma.menuVoteResponse.create({
-    data: { menuVoteId: voteId, subscriberId: subscriber.id, selectedOptions: [selectedOption] },
+    data: { menuVoteId: voteId, subscriberId: subscriber.id, selectedOptions: [selectedOption] as object[] },
   });
 
   res.status(201).json({ message: 'Vote enregistré', response });

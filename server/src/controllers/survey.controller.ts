@@ -160,7 +160,7 @@ export async function respondToSurvey(req: Request, res: Response): Promise<void
   }
 
   const response = await prisma.preferenceResponse.create({
-    data: { surveyId, subscriberId: subscriber.id, answers },
+    data: { surveyId, subscriberId: subscriber.id, answers: answers as object },
   });
 
   res.status(201).json({ message: 'Réponse enregistrée', response });
