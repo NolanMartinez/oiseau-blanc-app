@@ -82,9 +82,10 @@ export function AppLayout({ children, title, mapMode = false, back = false }: Ap
     <div className="h-screen flex flex-col" style={{ background: 'var(--cream)' }}>
       {/* Header */}
       <header
-        className="flex-shrink-0 h-16 flex items-center px-5 gap-3 z-20"
-        style={{ background: '#ffffff', borderBottom: '1px solid var(--line)' }}
+        className="flex-shrink-0 z-20"
+        style={{ background: '#ffffff', borderBottom: '1px solid var(--line)', paddingTop: 'env(safe-area-inset-top)' }}
       >
+      <div className="h-16 flex items-center px-5 gap-3">
         {back ? (
           <button
             onClick={() => navigate(-1)}
@@ -108,6 +109,7 @@ export function AppLayout({ children, title, mapMode = false, back = false }: Ap
           )}
         </div>
         <BellButton />
+      </div>
       </header>
 
       {/* Content */}

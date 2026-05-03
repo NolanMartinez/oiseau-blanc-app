@@ -1,7 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="112" fill="#319966"/>
-  <!-- F glyph en blanc, style Friggo (heavy rounded sans) -->
-  <rect x="110" y="100" width="92" height="312" rx="24" fill="#ffffff"/>
-  <rect x="110" y="100" width="300" height="92" rx="24" fill="#ffffff"/>
-  <rect x="110" y="216" width="240" height="80" rx="24" fill="#ffffff"/>
+  <defs>
+    <style><![CDATA[
+      @import url('https://fonts.googleapis.com/css2?family=Onest:wght@900&display=swap');
+    ]]></style>
+  </defs>
+  <rect width="512" height="512" fill="#ffffff"/>
+  <text
+    x="256"
+    y="258"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-family="'Onest', 'Nunito', 'Arial Rounded MT Bold', sans-serif"
+    font-weight="900"
+    font-size="136"
+    letter-spacing="-3"
+  >
+    <tspan fill="#70C8F2">Frig</tspan><tspan fill="#319966">go</tspan>
+  </text>
+  <text
+    x="256"
+    y="350"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-family="'Onest', 'Nunito', sans-serif"
+    font-weight="700"
+    font-size="32"
+    fill="#FECB37"
+    letter-spacing="0.2"
+  >C'est bien fait, pour vous</text>
 </svg>
