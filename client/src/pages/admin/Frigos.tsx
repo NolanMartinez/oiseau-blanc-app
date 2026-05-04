@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Refrigerator, Wifi, WifiOff, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { Refrigerator, Wifi, WifiOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
 
@@ -150,14 +150,6 @@ export function Frigos() {
 
   return (
     <AdminLayout title="Frigos & Plats">
-      {/* Bannière mock */}
-      <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
-        <AlertTriangle size={16} className="text-amber-500 flex-shrink-0" />
-        <p className="text-sm text-amber-700">
-          <span className="font-semibold">Données simulées</span> — En attente de la clé API Bicom.
-          Ces données sont des exemples et ne reflètent pas le stock réel.
-        </p>
-      </div>
 
       {/* Stats rapides */}
       {!loading && (
