@@ -72,6 +72,15 @@ export async function sendBroadcast(req: Request, res: Response): Promise<void> 
     return;
   }
 
+  // Sauvegarde la notification pour l'historique in-app
+  await prisma.notification.create({
+    data: {
+      title: result.data.title,
+      body:  result.data.body,
+      url:   result.data.url ?? '/app/mon-frigo',
+    },
+  });
+
   const stats = await broadcastPush(result.data);
-  res.json({ message: `${stats.sent} notification(s) envoyée(s) sur ${stats.total} abonnés` , ...stats });
+  res.json({ message: `${stats.sent} notification(s) envoyée(s) sur ${stats.total} abonnés`, ...stats });
 }

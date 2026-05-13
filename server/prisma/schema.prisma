@@ -27,8 +27,9 @@ model Subscriber {
   id           String   @id @default(uuid())
   email        String?  @unique
   phone        String?
-  passwordHash String?  @map("password_hash")
-  favoriId     String?  @map("favori_id")
+  passwordHash        String?   @map("password_hash")
+  favoriId            String?   @map("favori_id")
+  notificationsSeenAt DateTime? @map("notifications_seen_at")
   consentEmail Boolean  @default(false) @map("consent_email")
   consentPush  Boolean  @default(false) @map("consent_push")
   pushToken    String?  @map("push_token")
@@ -105,6 +106,16 @@ model MenuVoteResponse {
   subscriber Subscriber @relation(fields: [subscriberId], references: [id])
 
   @@map("menu_vote_responses")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  body      String
+  url       String   @default("/app/mon-frigo")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
 }
 
 model OtpCode {

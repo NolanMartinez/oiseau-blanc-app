@@ -22,6 +22,7 @@ import userAuthRoutes from './routes/userAuth.routes';
 import purchaseRoutes from './routes/purchase.routes';
 import pushPublicRoutes from './routes/push.public.routes';
 import pushAdminRoutes from './routes/push.admin.routes';
+import userNotificationsRoutes from './routes/userNotifications.routes';
 
 initVapid();
 
@@ -62,6 +63,7 @@ app.use('/api/v1/public', frigoPublicRoutes);
 app.use('/api/v1/public/user/auth', userAuthRoutes);
 app.use('/api/v1/public/user/purchases', purchaseRoutes);
 app.use('/api/v1/public/user/push', pushPublicRoutes);
+app.use('/api/v1/public/user/notifications', userNotificationsRoutes);
 app.use('/api/v1/admin/notifications', pushAdminRoutes);
 
 // Servir le build React si le dossier dist existe

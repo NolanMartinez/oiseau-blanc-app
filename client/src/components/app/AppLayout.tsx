@@ -1,8 +1,8 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Refrigerator, Star, ClipboardList, User, ArrowLeft, Bell, BellOff } from 'lucide-react';
+import { Refrigerator, Star, ClipboardList, User, ArrowLeft, Bell } from 'lucide-react';
 import { useUserAuth } from '../../context/UserAuthContext';
-import { usePushNotifications } from '../../hooks/usePushNotifications';
+import { userApi } from '../../services/api';
 
 const NAV = [
   { to: '/app/mon-frigo', label: 'Mon Frigo', Icon: Refrigerator },
@@ -39,57 +39,33 @@ export function FriggoWordmark({ size = 17 }: { size?: number }) {
 
 function BellButton() {
   const { subscriber } = useUserAuth();
-  const { status, errorMsg, subscribe, unsubscribe } = usePushNotifications(!!subscriber);
+  const navigate = useNavigate();
+  const [unread, setUnread] = useState(0);
 
-  if (status === 'unsupported') return null;
+  useEffect(() => {
+    if (!subscriber) return;
+    userApi.get('/public/user/notifications')
+      .then((res) => setUnread(res.data.unreadCount ?? 0))
+      .catch(() => {});
+  }, [subscriber]);
 
-  const isSubscribed = status === 'subscribed';
-  const isDenied = status === 'denied';
-  const isLoading = status === 'loading';
-  const isError = status === 'error';
+  if (!subscriber) return null;
 
   return (
-    <div className="relative flex-shrink-0">
-      <button
-        onClick={isSubscribed ? unsubscribe : subscribe}
-        disabled={isLoading || isDenied}
-        className="w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-95"
-        style={{
-          background: isSubscribed ? 'var(--green)' : isError ? '#fef2f2' : '#ffffff',
-          border: `1px solid ${isSubscribed ? 'var(--green)' : isError ? '#fca5a5' : 'var(--line)'}`,
-          opacity: isDenied ? 0.4 : 1,
-        }}
-        aria-label={isSubscribed ? 'Désactiver les notifications' : 'Activer les notifications'}
-      >
-        {isLoading ? (
-          <span
-            className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
-            style={{ borderColor: 'var(--ink-faint)', borderTopColor: 'transparent' }}
-          />
-        ) : isSubscribed ? (
-          <Bell size={16} style={{ color: '#ffffff' }} strokeWidth={2} />
-        ) : isDenied ? (
-          <BellOff size={16} style={{ color: 'var(--ink-faint)' }} strokeWidth={1.8} />
-        ) : (
-          <Bell size={16} style={{ color: isError ? '#ef4444' : 'var(--ink-faint)' }} strokeWidth={1.8} />
-        )}
-      </button>
-
-      {/* Message d'erreur — bulle sous le bouton */}
-      {errorMsg && (
-        <div
-          className="absolute right-0 top-12 z-50 w-56 rounded-2xl px-3 py-2.5 text-[12px] leading-snug shadow-lg"
-          style={{ background: '#1c1c1e', color: '#ffffff', fontWeight: 500 }}
-        >
-          {errorMsg}
-          {/* petite flèche vers le haut */}
-          <div
-            className="absolute -top-1.5 right-3 w-3 h-3 rotate-45"
-            style={{ background: '#1c1c1e' }}
-          />
-        </div>
+    <button
+      onClick={() => { setUnread(0); navigate('/app/notifications'); }}
+      className="relative w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0 transition-all active:scale-95"
+      style={{ background: '#ffffff', border: '1px solid var(--line)' }}
+      aria-label="Notifications"
+    >
+      <Bell size={16} style={{ color: 'var(--ink-faint)' }} strokeWidth={1.8} />
+      {unread > 0 && (
+        <span
+          className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+          style={{ background: '#ef4444' }}
+        />
       )}
-    </div>
+    </button>
   );
 }
 
