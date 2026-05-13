@@ -12,7 +12,7 @@ export function LoginPage() {
   const { login } = useUserAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const next = params.get('next') ?? '/app/avis';
+  const next = params.get('next') ?? '/app/mon-frigo';
 
   const [step, setStep] = useState<Step>('contact');
   const [contact, setContact] = useState('');

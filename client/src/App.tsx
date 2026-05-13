@@ -17,6 +17,7 @@ import { Notifications } from './pages/admin/Notifications';
 
 // App utilisateur
 import { LoginPage } from './pages/app/LoginPage';
+import { OnboardingPage } from './pages/app/OnboardingPage';
 import { MonFrigoPage } from './pages/app/MonFrigoPage';
 import { AvisPage } from './pages/app/AvisPage';
 import { SondagesPage } from './pages/app/SondagesPage';
@@ -30,6 +31,7 @@ function App() {
         <Routes>
           {/* ── App utilisateur ────────────────────────────────────── */}
           <Route path="/app/login" element={<LoginPage />} />
+          <Route path="/app/onboarding" element={<UserPrivateRoute><OnboardingPage /></UserPrivateRoute>} />
           <Route path="/app" element={<Navigate to="/app/mon-frigo" replace />} />
           <Route path="/app/mon-frigo" element={<UserPrivateRoute><MonFrigoPage /></UserPrivateRoute>} />
           <Route path="/app/avis" element={<UserPrivateRoute><AvisPage /></UserPrivateRoute>} />

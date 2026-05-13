@@ -17,5 +17,9 @@ export function UserPrivateRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to={`/app/login?next=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
+  if (!subscriber.favoriId && location.pathname !== '/app/onboarding') {
+    return <Navigate to="/app/onboarding" replace />;
+  }
+
   return <>{children}</>;
 }

@@ -72,10 +72,11 @@ export function MonFrigoPage() {
 
   async function handleChoose(frigoId: string) {
     try {
-      const res = await userApi.patch('/public/user/auth/frigo-favori', { frigoId });
+      await userApi.patch('/public/user/auth/frigo-favori', { frigoId });
       updateSubscriber({ favoriId: frigoId });
+      setFridge(null);
+      setLoading(true);
       setFavoriId(frigoId);
-      setFridge(res.data.subscriber.favoriId ? null : null); // will reload via effect
       setChoosing(false);
     } catch {
       // silencieux
