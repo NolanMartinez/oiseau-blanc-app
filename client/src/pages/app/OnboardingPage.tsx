@@ -82,52 +82,69 @@ export function OnboardingPage() {
   if (step === 'notifs') {
     return (
       <div
-        className="min-h-screen flex flex-col px-6 fade-up"
-        style={{ background: 'var(--cream)', ...safeTop }}
+        className="min-h-screen flex flex-col fade-up"
+        style={{
+          background: 'var(--cream)',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+        }}
       >
-        <div className="pb-10 flex-1 flex flex-col">
-          <div className="flex gap-1.5 mb-8">
+        {/* Branding */}
+        <div className="px-8 pt-14 pb-8">
+          <div className="flex gap-1.5 mb-5">
             <div className="h-1 flex-1 rounded-full" style={{ background: 'var(--green)' }} />
             <div className="h-1 flex-1 rounded-full" style={{ background: 'var(--green)' }} />
           </div>
+          <FriggoWordmark size={42} />
+          <p className="text-[12px] mt-1.5" style={{ color: '#d49b00', fontWeight: 700, letterSpacing: '0.01em' }}>
+            C'est bien fait, pour vous
+          </p>
+        </div>
 
-          <FriggoWordmark size={20} />
+        {/* Card */}
+        <div
+          className="mx-4 rounded-3xl p-6 flex-1 flex flex-col"
+          style={{ background: '#ffffff', border: '1px solid var(--line)' }}
+        >
+          {/* Icône */}
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6"
+            style={{ background: 'var(--green)' }}
+          >
+            <Bell size={26} color="#fff" strokeWidth={1.8} />
+          </div>
 
-          <div className="mt-8 flex-1 flex flex-col">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6"
-              style={{ background: 'var(--green)' }}
+          <h2 className="text-titre-gros mb-3" style={{ color: 'var(--ink)' }}>
+            Restez<br />informé
+          </h2>
+          <p className="text-texte" style={{ color: 'var(--ink-soft)', maxWidth: '30ch' }}>
+            Recevez une notification dès qu'un nouveau plat est disponible dans votre frigo favori.
+          </p>
+
+          <div className="flex-1" />
+
+          <div className="space-y-3 pt-6">
+            <button
+              onClick={() => handleNotifs(true)}
+              className="w-full rounded-full py-4 flex items-center justify-center gap-2 transition-all hover:scale-[0.99]"
+              style={{
+                background: 'var(--green)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: 15,
+                boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
+              }}
             >
-              <Bell size={24} color="#fff" strokeWidth={1.8} />
-            </div>
-            <h1 className="text-titre-gros mb-3" style={{ color: 'var(--ink)' }}>
-              Restez<br />informé
-            </h1>
-            <p className="text-texte mb-10" style={{ color: 'var(--ink-soft)', maxWidth: '30ch' }}>
-              Recevez une notification dès qu'un nouveau plat est disponible dans votre frigo favori.
-            </p>
-            <div className="mt-auto space-y-3">
-              <button
-                onClick={() => handleNotifs(true)}
-                className="w-full rounded-full py-4 flex items-center justify-center gap-2 transition-all hover:scale-[0.99]"
-                style={{
-                  background: 'var(--green)',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
-                }}
-              >
-                <Bell size={16} />
-                Activer les notifications
-              </button>
-              <button
-                onClick={() => handleNotifs(false)}
-                className="w-full text-[13px] text-center py-3"
-                style={{ color: 'var(--ink-faint)', fontWeight: 500 }}
-              >
-                Passer pour l'instant
-              </button>
-            </div>
+              <Bell size={16} />
+              Activer les notifications
+            </button>
+            <button
+              onClick={() => handleNotifs(false)}
+              className="w-full text-[13px] text-center py-3"
+              style={{ color: 'var(--ink-faint)', fontWeight: 500 }}
+            >
+              Passer pour l'instant
+            </button>
           </div>
         </div>
       </div>
