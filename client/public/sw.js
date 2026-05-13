@@ -12,12 +12,11 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body ?? '',
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     tag: data.tag ?? 'friggo',
     renotify: true,
-    data: { url: data.url ?? '/' },
-    actions: data.actions ?? [],
+    data: { url: data.url ?? '/app/mon-frigo' },
   };
 
   event.waitUntil(
@@ -27,7 +26,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url ?? '/';
+  const url = event.notification.data?.url ?? '/app/mon-frigo';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
