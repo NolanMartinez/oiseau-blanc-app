@@ -1,238 +1,219 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
-import { AppLayout, FriggoWordmark } from '../../components/app/AppLayout';
+import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { FriggoWordmark } from '../../components/app/AppLayout';
 import { userApi } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext';
 import type { Subscriber } from '../../context/UserAuthContext';
 
-type Step = 'contact' | 'code';
+type Mode = 'login' | 'register';
 
 export function LoginPage() {
-  const { login } = useUserAuth();
+  const { login, subscriber } = useUserAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = params.get('next') ?? '/app/mon-frigo';
 
-  const [step, setStep] = useState<Step>('contact');
-  const [contact, setContact] = useState('');
-  const [code, setCode] = useState('');
+  const [mode, setMode] = useState<Mode>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [devCode, setDevCode] = useState<string | null>(null);
 
-  async function handleRequestOtp(e: FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    if (subscriber) navigate(next, { replace: true });
+  }, [subscriber, navigate, next]);
+
+  function switchMode(m: Mode) {
+    setMode(m);
     setError('');
-    if (!contact.trim()) { setError('Veuillez renseigner votre email ou téléphone.'); return; }
-    setLoading(true);
-    try {
-      const res = await userApi.post('/public/user/auth/request-otp', { contact: contact.trim() });
-      if (res.data._devCode) setDevCode(res.data._devCode);
-      setStep('code');
-    } catch {
-      setError('Une erreur est survenue. Veuillez réessayer.');
-    } finally {
-      setLoading(false);
-    }
+    setPassword('');
+    setConfirm('');
   }
 
-  async function handleVerifyOtp(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-    if (code.length !== 6) { setError('Le code doit contenir 6 chiffres.'); return; }
+
+    if (!email.trim()) { setError('Veuillez renseigner votre email.'); return; }
+    if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
+    if (mode === 'register' && password !== confirm) {
+      setError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await userApi.post('/public/user/auth/verify-otp', {
-        contact: contact.trim(),
-        code: code.trim(),
-      });
+      const endpoint = mode === 'login'
+        ? '/public/user/auth/login'
+        : '/public/user/auth/register';
+      const res = await userApi.post(endpoint, { email: email.trim(), password });
       login(res.data.token, res.data.subscriber as Subscriber);
       navigate(next, { replace: true });
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
-      setError(status === 401 ? 'Code invalide ou expiré.' : 'Une erreur est survenue.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleResend() {
-    setError('');
-    setCode('');
-    setDevCode(null);
-    setLoading(true);
-    try {
-      const res = await userApi.post('/public/user/auth/request-otp', { contact: contact.trim() });
-      if (res.data._devCode) setDevCode(res.data._devCode);
-    } catch {
-      setError('Impossible de renvoyer le code.');
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      if (status === 409) setError('Un compte existe déjà avec cet email.');
+      else if (status === 401) setError('Email ou mot de passe incorrect.');
+      else setError(msg ?? 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <AppLayout back title="Connexion">
-      {step === 'contact' ? (
-        <div className="px-6 pt-10 pb-6 fade-up">
-          <div className="mb-6">
-            <FriggoWordmark size={36} />
-            <p
-              className="text-[12px] mt-1"
-              style={{ color: '#d49b00', fontWeight: 700, letterSpacing: '0.01em' }}
-            >
-              C'est bien fait, pour vous
-            </p>
-          </div>
-          <h1 className="text-titre-gros mb-3" style={{ color: 'var(--ink)' }}>
-            Identifiez-<br />vous
-          </h1>
-          <p className="text-texte mb-10" style={{ color: 'var(--ink-soft)', maxWidth: '28ch' }}>
-            Nous vous enverrons un code à 6 chiffres pour confirmer votre identité.
-          </p>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{
+        background: 'var(--cream)',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+      }}
+    >
+      {/* Branding */}
+      <div className="px-8 pt-14 pb-8">
+        <FriggoWordmark size={42} />
+        <p className="text-[12px] mt-1.5" style={{ color: '#d49b00', fontWeight: 700, letterSpacing: '0.01em' }}>
+          C'est bien fait, pour vous
+        </p>
+      </div>
 
-          <form onSubmit={handleRequestOtp} className="space-y-6">
-            <div>
-              <label className="text-[11px] uppercase tracking-[0.05em] font-semibold block mb-3" style={{ color: 'var(--ink-faint)' }}>
-                Email ou téléphone
-              </label>
-              <input
-                type="text"
-                value={contact}
-                onChange={(e) => setContact(e.target.value)}
-                placeholder="votre@email.fr"
-                autoFocus
-                className="w-full py-4 px-5 rounded-2xl text-[15px] focus:outline-none transition-all"
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid var(--line)',
-                  color: 'var(--ink)',
-                }}
-              />
-            </div>
-
-            {error && (
-              <p
-                className="text-[13px] rounded-xl px-4 py-3"
-                style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}
-              >
-                {error}
-              </p>
-            )}
-
+      {/* Card */}
+      <div
+        className="mx-4 rounded-3xl p-6 flex-1 flex flex-col"
+        style={{ background: '#ffffff', border: '1px solid var(--line)' }}
+      >
+        {/* Mode toggle */}
+        <div
+          className="flex rounded-2xl p-1 mb-7"
+          style={{ background: 'var(--cream)' }}
+        >
+          {(['login', 'register'] as const).map((m) => (
             <button
-              type="submit"
-              disabled={loading}
-              className="text-cta w-full rounded-full py-4 disabled:opacity-50 transition-all hover:scale-[0.99] flex items-center justify-center gap-2"
+              key={m}
+              type="button"
+              onClick={() => switchMode(m)}
+              className="flex-1 py-2.5 rounded-xl text-[13px] transition-all"
               style={{
-                background: 'var(--green)',
-                color: '#ffffff',
-                fontWeight: 700,
-                boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
+                background: mode === m ? '#ffffff' : 'transparent',
+                color: mode === m ? 'var(--ink)' : 'var(--ink-faint)',
+                fontWeight: mode === m ? 700 : 500,
+                boxShadow: mode === m ? '0 1px 6px rgba(0,0,0,0.08)' : 'none',
               }}
             >
-              {loading ? 'Envoi…' : <>Recevoir le code <ArrowRight size={16} /></>}
+              {m === 'login' ? 'Se connecter' : 'Créer un compte'}
             </button>
-          </form>
+          ))}
         </div>
-      ) : (
-        <div className="px-6 pt-10 pb-6 fade-up">
-          <p className="text-[11px] uppercase tracking-[0.05em] font-semibold mb-3" style={{ color: 'var(--green)' }}>
-            Vérification
-          </p>
-          <h1 className="text-titre-gros mb-3" style={{ color: 'var(--ink)' }}>
-            Votre<br />code
-          </h1>
-          <p className="text-texte mb-2" style={{ color: 'var(--ink-soft)' }}>
-            Code envoyé à
-          </p>
-          <p className="text-[15px] font-semibold mb-8" style={{ color: 'var(--ink)' }}>
-            {contact}
-          </p>
 
-          {devCode && (
-            <div
-              className="rounded-2xl px-5 py-4 mb-6 flex items-center justify-between"
-              style={{ background: 'var(--yellow-soft)', border: '1px dashed var(--yellow)' }}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1">
+          {/* Email */}
+          <div>
+            <label
+              className="text-[11px] uppercase tracking-[0.05em] font-semibold block mb-2"
+              style={{ color: 'var(--ink-faint)' }}
             >
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: '#a17600' }}>
-                  Mode dev
-                </p>
-                <p className="text-xl tracking-wider" style={{ color: 'var(--ink)', fontWeight: 800 }}>
-                  {devCode}
-                </p>
-              </div>
-            </div>
-          )}
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="votre@email.fr"
+              autoComplete="email"
+              autoFocus
+              className="w-full py-3.5 px-4 rounded-2xl text-[15px] focus:outline-none"
+              style={{ background: 'var(--cream)', border: '1px solid var(--line)', color: 'var(--ink)' }}
+            />
+          </div>
 
-          <form onSubmit={handleVerifyOtp} className="space-y-6">
-            <div>
-              <label className="text-[11px] uppercase tracking-[0.05em] font-semibold block mb-3" style={{ color: 'var(--ink-faint)' }}>
-                Code à 6 chiffres
-              </label>
+          {/* Mot de passe */}
+          <div>
+            <label
+              className="text-[11px] uppercase tracking-[0.05em] font-semibold block mb-2"
+              style={{ color: 'var(--ink-faint)' }}
+            >
+              Mot de passe
+            </label>
+            <div className="relative">
               <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="••••••"
-                autoFocus
-                className="w-full py-5 px-5 rounded-2xl text-3xl tracking-[0.5em] text-center focus:outline-none"
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid var(--line)',
-                  color: 'var(--ink)',
-                  fontWeight: 800,
-                }}
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="6 caractères minimum"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                className="w-full py-3.5 px-4 pr-12 rounded-2xl text-[15px] focus:outline-none"
+                style={{ background: 'var(--cream)', border: '1px solid var(--line)', color: 'var(--ink)' }}
               />
               <button
                 type="button"
-                onClick={handleResend}
-                disabled={loading}
-                className="flex items-center gap-1.5 text-[12px] mt-4 mx-auto disabled:opacity-40"
-                style={{ color: 'var(--green)', fontWeight: 600 }}
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center"
+                style={{ color: 'var(--ink-faint)' }}
               >
-                <RefreshCw size={11} />
-                Renvoyer le code
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+          </div>
 
-            {error && (
-              <p
-                className="text-[13px] rounded-xl px-4 py-3"
-                style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}
+          {/* Confirmer (register only) */}
+          {mode === 'register' && (
+            <div>
+              <label
+                className="text-[11px] uppercase tracking-[0.05em] font-semibold block mb-2"
+                style={{ color: 'var(--ink-faint)' }}
               >
-                {error}
-              </p>
-            )}
+                Confirmer le mot de passe
+              </label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Répétez le mot de passe"
+                autoComplete="new-password"
+                className="w-full py-3.5 px-4 rounded-2xl text-[15px] focus:outline-none"
+                style={{ background: 'var(--cream)', border: '1px solid var(--line)', color: 'var(--ink)' }}
+              />
+            </div>
+          )}
 
-            <button
-              type="submit"
-              disabled={loading || code.length !== 6}
-              className="text-cta w-full rounded-full py-4 disabled:opacity-50 transition-all hover:scale-[0.99]"
-              style={{
-                background: 'var(--green)',
-                color: '#ffffff',
-                fontWeight: 700,
-                boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
-              }}
+          {/* Erreur */}
+          {error && (
+            <p
+              className="text-[13px] rounded-xl px-4 py-3"
+              style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}
             >
-              {loading ? 'Vérification…' : 'Confirmer'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setStep('contact'); setCode(''); setError(''); }}
-              className="w-full flex items-center justify-center gap-1.5 text-[13px]"
-              style={{ color: 'var(--ink-faint)', fontWeight: 500 }}
-            >
-              <ArrowLeft size={13} /> Changer de contact
-            </button>
-          </form>
-        </div>
-      )}
-    </AppLayout>
+              {error}
+            </p>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-full py-4 disabled:opacity-50 transition-all hover:scale-[0.99] flex items-center justify-center gap-2"
+            style={{
+              background: 'var(--green)',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: 15,
+              boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
+            }}
+          >
+            {loading
+              ? 'Chargement…'
+              : mode === 'login'
+              ? <><span>Se connecter</span> <ArrowRight size={16} /></>
+              : <><span>Créer mon compte</span> <ArrowRight size={16} /></>
+            }
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
