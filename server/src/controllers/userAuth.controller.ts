@@ -102,7 +102,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
 
   res.json({
     token,
-    subscriber: { id: subscriber.id, email: subscriber.email, phone: subscriber.phone },
+    subscriber: { id: subscriber.id, email: subscriber.email, phone: subscriber.phone, favoriId: subscriber.favoriId },
   });
 }
 
@@ -137,13 +137,34 @@ export async function getMe(req: Request, res: Response): Promise<void> {
 
   const subscriber = await prisma.subscriber.findUnique({
     where: { id: subscriberId },
-    select: { id: true, email: true, phone: true, consentEmail: true, consentPush: true },
+    select: { id: true, email: true, phone: true, favoriId: true, consentEmail: true, consentPush: true },
   });
 
   if (!subscriber) {
     res.status(404).json({ error: 'Compte introuvable' });
     return;
   }
+
+  res.json({ subscriber });
+}
+
+const setFavoriSchema = z.object({ frigoId: z.string().min(1) });
+
+// PATCH /public/user/auth/frigo-favori
+export async function setFavori(req: Request, res: Response): Promise<void> {
+  const subscriberId = (req as SubscriberRequest).subscriberId;
+
+  const result = setFavoriSchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: 'frigoId invalide' });
+    return;
+  }
+
+  const subscriber = await prisma.subscriber.update({
+    where: { id: subscriberId },
+    data: { favoriId: result.data.frigoId },
+    select: { id: true, email: true, phone: true, favoriId: true, consentEmail: true, consentPush: true },
+  });
 
   res.json({ subscriber });
 }

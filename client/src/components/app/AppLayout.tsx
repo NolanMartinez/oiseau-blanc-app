@@ -1,14 +1,13 @@
 import { type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { MapPin, Star, ClipboardList, Vote, User, ArrowLeft, Bell, BellOff } from 'lucide-react';
+import { Refrigerator, Star, ClipboardList, User, ArrowLeft, Bell, BellOff } from 'lucide-react';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 const NAV = [
-  { to: '/app/carte', label: 'Carte', Icon: MapPin },
+  { to: '/app/mon-frigo', label: 'Mon Frigo', Icon: Refrigerator },
   { to: '/app/avis', label: 'Avis', Icon: Star },
   { to: '/app/sondages', label: 'Sondages', Icon: ClipboardList },
-  { to: '/app/votes', label: 'Votes', Icon: Vote },
   { to: '/app/profil', label: 'Profil', Icon: User },
 ];
 

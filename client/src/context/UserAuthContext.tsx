@@ -5,6 +5,7 @@ export interface Subscriber {
   id: string;
   email: string | null;
   phone: string | null;
+  favoriId: string | null;
   consentEmail: boolean;
   consentPush: boolean;
 }
@@ -14,6 +15,7 @@ interface UserAuthContextType {
   isLoading: boolean;
   login: (token: string, subscriber: Subscriber) => void;
   logout: () => void;
+  updateSubscriber: (patch: Partial<Subscriber>) => void;
 }
 
 const UserAuthContext = createContext<UserAuthContextType | null>(null);
@@ -41,8 +43,12 @@ export function UserAuthProvider({ children }: { children: ReactNode }) {
     setSubscriber(null);
   }
 
+  function updateSubscriber(patch: Partial<Subscriber>) {
+    setSubscriber((prev) => prev ? { ...prev, ...patch } : prev);
+  }
+
   return (
-    <UserAuthContext.Provider value={{ subscriber, isLoading, login, logout }}>
+    <UserAuthContext.Provider value={{ subscriber, isLoading, login, logout, updateSubscriber }}>
       {children}
     </UserAuthContext.Provider>
   );

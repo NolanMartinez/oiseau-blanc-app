@@ -27,6 +27,7 @@ model Subscriber {
   id           String   @id @default(uuid())
   email        String?  @unique
   phone        String?
+  favoriId     String?  @map("favori_id")
   consentEmail Boolean  @default(false) @map("consent_email")
   consentPush  Boolean  @default(false) @map("consent_push")
   pushToken    String?  @map("push_token")
