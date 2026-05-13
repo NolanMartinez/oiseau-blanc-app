@@ -520,6 +520,7 @@ export function Surveys() {
             <p className="text-xs text-gray-400 mt-1">Créez votre premier sondage pour recueillir les préférences de vos abonnés.</p>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -577,6 +578,7 @@ export function Surveys() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

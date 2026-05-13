@@ -89,6 +89,7 @@ export function Subscribers() {
         ) : data?.subscribers.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-400">Aucun abonné pour l'instant.</div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -144,6 +145,7 @@ export function Subscribers() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
 
         {/* Pagination */}

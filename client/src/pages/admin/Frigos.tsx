@@ -52,32 +52,32 @@ function FridgeCard({ fridge }: { fridge: Fridge }) {
         className="flex items-center justify-between p-5 cursor-pointer select-none"
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
             fridge.online ? 'bg-blue-50' : 'bg-gray-100'
           }`}>
             <Refrigerator size={20} className={fridge.online ? 'text-blue-600' : 'text-gray-400'} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="font-semibold text-gray-800">{fridge.name}</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-gray-800 truncate">{fridge.name}</p>
               {fridge.online ? (
-                <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
                   <Wifi size={11} />En ligne
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+                <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
                   <WifiOff size={11} />Hors ligne
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">{fridge.location}</p>
+            <p className="text-xs text-gray-400 mt-0.5 truncate">{fridge.location}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-6 flex-shrink-0">
+        <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
           {fridge.online && fridge.temperature !== null && (
-            <div className="text-right">
+            <div className="text-right hidden sm:block">
               <p className="text-lg font-bold text-gray-800">{fridge.temperature}°C</p>
               <p className="text-xs text-gray-400">Température</p>
             </div>
@@ -86,7 +86,7 @@ function FridgeCard({ fridge }: { fridge: Fridge }) {
             <p className="text-sm font-semibold text-gray-700">{fridge.dishes.length}</p>
             <p className="text-xs text-gray-400">Plats</p>
           </div>
-          <div className="text-right">
+          <div className="text-right hidden sm:block">
             <p className="text-xs text-gray-400">{formatSync(fridge.lastSync)}</p>
             <p className="text-xs text-gray-300">Sync</p>
           </div>
@@ -103,6 +103,7 @@ function FridgeCard({ fridge }: { fridge: Fridge }) {
           {fridge.dishes.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">Aucun plat dans ce frigo.</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -129,6 +130,7 @@ function FridgeCard({ fridge }: { fridge: Fridge }) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}

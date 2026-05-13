@@ -85,8 +85,8 @@ export function Reviews() {
   return (
     <AdminLayout title="Avis">
       {/* Stats + export */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-6">
           {data && (
             <>
               <p className="text-sm text-gray-500">{data.total} avis au total</p>
@@ -94,7 +94,7 @@ export function Reviews() {
                 <div className="flex items-center gap-2">
                   <Stars rating={Math.round(data.average)} />
                   <span className="text-sm font-semibold text-gray-700">{data.average}/5</span>
-                  <span className="text-sm text-gray-400">moyenne générale</span>
+                  <span className="text-sm text-gray-400 hidden sm:inline">moyenne générale</span>
                 </div>
               )}
             </>
@@ -117,6 +117,7 @@ export function Reviews() {
         ) : data?.reviews.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-400">Aucun avis pour l'instant.</div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -162,6 +163,7 @@ export function Reviews() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
 
         {data && data.pages > 1 && (
