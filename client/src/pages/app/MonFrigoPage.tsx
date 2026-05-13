@@ -25,21 +25,11 @@ interface Fridge {
 }
 
 function StockBadge({ stock }: { stock: number }) {
-  if (stock === 0)
-    return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: '#fef2f2', color: '#c53838' }}>
-        Épuisé
-      </span>
-    );
-  if (stock <= 2)
-    return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: '#fffbeb', color: '#a17600' }}>
-        Plus que {stock} restant{stock > 1 ? 's' : ''}
-      </span>
-    );
+  const bg = stock === 0 ? '#fef2f2' : stock <= 2 ? '#fffbeb' : 'var(--green-soft)';
+  const color = stock === 0 ? '#c53838' : stock <= 2 ? '#a17600' : 'var(--green)';
   return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: 'var(--green-soft)', color: 'var(--green)' }}>
-      {stock} en stock
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: bg, color }}>
+      {stock === 0 ? 'Épuisé' : `${stock} en stock`}
     </span>
   );
 }
