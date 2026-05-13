@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { userApi } from '../services/api';
 
-export type PushStatus = 'unsupported' | 'loading' | 'denied' | 'subscribed' | 'unsubscribed';
+export type PushStatus = 'unsupported' | 'loading' | 'denied' | 'subscribed' | 'unsubscribed' | 'error';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -15,6 +15,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 
 export function usePushNotifications(isAuthenticated: boolean) {
   const [status, setStatus] = useState<PushStatus>('loading');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -25,40 +26,48 @@ export function usePushNotifications(isAuthenticated: boolean) {
       setStatus('denied');
       return;
     }
-    // Vérifie si déjà abonné
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.pushManager.getSubscription().then((sub) => {
-        setStatus(sub ? 'subscribed' : 'unsubscribed');
-      });
-    });
+    // Timeout de sécurité si le SW ne répond pas
+    const timer = setTimeout(() => setStatus('unsubscribed'), 5000);
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => setStatus(sub ? 'subscribed' : 'unsubscribed'))
+      .catch(() => setStatus('unsubscribed'))
+      .finally(() => clearTimeout(timer));
   }, []);
 
   const subscribe = useCallback(async () => {
     if (!isAuthenticated) return;
     setStatus('loading');
+    setErrorMsg(null);
     try {
-      // Enregistre le service worker
       const reg = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
 
-      // Récupère la clé VAPID publique
-      const { data } = await userApi.get('/public/user/push/vapid-key');
-      const applicationServerKey = urlBase64ToUint8Array(data.publicKey);
+      let vapidKey: string;
+      try {
+        const { data } = await userApi.get('/public/user/push/vapid-key');
+        vapidKey = data.publicKey;
+      } catch {
+        setStatus('error');
+        setErrorMsg('Service de notifications non configuré.');
+        return;
+      }
 
-      // Demande la permission et crée la subscription
+      const applicationServerKey = urlBase64ToUint8Array(vapidKey);
       const subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey,
       });
 
-      // Envoie au serveur
       await userApi.post('/public/user/push/subscribe', { subscription });
       setStatus('subscribed');
     } catch (err) {
       if (Notification.permission === 'denied') {
         setStatus('denied');
+        setErrorMsg('Notifications bloquées. Autorisez-les dans vos réglages.');
       } else {
-        setStatus('unsubscribed');
+        setStatus('error');
+        setErrorMsg('Impossible d\'activer les notifications.');
       }
       console.error('Push subscribe error:', err);
     }
@@ -77,5 +86,12 @@ export function usePushNotifications(isAuthenticated: boolean) {
     }
   }, []);
 
-  return { status, subscribe, unsubscribe };
+  // Auto-efface l'erreur après 4s
+  useEffect(() => {
+    if (!errorMsg) return;
+    const t = setTimeout(() => setErrorMsg(null), 4000);
+    return () => clearTimeout(t);
+  }, [errorMsg]);
+
+  return { status, errorMsg, subscribe, unsubscribe };
 }

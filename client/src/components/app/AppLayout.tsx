@@ -39,38 +39,57 @@ export function FriggoWordmark({ size = 17 }: { size?: number }) {
 
 function BellButton() {
   const { subscriber } = useUserAuth();
-  const { status, subscribe, unsubscribe } = usePushNotifications(!!subscriber);
+  const { status, errorMsg, subscribe, unsubscribe } = usePushNotifications(!!subscriber);
 
   if (status === 'unsupported') return null;
 
   const isSubscribed = status === 'subscribed';
   const isDenied = status === 'denied';
   const isLoading = status === 'loading';
+  const isError = status === 'error';
 
   return (
-    <button
-      onClick={isSubscribed ? unsubscribe : subscribe}
-      disabled={isLoading || isDenied}
-      title={
-        isDenied ? 'Notifications bloquées par le navigateur'
-        : isSubscribed ? 'Désactiver les notifications'
-        : 'Activer les notifications'
-      }
-      className="w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0 transition-all"
-      style={{
-        background: isSubscribed ? 'var(--green)' : '#ffffff',
-        border: `1px solid ${isSubscribed ? 'var(--green)' : 'var(--line)'}`,
-        opacity: isDenied || isLoading ? 0.5 : 1,
-      }}
-      aria-label={isSubscribed ? 'Désactiver les notifications' : 'Activer les notifications'}
-    >
-      {isSubscribed
-        ? <Bell size={16} style={{ color: '#ffffff' }} strokeWidth={2} />
-        : isDenied
-        ? <BellOff size={16} style={{ color: 'var(--ink-faint)' }} strokeWidth={1.8} />
-        : <Bell size={16} style={{ color: 'var(--ink-faint)' }} strokeWidth={1.8} />
-      }
-    </button>
+    <div className="relative flex-shrink-0">
+      <button
+        onClick={isSubscribed ? unsubscribe : subscribe}
+        disabled={isLoading || isDenied}
+        className="w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-95"
+        style={{
+          background: isSubscribed ? 'var(--green)' : isError ? '#fef2f2' : '#ffffff',
+          border: `1px solid ${isSubscribed ? 'var(--green)' : isError ? '#fca5a5' : 'var(--line)'}`,
+          opacity: isDenied ? 0.4 : 1,
+        }}
+        aria-label={isSubscribed ? 'Désactiver les notifications' : 'Activer les notifications'}
+      >
+        {isLoading ? (
+          <span
+            className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
+            style={{ borderColor: 'var(--ink-faint)', borderTopColor: 'transparent' }}
+          />
+        ) : isSubscribed ? (
+          <Bell size={16} style={{ color: '#ffffff' }} strokeWidth={2} />
+        ) : isDenied ? (
+          <BellOff size={16} style={{ color: 'var(--ink-faint)' }} strokeWidth={1.8} />
+        ) : (
+          <Bell size={16} style={{ color: isError ? '#ef4444' : 'var(--ink-faint)' }} strokeWidth={1.8} />
+        )}
+      </button>
+
+      {/* Message d'erreur — bulle sous le bouton */}
+      {errorMsg && (
+        <div
+          className="absolute right-0 top-12 z-50 w-56 rounded-2xl px-3 py-2.5 text-[12px] leading-snug shadow-lg"
+          style={{ background: '#1c1c1e', color: '#ffffff', fontWeight: 500 }}
+        >
+          {errorMsg}
+          {/* petite flèche vers le haut */}
+          <div
+            className="absolute -top-1.5 right-3 w-3 h-3 rotate-45"
+            style={{ background: '#1c1c1e' }}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
