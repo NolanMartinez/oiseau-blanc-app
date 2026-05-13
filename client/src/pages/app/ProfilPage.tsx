@@ -36,7 +36,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 export function ProfilPage() {
-  const { subscriber, isLoading: authLoading, logout } = useUserAuth();
+  const { subscriber, isLoading: authLoading, logout, updateSubscriber } = useUserAuth();
   const navigate = useNavigate();
 
   const [consentEmail, setConsentEmail] = useState(false);
@@ -57,6 +57,7 @@ export function ProfilPage() {
     setLoading(true);
     try {
       await userApi.patch('/public/user/auth/me', { consentEmail, consentPush });
+      updateSubscriber({ consentEmail, consentPush });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
@@ -207,7 +208,7 @@ export function ProfilPage() {
       {/* Déconnexion */}
       <div className="px-6 mt-6">
         <button
-          onClick={() => { logout(); navigate('/app/carte'); }}
+          onClick={() => { logout(); navigate('/app/login'); }}
           className="w-full rounded-2xl p-5 flex items-center gap-4 transition-all hover:scale-[0.99]"
           style={{ background: '#ffffff', border: '1px solid var(--line)' }}
         >
