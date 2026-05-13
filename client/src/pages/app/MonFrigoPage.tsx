@@ -26,10 +26,22 @@ interface Fridge {
 
 function StockBadge({ stock }: { stock: number }) {
   if (stock === 0)
-    return <span className="text-[10px] uppercase tracking-wider" style={{ color: '#c53838', fontWeight: 700 }}>Épuisé</span>;
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: '#fef2f2', color: '#c53838' }}>
+        Épuisé
+      </span>
+    );
   if (stock <= 2)
-    return <span className="text-[10px] uppercase tracking-wider" style={{ color: '#a17600', fontWeight: 700 }}>Plus que {stock}</span>;
-  return <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--green)', fontWeight: 700 }}>Disponible</span>;
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: '#fffbeb', color: '#a17600' }}>
+        Plus que {stock} restant{stock > 1 ? 's' : ''}
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: 'var(--green-soft)', color: 'var(--green)' }}>
+      {stock} en stock
+    </span>
+  );
 }
 
 export function MonFrigoPage() {
