@@ -43,21 +43,23 @@ export function MonFrigoPage() {
   const [purchasedDishIds, setPurchasedDishIds] = useState<Set<string>>(new Set());
   const [choosing, setChoosing] = useState(false);
 
-  // Charge le frigo favori ou la liste si pas de favori
+  // Charge le frigo favori
   useEffect(() => {
-    if (favoriId) {
-      setLoading(true);
-      api.get(`/public/frigos/${favoriId}`)
-        .then((res) => setFridge(res.data.fridge))
-        .catch(() => { setFavoriId(null); setFridge(null); })
-        .finally(() => setLoading(false));
-    } else {
-      api.get('/public/frigos')
-        .then((res) => setFridges(res.data.fridges))
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }
+    if (!favoriId) { setLoading(false); return; }
+    setLoading(true);
+    api.get(`/public/frigos/${favoriId}`)
+      .then((res) => setFridge(res.data.fridge))
+      .catch(() => { setFavoriId(null); setFridge(null); })
+      .finally(() => setLoading(false));
   }, [favoriId]);
+
+  // Charge la liste des frigos quand l'écran de sélection s'ouvre
+  useEffect(() => {
+    if (!choosing && favoriId) return;
+    api.get('/public/frigos')
+      .then((res) => setFridges(res.data.fridges))
+      .catch(() => {});
+  }, [choosing, favoriId]);
 
   // Achats pour le bouton "noter"
   useEffect(() => {
