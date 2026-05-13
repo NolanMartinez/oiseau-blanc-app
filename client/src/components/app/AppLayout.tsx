@@ -76,6 +76,7 @@ function BellButton() {
 
 export function AppLayout({ children, title, mapMode = false, back = false }: AppLayoutProps) {
   const navigate = useNavigate();
+  const { subscriber } = useUserAuth();
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--cream)' }}>
@@ -119,44 +120,46 @@ export function AppLayout({ children, title, mapMode = false, back = false }: Ap
         {children}
       </main>
 
-      {/* Bottom nav */}
-      <nav
-        className="flex-shrink-0 flex z-20"
-        style={{
-          background: '#ffffff',
-          borderTop: '1px solid var(--line)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0)',
-        }}
-      >
-        {NAV.map(({ to, label, Icon }) => (
-          <NavLink key={to} to={to} className="flex-1 relative">
-            {({ isActive }) => (
-              <div className="flex flex-col items-center pt-3 pb-3 gap-1.5 transition-all">
-                {isActive && (
-                  <div
-                    className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full"
-                    style={{ background: 'var(--green)' }}
+      {/* Bottom nav — uniquement si connecté */}
+      {subscriber && (
+        <nav
+          className="flex-shrink-0 flex z-20"
+          style={{
+            background: '#ffffff',
+            borderTop: '1px solid var(--line)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0)',
+          }}
+        >
+          {NAV.map(({ to, label, Icon }) => (
+            <NavLink key={to} to={to} className="flex-1 relative">
+              {({ isActive }) => (
+                <div className="flex flex-col items-center pt-3 pb-3 gap-1.5 transition-all">
+                  {isActive && (
+                    <div
+                      className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full"
+                      style={{ background: 'var(--green)' }}
+                    />
+                  )}
+                  <Icon
+                    size={20}
+                    strokeWidth={isActive ? 2.2 : 1.6}
+                    style={{ color: isActive ? 'var(--green)' : 'var(--ink-faint)' }}
                   />
-                )}
-                <Icon
-                  size={20}
-                  strokeWidth={isActive ? 2.2 : 1.6}
-                  style={{ color: isActive ? 'var(--green)' : 'var(--ink-faint)' }}
-                />
-                <span
-                  className="text-cta-navbar"
-                  style={{
-                    color: isActive ? 'var(--green)' : 'var(--ink-faint)',
-                    fontWeight: isActive ? 700 : 500,
-                  }}
-                >
-                  {label}
-                </span>
-              </div>
-            )}
-          </NavLink>
-        ))}
-      </nav>
+                  <span
+                    className="text-cta-navbar"
+                    style={{
+                      color: isActive ? 'var(--green)' : 'var(--ink-faint)',
+                      fontWeight: isActive ? 700 : 500,
+                    }}
+                  >
+                    {label}
+                  </span>
+                </div>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }
