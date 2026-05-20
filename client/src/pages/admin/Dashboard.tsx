@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Star, ClipboardList, Vote } from 'lucide-react';
+import { Users, Star, ClipboardList } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -30,7 +30,6 @@ interface Stats {
   subscribers: number;
   reviews: number;
   activeSurveys: number;
-  openVotes: number;
   reviewsLast30Days: DayPoint[];
   subscribersLast30Days: DayPoint[];
   ratingsByDish: DishRating[];
@@ -85,7 +84,6 @@ export function Dashboard() {
     { label: 'Abonnés', value: stats?.subscribers ?? '—', icon: Users, color: 'bg-blue-50 text-blue-600' },
     { label: 'Avis déposés', value: stats?.reviews ?? '—', icon: Star, color: 'bg-yellow-50 text-yellow-600' },
     { label: 'Sondages actifs', value: stats?.activeSurveys ?? '—', icon: ClipboardList, color: 'bg-green-50 text-green-600' },
-    { label: 'Votes en cours', value: stats?.openVotes ?? '—', icon: Vote, color: 'bg-purple-50 text-purple-600' },
   ];
 
   // Filtre les ticks pour n'afficher qu'environ 6 dates sur 30 jours

@@ -5,7 +5,6 @@ import {
   UserCircle,
   Star,
   ClipboardList,
-  Vote,
   Bell,
   Refrigerator,
   LogOut,
@@ -19,7 +18,6 @@ const navItems = [
   { to: '/admin/subscribers', icon: UserCircle, label: 'Abonnés' },
   { to: '/admin/reviews', icon: Star, label: 'Avis' },
   { to: '/admin/surveys', icon: ClipboardList, label: 'Sondages' },
-  { to: '/admin/votes', icon: Vote, label: 'Votes menus' },
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
 ];
 
