@@ -53,7 +53,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
       <aside
         className={`
-          w-64 bg-gray-900 text-white flex flex-col h-screen fixed left-0 top-0 z-40
+          w-full lg:w-64 bg-gray-900 text-white flex flex-col h-screen fixed left-0 top-0 z-40
           transition-transform duration-300
           lg:translate-x-0
           ${open ? 'translate-x-0' : '-translate-x-full'}
