@@ -157,8 +157,25 @@ model Dish {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   fridgeStocks FridgeStock[]
+  translations DishTranslation[]
 
   @@map("dishes")
+}
+
+model DishTranslation {
+  id          String   @id @default(uuid())
+  dishId      String   @map("dish_id")
+  language    String
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  dish Dish @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@unique([dishId, language])
+  @@index([dishId])
+  @@map("dish_translations")
 }
 
 model FridgeStock {

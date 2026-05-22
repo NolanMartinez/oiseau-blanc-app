@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, UtensilsCrossed, ImagePlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, UtensilsCrossed, ImagePlus, Languages } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
 import { ALLERGENS, DISH_CATEGORIES, dishImageUrl, type CatalogDish } from '../../types/dish';
@@ -260,6 +260,8 @@ export function Plats() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingDish, setEditingDish] = useState<CatalogDish | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const [translateResult, setTranslateResult] = useState<string | null>(null);
 
   async function fetchDishes() {
     setLoading(true);
@@ -297,17 +299,45 @@ export function Plats() {
     fetchDishes();
   }
 
+  async function handleTranslateAll() {
+    if (!confirm('Générer (ou régénérer) les traductions EN / ES / PT / DE / IT pour tous les plats ?')) return;
+    setTranslating(true);
+    setTranslateResult(null);
+    try {
+      const res = await api.post('/admin/dishes/translate-all');
+      setTranslateResult(`${res.data.translated} plat(s) traduits.${res.data.errors > 0 ? ` ${res.data.errors} erreur(s).` : ''}`);
+    } catch {
+      setTranslateResult('Erreur — vérifiez que DEEPL_API_KEY est configurée.');
+    } finally {
+      setTranslating(false);
+    }
+  }
+
   return (
     <AdminLayout title="Plats">
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-500">{dishes.length} plat{dishes.length !== 1 ? 's' : ''}</p>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={15} />
-          Nouveau plat
-        </button>
+        <div className="flex items-center gap-2">
+          {translateResult && (
+            <span className="text-xs text-gray-500">{translateResult}</span>
+          )}
+          <button
+            onClick={handleTranslateAll}
+            disabled={translating}
+            title="Générer les traductions automatiques (EN, ES, PT, DE, IT)"
+            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+          >
+            <Languages size={15} />
+            {translating ? 'Traduction…' : 'Traduire'}
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus size={15} />
+            Nouveau plat
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

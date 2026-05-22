@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Thermometer, Star, MapPin, Refrigerator, ChevronRight, RefreshCw } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
@@ -16,9 +16,16 @@ function StockBadge({ stock }: { stock: number }) {
   );
 }
 
+const SUPPORTED_LANGS = new Set(['en', 'es', 'pt', 'de', 'it']);
+
 export function MonFrigoPage() {
   const { subscriber, updateSubscriber } = useUserAuth();
   const navigate = useNavigate();
+
+  const lang = useMemo(() => {
+    const code = navigator.language.split('-')[0].toLowerCase();
+    return SUPPORTED_LANGS.has(code) ? code : 'fr';
+  }, []);
 
   const [favoriId, setFavoriId] = useState<string | null>(subscriber?.favoriId ?? null);
   const [fridge, setFridge] = useState<Fridge | null>(null);
@@ -31,11 +38,11 @@ export function MonFrigoPage() {
   useEffect(() => {
     if (!favoriId) { setLoading(false); return; }
     setLoading(true);
-    api.get(`/public/frigos/${favoriId}`)
+    api.get(`/public/frigos/${favoriId}?lang=${lang}`)
       .then((res) => setFridge(res.data.fridge))
       .catch(() => { setFavoriId(null); setFridge(null); })
       .finally(() => setLoading(false));
-  }, [favoriId]);
+  }, [favoriId, lang]);
 
   // Charge la liste des frigos quand l'écran de sélection s'ouvre
   useEffect(() => {

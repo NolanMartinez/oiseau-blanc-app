@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma';
+import { translateDish, translateAllDishes } from '../services/translation.service';
 
 const dishSelect = {
   id: true,
@@ -72,6 +73,7 @@ export async function createDish(req: Request, res: Response): Promise<void> {
     },
     select: dishSelect,
   });
+  translateDish(dish.id, dish.name, dish.description).catch(() => {});
   res.status(201).json({ dish: toDishDTO(dish) });
 }
 
@@ -104,6 +106,7 @@ export async function updateDish(req: Request, res: Response): Promise<void> {
     data: { ...fields, ...imageData },
     select: dishSelect,
   });
+  translateDish(dish.id, dish.name, dish.description).catch(() => {});
   res.json({ dish: toDishDTO(dish) });
 }
 
@@ -117,6 +120,12 @@ export async function deleteDish(req: Request, res: Response): Promise<void> {
   }
   await prisma.dish.update({ where: { id }, data: { isActive: false } });
   res.status(204).send();
+}
+
+// POST /api/v1/admin/dishes/translate-all — (re)génère toutes les traductions
+export async function translateAllDishesHandler(_req: Request, res: Response): Promise<void> {
+  const result = await translateAllDishes();
+  res.json(result);
 }
 
 // GET /api/v1/public/dishes/:id/image — route publique (chargée dans des <img>)
