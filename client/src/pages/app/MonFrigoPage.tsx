@@ -4,25 +4,7 @@ import { Thermometer, Star, MapPin, Refrigerator, ChevronRight, RefreshCw } from
 import { AppLayout } from '../../components/app/AppLayout';
 import api, { userApi } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext';
-
-interface Dish {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
-  allergens: string[];
-}
-
-interface Fridge {
-  id: string;
-  name: string;
-  location: string;
-  online: boolean;
-  temperature: number | null;
-  lastSync: string;
-  dishes: Dish[];
-}
+import { dishImageUrl, type Fridge, type FridgeDish } from '../../types/dish';
 
 function StockBadge({ stock }: { stock: number }) {
   const bg = stock === 0 ? '#fef2f2' : stock <= 2 ? '#fffbeb' : 'var(--green-soft)';
@@ -173,7 +155,7 @@ export function MonFrigoPage() {
     );
   }
 
-  const byCategory: Record<string, Dish[]> = {};
+  const byCategory: Record<string, FridgeDish[]> = {};
   for (const dish of fridge.dishes) {
     (byCategory[dish.category] ??= []).push(dish);
   }
@@ -235,32 +217,65 @@ export function MonFrigoPage() {
                 {dishes.map((dish) => (
                   <div
                     key={dish.id}
-                    className="rounded-3xl p-5"
+                    className="rounded-3xl overflow-hidden"
                     style={{ background: '#ffffff', border: '1px solid var(--line)', opacity: dish.stock === 0 ? 0.55 : 1 }}
                   >
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <h3 className="text-[18px] leading-tight flex-1" style={{ color: 'var(--ink)', fontWeight: 800 }}>{dish.name}</h3>
-                      <span className="text-[18px] flex-shrink-0" style={{ color: 'var(--green)', fontWeight: 800 }}>
-                        {dish.price.toFixed(2).replace('.', ',')} €
-                      </span>
-                    </div>
-                    {dish.allergens.length > 0 && (
-                      <p className="text-[11px] mb-3" style={{ color: 'var(--ink-faint)' }}>
-                        Allergènes · {dish.allergens.join(', ')}
-                      </p>
+                    {dish.hasImage && (
+                      <img
+                        src={dishImageUrl(dish.id)}
+                        alt={dish.name}
+                        className="w-full h-40 object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
                     )}
-                    <div className="flex items-center justify-between">
-                      <StockBadge stock={dish.stock} />
-                      {purchasedDishIds.has(dish.id) && (
-                        <button
-                          onClick={() => navigate(`/app/avis?dish=${dish.id}`)}
-                          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full hover:scale-95 transition-all"
-                          style={{ color: '#a17600', background: 'var(--yellow-soft)', fontWeight: 700 }}
-                        >
-                          <Star size={11} fill="#f5b400" strokeWidth={0} />
-                          Noter ce plat
-                        </button>
+                    <div className="p-5">
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <h3 className="text-[18px] leading-tight flex-1" style={{ color: 'var(--ink)', fontWeight: 800 }}>{dish.name}</h3>
+                        {dish.promoPercent && dish.promoPercent > 0 ? (
+                          <div className="flex flex-col items-end flex-shrink-0">
+                            <span className="text-[12px] line-through" style={{ color: 'var(--ink-faint)' }}>
+                              {dish.price.toFixed(2).replace('.', ',')} €
+                            </span>
+                            <span className="text-[18px]" style={{ color: 'var(--green)', fontWeight: 800 }}>
+                              {dish.finalPrice.toFixed(2).replace('.', ',')} €
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[18px] flex-shrink-0" style={{ color: 'var(--green)', fontWeight: 800 }}>
+                            {dish.price.toFixed(2).replace('.', ',')} €
+                          </span>
+                        )}
+                      </div>
+                      {dish.description && (
+                        <p className="text-[13px] mb-3 leading-snug" style={{ color: 'var(--ink-soft)' }}>
+                          {dish.description}
+                        </p>
                       )}
+                      {dish.allergens.length > 0 && (
+                        <p className="text-[11px] mb-3" style={{ color: 'var(--ink-faint)' }}>
+                          Allergènes · {dish.allergens.join(', ')}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <StockBadge stock={dish.stock} />
+                          {dish.promoPercent && dish.promoPercent > 0 && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: '#e0533d' }}>
+                              -{dish.promoPercent}%
+                            </span>
+                          )}
+                        </div>
+                        {purchasedDishIds.has(dish.id) && (
+                          <button
+                            onClick={() => navigate(`/app/avis?dish=${dish.id}`)}
+                            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full hover:scale-95 transition-all"
+                            style={{ color: '#a17600', background: 'var(--yellow-soft)', fontWeight: 700 }}
+                          >
+                            <Star size={11} fill="#f5b400" strokeWidth={0} />
+                            Noter ce plat
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

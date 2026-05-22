@@ -23,6 +23,10 @@ import purchaseRoutes from './routes/purchase.routes';
 import pushPublicRoutes from './routes/push.public.routes';
 import pushAdminRoutes from './routes/push.admin.routes';
 import userNotificationsRoutes from './routes/userNotifications.routes';
+import dishAdminRoutes from './routes/dish.admin.routes';
+import dishPublicRoutes from './routes/dish.public.routes';
+import stockAdminRoutes from './routes/stock.admin.routes';
+import recommendationRoutes from './routes/recommendation.routes';
 
 initVapid();
 
@@ -41,7 +45,7 @@ app.use(cors({
     }
   },
 }));
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 
 app.get('/api/v1/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -60,6 +64,10 @@ app.use('/api/v1/admin/votes', voteAdminRoutes);
 app.use('/api/v1/admin/dashboard', dashboardRoutes);
 app.use('/api/v1/admin/frigos', frigoAdminRoutes);
 app.use('/api/v1/public', frigoPublicRoutes);
+app.use('/api/v1/admin/dishes', dishAdminRoutes);
+app.use('/api/v1/public', dishPublicRoutes);
+app.use('/api/v1/admin/stock', stockAdminRoutes);
+app.use('/api/v1/admin/recommendations', recommendationRoutes);
 app.use('/api/v1/public/user/auth', userAuthRoutes);
 app.use('/api/v1/public/user/purchases', purchaseRoutes);
 app.use('/api/v1/public/user/push', pushPublicRoutes);

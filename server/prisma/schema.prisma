@@ -142,3 +142,38 @@ model Purchase {
   @@index([subscriberId])
   @@map("purchases")
 }
+
+model Dish {
+  id            String   @id @default(uuid())
+  name          String
+  category      String
+  description   String?
+  price         Float
+  allergens     String[]
+  imageData     Bytes?   @map("image_data")
+  imageMimeType String?  @map("image_mime_type")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  fridgeStocks FridgeStock[]
+
+  @@map("dishes")
+}
+
+model FridgeStock {
+  id           String    @id @default(uuid())
+  frigoId      String    @map("frigo_id")
+  dishId       String    @map("dish_id")
+  quantity     Int       @default(0)
+  expiryDate   DateTime? @map("expiry_date")
+  promoPercent Int?      @map("promo_percent")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  dish Dish @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@unique([frigoId, dishId])
+  @@index([dishId])
+  @@map("fridge_stocks")
+}

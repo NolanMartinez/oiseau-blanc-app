@@ -106,20 +106,15 @@ export async function exportReviews(_req: Request, res: Response): Promise<void>
     include: { subscriber: { select: { email: true, phone: true } } },
   });
 
-  // Carte id → nom depuis le mock Bicom (import inline pour éviter la dépendance circulaire)
-  const { MOCK_FRIDGES } = await import('../services/bicom.mock');
-  const dishNameMap: Record<string, string> = {};
-  for (const fridge of MOCK_FRIDGES) {
-    for (const dish of fridge.dishes) {
-      dishNameMap[dish.id] = dish.name;
-    }
-  }
+  // Carte id → nom des plats (en base)
+  const dishes = await prisma.dish.findMany({ select: { id: true, name: true } });
+  const dishNameMap = new Map(dishes.map((d) => [d.id, d.name]));
 
   const escape = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
   const header = ['Plat', 'Note', 'Commentaire', 'Email/Téléphone', 'Date'].map(escape).join(',');
   const rows = reviews.map((r) =>
     [
-      dishNameMap[r.dishId] ?? r.dishId,
+      dishNameMap.get(r.dishId) ?? r.dishId,
       String(r.rating),
       r.comment ?? '',
       r.subscriber.email ?? r.subscriber.phone ?? '',

@@ -21,9 +21,12 @@ export async function recordPurchase(req: Request, res: Response): Promise<void>
 
   const { dishId, frigoId } = result.data;
 
-  const fridge = MOCK_FRIDGES.find((f) => f.id === frigoId);
-  const dish = fridge?.dishes.find((d) => d.id === dishId);
-  if (!dish) {
+  // Le plat doit être affecté à ce frigo (modèle FridgeStock)
+  const stock = await prisma.fridgeStock.findUnique({
+    where: { frigoId_dishId: { frigoId, dishId } },
+    include: { dish: { select: { isActive: true } } },
+  });
+  if (!stock || !stock.dish.isActive) {
     res.status(404).json({ error: 'Plat introuvable dans ce frigo' });
     return;
   }
@@ -39,7 +42,7 @@ export async function recordPurchase(req: Request, res: Response): Promise<void>
 export async function listMyPurchases(req: Request, res: Response): Promise<void> {
   const subscriberId = (req as SubscriberRequest).subscriberId;
 
-  const [purchases, reviewedRows] = await Promise.all([
+  const [purchases, reviewedRows, dishes] = await Promise.all([
     prisma.purchase.findMany({
       where: { subscriberId },
       orderBy: { purchasedAt: 'desc' },
@@ -48,21 +51,17 @@ export async function listMyPurchases(req: Request, res: Response): Promise<void
       where: { subscriberId },
       select: { dishId: true },
     }),
+    prisma.dish.findMany({ select: { id: true, name: true } }),
   ]);
 
   const reviewedDishIds = new Set(reviewedRows.map((r) => r.dishId));
-
-  const dishMap: Record<string, { name: string; frigoName: string }> = {};
-  for (const fridge of MOCK_FRIDGES) {
-    for (const dish of fridge.dishes) {
-      dishMap[dish.id] = { name: dish.name, frigoName: fridge.name };
-    }
-  }
+  const dishNameMap = new Map(dishes.map((d) => [d.id, d.name]));
+  const fridgeNameMap = new Map(MOCK_FRIDGES.map((f) => [f.id, f.name]));
 
   const enriched = purchases.map((p) => ({
     ...p,
-    dishName: dishMap[p.dishId]?.name ?? p.dishId,
-    frigoName: dishMap[p.dishId]?.frigoName ?? p.frigoId,
+    dishName: dishNameMap.get(p.dishId) ?? p.dishId,
+    frigoName: fridgeNameMap.get(p.frigoId) ?? p.frigoId,
     hasReview: reviewedDishIds.has(p.dishId),
   }));
 

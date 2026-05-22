@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { prisma } from '../utils/prisma';
-import { MOCK_FRIDGES } from '../services/bicom.mock';
 
 const router = Router();
 router.use(requireAuth);
@@ -46,6 +45,7 @@ router.get('/stats', async (_req, res) => {
     reviewsRaw,
     subscribersRaw,
     ratingsByDishRaw,
+    dishes,
   ] = await Promise.all([
     prisma.subscriber.count(),
     prisma.review.count(),
@@ -76,21 +76,19 @@ router.get('/stats', async (_req, res) => {
       _avg: { rating: true },
       _count: { rating: true },
     }),
+
+    // Noms des plats (en base)
+    prisma.dish.findMany({ select: { id: true, name: true } }),
   ]);
 
-  // Carte id → nom des plats (depuis le mock Bicom)
-  const dishNameMap: Record<string, string> = {};
-  for (const fridge of MOCK_FRIDGES) {
-    for (const dish of fridge.dishes) {
-      dishNameMap[dish.id] = dish.name;
-    }
-  }
+  // Carte id → nom des plats
+  const dishNameMap = new Map(dishes.map((d) => [d.id, d.name]));
 
   const ratingsByDish = ratingsByDishRaw
     .filter((r) => r._avg.rating !== null)
     .map((r) => ({
       dishId: r.dishId,
-      name: dishNameMap[r.dishId] ?? r.dishId,
+      name: dishNameMap.get(r.dishId) ?? r.dishId,
       average: Math.round((r._avg.rating ?? 0) * 10) / 10,
       count: r._count.rating,
     }))

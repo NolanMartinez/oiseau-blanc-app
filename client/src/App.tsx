@@ -12,6 +12,8 @@ import { Reviews } from './pages/admin/Reviews';
 import { Surveys } from './pages/admin/Surveys';
 import { Votes } from './pages/admin/Votes';
 import { Frigos } from './pages/admin/Frigos';
+import { Plats } from './pages/admin/Plats';
+import { Recommandations } from './pages/admin/Recommandations';
 import { AdminsPage } from './pages/admin/AdminsPage';
 import { Notifications } from './pages/admin/Notifications';
 
@@ -56,6 +58,8 @@ function App() {
           <Route path="/admin/surveys" element={<PrivateRoute><Surveys /></PrivateRoute>} />
           <Route path="/admin/votes" element={<PrivateRoute><Votes /></PrivateRoute>} />
           <Route path="/admin/frigos" element={<PrivateRoute><Frigos /></PrivateRoute>} />
+          <Route path="/admin/plats" element={<PrivateRoute><Plats /></PrivateRoute>} />
+          <Route path="/admin/recommandations" element={<PrivateRoute><Recommandations /></PrivateRoute>} />
           <Route path="/admin/admins" element={<PrivateRoute><AdminsPage /></PrivateRoute>} />
           <Route path="/admin/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
 

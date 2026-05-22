@@ -7,6 +7,8 @@ import {
   ClipboardList,
   Bell,
   Refrigerator,
+  UtensilsCrossed,
+  Lightbulb,
   LogOut,
   X,
 } from 'lucide-react';
@@ -14,7 +16,9 @@ import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/frigos', icon: Refrigerator, label: 'Frigos & Plats' },
+  { to: '/admin/frigos', icon: Refrigerator, label: 'Frigos' },
+  { to: '/admin/plats', icon: UtensilsCrossed, label: 'Plats' },
+  { to: '/admin/recommandations', icon: Lightbulb, label: 'Recommandations' },
   { to: '/admin/subscribers', icon: UserCircle, label: 'Abonnés' },
   { to: '/admin/reviews', icon: Star, label: 'Avis' },
   { to: '/admin/surveys', icon: ClipboardList, label: 'Sondages' },
