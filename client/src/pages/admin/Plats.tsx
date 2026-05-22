@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, UtensilsCrossed, ImagePlus, Languages } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, UtensilsCrossed, ImagePlus, Languages, Sparkles } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
 import { ALLERGENS, DISH_CATEGORIES, dishImageUrl, type CatalogDish } from '../../types/dish';
@@ -28,6 +28,7 @@ function DishModal({
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [newImage, setNewImage] = useState<ImageChange>(undefined);
   const [imageProcessing, setImageProcessing] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -60,6 +61,19 @@ function DishModal({
         : initial?.hasImage
           ? dishImageUrl(initial.id) + '?v=' + encodeURIComponent(initial.updatedAt)
           : null;
+
+  async function handleSuggestDescription() {
+    if (!name.trim()) return;
+    setSuggesting(true);
+    try {
+      const res = await api.post('/admin/dishes/suggest-description', { name: name.trim(), category: category.trim() || undefined });
+      setDescription(res.data.description);
+    } catch {
+      // silencieux — l'admin peut toujours saisir manuellement
+    } finally {
+      setSuggesting(false);
+    }
+  }
 
   async function handleSave() {
     setError('');
@@ -190,7 +204,18 @@ function DishModal({
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium text-gray-700">Description</label>
+              <button
+                type="button"
+                onClick={handleSuggestDescription}
+                disabled={!name.trim() || suggesting}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed text-purple-700 font-medium transition-colors"
+              >
+                <Sparkles size={12} />
+                {suggesting ? 'Génération…' : 'Suggérer'}
+              </button>
+            </div>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}

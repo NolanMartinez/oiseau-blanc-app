@@ -122,6 +122,49 @@ export async function deleteDish(req: Request, res: Response): Promise<void> {
   res.status(204).send();
 }
 
+// POST /api/v1/admin/dishes/suggest-description — génère une description via Claude
+export async function suggestDescription(req: Request, res: Response): Promise<void> {
+  const { name, category } = req.body as { name?: string; category?: string };
+  if (!name?.trim()) {
+    res.status(400).json({ error: 'Le nom du plat est requis.' });
+    return;
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    res.status(503).json({ error: 'ANTHROPIC_API_KEY non configurée.' });
+    return;
+  }
+
+  const prompt = `Tu es rédacteur pour un traiteur français haut de gamme.
+Écris une description gourmande et élégante pour un plat nommé « ${name.trim()} »${category ? ` (catégorie : ${category.trim()})` : ''}.
+Contraintes : 1 à 2 phrases, 80-150 caractères maximum, en français, sans guillemets ni ponctuation finale.
+Réponds uniquement avec la description, rien d'autre.`;
+
+  const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!apiRes.ok) {
+    res.status(502).json({ error: 'Erreur API Claude.' });
+    return;
+  }
+
+  const data = (await apiRes.json()) as { content: { type: string; text: string }[] };
+  const description = data.content.find((b) => b.type === 'text')?.text?.trim() ?? '';
+  res.json({ description });
+}
+
 // POST /api/v1/admin/dishes/translate-all — (re)génère toutes les traductions
 export async function translateAllDishesHandler(_req: Request, res: Response): Promise<void> {
   const result = await translateAllDishes();
