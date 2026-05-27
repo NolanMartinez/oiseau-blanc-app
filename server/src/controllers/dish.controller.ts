@@ -122,7 +122,7 @@ export async function deleteDish(req: Request, res: Response): Promise<void> {
   res.status(204).send();
 }
 
-// POST /api/v1/admin/dishes/suggest-description — génère une description via Claude
+// POST /api/v1/admin/dishes/suggest-description — génère une description via Groq (Llama, gratuit)
 export async function suggestDescription(req: Request, res: Response): Promise<void> {
   const { name, category } = req.body as { name?: string; category?: string };
   if (!name?.trim()) {
@@ -130,38 +130,34 @@ export async function suggestDescription(req: Request, res: Response): Promise<v
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    res.status(503).json({ error: 'ANTHROPIC_API_KEY non configurée.' });
+    res.status(503).json({ error: 'GROQ_API_KEY non configurée.' });
     return;
   }
 
   const prompt = `Tu es rédacteur pour un traiteur français haut de gamme.
-Écris une description gourmande et élégante pour un plat nommé « ${name.trim()} »${category ? ` (catégorie : ${category.trim()})` : ''}.
+Écris une description gourmande et élégante pour un plat nommé « ${name.trim()} »${category?.trim() ? ` (catégorie : ${category.trim()})` : ''}.
 Contraintes : 1 à 2 phrases, 80-150 caractères maximum, en français, sans guillemets ni ponctuation finale.
 Réponds uniquement avec la description, rien d'autre.`;
 
-  const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+  const apiRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 200,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
 
   if (!apiRes.ok) {
-    res.status(502).json({ error: 'Erreur API Claude.' });
+    res.status(502).json({ error: 'Erreur API Groq.' });
     return;
   }
 
-  const data = (await apiRes.json()) as { content: { type: string; text: string }[] };
-  const description = data.content.find((b) => b.type === 'text')?.text?.trim() ?? '';
+  const data = (await apiRes.json()) as { choices: { message: { content: string } }[] };
+  const description = data.choices[0]?.message?.content?.trim() ?? '';
   res.json({ description });
 }
 
