@@ -8,11 +8,13 @@ import { dishImageUrl, type Fridge, type FridgeDish } from '../../types/dish';
 import { useLang } from '../../context/LanguageContext';
 
 function StockBadge({ stock }: { stock: number }) {
+  const { t } = useLang();
   const bg = stock === 0 ? '#fef2f2' : stock <= 2 ? '#fffbeb' : 'var(--green-soft)';
   const color = stock === 0 ? '#c53838' : stock <= 2 ? '#a17600' : 'var(--green)';
+  const label = stock === 0 ? t('out_of_stock') : t('in_stock', stock);
   return (
     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: bg, color }}>
-      {stock === 0 ? 'Épuisé' : `${stock} en stock`}
+      {label}
     </span>
   );
 }
@@ -20,7 +22,7 @@ function StockBadge({ stock }: { stock: number }) {
 export function MonFrigoPage() {
   const { subscriber, updateSubscriber } = useUserAuth();
   const navigate = useNavigate();
-  const { lang } = useLang();
+  const { lang, t } = useLang();
 
   const [favoriId, setFavoriId] = useState<string | null>(subscriber?.favoriId ?? null);
   const [fridge, setFridge] = useState<Fridge | null>(null);
@@ -28,7 +30,6 @@ export function MonFrigoPage() {
   const [loading, setLoading] = useState(true);
   const [choosing, setChoosing] = useState(false);
 
-  // Charge le frigo favori
   useEffect(() => {
     if (!favoriId) { setLoading(false); return; }
     setLoading(true);
@@ -38,14 +39,12 @@ export function MonFrigoPage() {
       .finally(() => setLoading(false));
   }, [favoriId, lang]);
 
-  // Charge la liste des frigos quand l'écran de sélection s'ouvre
   useEffect(() => {
     if (!choosing && favoriId) return;
     api.get('/public/frigos')
       .then((res) => setFridges(res.data.fridges))
       .catch(() => {});
   }, [choosing, favoriId]);
-
 
   async function handleChoose(frigoId: string) {
     try {
@@ -60,23 +59,22 @@ export function MonFrigoPage() {
     }
   }
 
-  // Écran de sélection du frigo
   if (!favoriId || choosing) {
     return (
       <AppLayout>
         <div className="px-6 pt-10 pb-6 fade-up">
           <p className="text-[11px] uppercase tracking-[0.05em] font-semibold mb-3" style={{ color: 'var(--green)' }}>
-            {choosing ? 'Changer de frigo' : 'Mon frigo'}
+            {choosing ? t('change_fridge_label') : t('my_fridge_label')}
           </p>
           <h1 className="text-titre-gros mb-2" style={{ color: 'var(--ink)' }}>
-            {choosing ? 'Choisissez\nun frigo' : 'Choisissez\nvotre frigo'}
+            {choosing ? t('choose_fridge_change') : t('choose_fridge_first')}
           </h1>
           <p className="text-texte mb-8" style={{ color: 'var(--ink-soft)' }}>
-            Votre frigo favori sera votre point de départ à chaque connexion.
+            {t('choose_fridge_subtitle')}
           </p>
 
           {loading ? (
-            <p className="text-sm text-center py-10" style={{ color: 'var(--ink-faint)' }}>Chargement…</p>
+            <p className="text-sm text-center py-10" style={{ color: 'var(--ink-faint)' }}>{t('loading')}</p>
           ) : (
             <div className="space-y-3">
               {fridges.map((f) => {
@@ -98,7 +96,7 @@ export function MonFrigoPage() {
                       <p className="text-[15px] font-bold truncate" style={{ color: 'var(--ink)' }}>{f.name}</p>
                       <p className="text-[12px] truncate mt-0.5" style={{ color: 'var(--ink-faint)' }}>{f.location}</p>
                       <p className="text-[11px] mt-1 font-semibold" style={{ color: f.online ? 'var(--green)' : '#bbb' }}>
-                        {f.online ? `${available} plat${available !== 1 ? 's' : ''} disponible${available !== 1 ? 's' : ''}` : 'Hors ligne'}
+                        {f.online ? t('dishes_available', available) : t('offline')}
                       </p>
                     </div>
                     <ChevronRight size={16} style={{ color: 'var(--ink-faint)', flexShrink: 0 }} />
@@ -114,7 +112,7 @@ export function MonFrigoPage() {
               className="w-full mt-6 text-[13px] text-center"
               style={{ color: 'var(--ink-faint)', fontWeight: 500 }}
             >
-              Annuler
+              {t('cancel')}
             </button>
           )}
         </div>
@@ -122,12 +120,11 @@ export function MonFrigoPage() {
     );
   }
 
-  // Chargement du frigo favori
   if (loading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-40 text-sm" style={{ color: 'var(--ink-faint)' }}>
-          Chargement…
+          {t('loading')}
         </div>
       </AppLayout>
     );
@@ -137,9 +134,9 @@ export function MonFrigoPage() {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center h-60 gap-3">
-          <p style={{ color: 'var(--ink-soft)' }}>Frigo introuvable.</p>
+          <p style={{ color: 'var(--ink-soft)' }}>{t('fridge_not_found')}</p>
           <button onClick={() => setFavoriId(null)} className="text-sm underline" style={{ color: 'var(--green)', fontWeight: 600 }}>
-            Choisir un autre frigo
+            {t('choose_another_fridge')}
           </button>
         </div>
       </AppLayout>
@@ -158,7 +155,7 @@ export function MonFrigoPage() {
         <div className="flex items-center gap-2 mb-3">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: fridge.online ? 'var(--green)' : '#bdbdbd' }} />
           <p className="text-[10px] uppercase tracking-[0.05em]" style={{ color: fridge.online ? 'var(--green)' : 'var(--ink-faint)', fontWeight: 700 }}>
-            {fridge.online ? 'En ligne' : 'Hors ligne'}
+            {fridge.online ? t('online') : t('offline')}
           </p>
           {fridge.online && fridge.temperature !== null && (
             <>
@@ -182,7 +179,7 @@ export function MonFrigoPage() {
             style={{ color: 'var(--ink-faint)', fontWeight: 600 }}
           >
             <RefreshCw size={11} />
-            Changer
+            {t('change')}
           </button>
         </div>
       </div>
@@ -190,14 +187,14 @@ export function MonFrigoPage() {
       {/* Séparateur */}
       <div className="px-6 mb-2 flex items-center gap-3">
         <div className="flex-1 h-px" style={{ background: 'var(--line)' }} />
-        <span className="text-[10px] uppercase tracking-[0.05em]" style={{ color: 'var(--ink-faint)', fontWeight: 700 }}>La carte</span>
+        <span className="text-[10px] uppercase tracking-[0.05em]" style={{ color: 'var(--ink-faint)', fontWeight: 700 }}>{t('the_menu')}</span>
         <div className="flex-1 h-px" style={{ background: 'var(--line)' }} />
       </div>
 
       {/* Plats */}
       <div className="pb-10">
         {fridge.dishes.length === 0 ? (
-          <p className="text-[13px] text-center py-16" style={{ color: 'var(--ink-faint)' }}>Aucun plat dans ce frigo.</p>
+          <p className="text-[13px] text-center py-16" style={{ color: 'var(--ink-faint)' }}>{t('no_dishes')}</p>
         ) : (
           Object.entries(byCategory).map(([category, dishes]) => (
             <div key={category} className="mt-6">
@@ -244,7 +241,7 @@ export function MonFrigoPage() {
                       )}
                       {dish.allergens.length > 0 && (
                         <p className="text-[11px] mb-3" style={{ color: 'var(--ink-faint)' }}>
-                          Allergènes · {dish.allergens.join(', ')}
+                          {t('allergens')} · {dish.allergens.join(', ')}
                         </p>
                       )}
                       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -257,13 +254,13 @@ export function MonFrigoPage() {
                           )}
                         </div>
                         <button
-                            onClick={() => navigate(`/app/avis?dish=${dish.id}`)}
-                            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full hover:scale-95 transition-all"
-                            style={{ color: '#a17600', background: 'var(--yellow-soft)', fontWeight: 700 }}
-                          >
-                            <Star size={11} fill="#f5b400" strokeWidth={0} />
-                            Noter ce plat
-                          </button>
+                          onClick={() => navigate(`/app/avis?dish=${dish.id}`)}
+                          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full hover:scale-95 transition-all"
+                          style={{ color: '#a17600', background: 'var(--yellow-soft)', fontWeight: 700 }}
+                        >
+                          <Star size={11} fill="#f5b400" strokeWidth={0} />
+                          {t('rate_dish')}
+                        </button>
                       </div>
                     </div>
                   </div>

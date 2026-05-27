@@ -4,8 +4,7 @@ import { Star, CheckCircle, Lock, ShoppingBag, ChevronDown } from 'lucide-react'
 import { AppLayout } from '../../components/app/AppLayout';
 import { userApi } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext';
-
-const LABELS: Record<number, string> = { 1: 'Décevant', 2: 'Moyen', 3: 'Bien', 4: 'Très bien', 5: 'Excellent' };
+import { useLang } from '../../context/LanguageContext';
 
 interface Purchase {
   dishId: string;
@@ -49,6 +48,7 @@ export function AvisPage() {
   const { subscriber, isLoading: authLoading } = useUserAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { t } = useLang();
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [purchasesLoading, setPurchasesLoading] = useState(false);
@@ -71,16 +71,16 @@ export function AvisPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-    if (!dishId) { setError('Veuillez sélectionner un plat.'); return; }
-    if (rating === 0) { setError('Veuillez attribuer une note.'); return; }
+    if (!dishId) { setError(t('error_select_dish')); return; }
+    if (rating === 0) { setError(t('error_select_rating')); return; }
     setLoading(true);
     try {
       await userApi.post('/public/reviews', { dish_id: dishId, rating, comment: comment || undefined });
       setSuccess(true);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 403) setError('Vous ne pouvez noter que les plats que vous avez pris.');
-      else setError('Une erreur est survenue. Veuillez réessayer.');
+      if (status === 403) setError(t('error_generic'));
+      else setError(t('error_generic'));
     } finally {
       setLoading(false);
     }
@@ -88,105 +88,82 @@ export function AvisPage() {
 
   if (authLoading) {
     return (
-      <AppLayout title="Mon avis">
+      <AppLayout title={t('my_review')}>
         <div className="flex items-center justify-center h-40 text-sm" style={{ color: 'var(--ink-faint)' }}>
-          Chargement…
+          {t('loading')}
         </div>
       </AppLayout>
     );
   }
 
-  // Non connecté
   if (!subscriber) {
     return (
-      <AppLayout title="Mon avis">
+      <AppLayout title={t('my_review')}>
         <div className="flex flex-col items-center justify-center px-6 pt-20 text-center fade-up">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
-            style={{ background: 'var(--green-soft)' }}
-          >
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ background: 'var(--green-soft)' }}>
             <Lock size={22} style={{ color: 'var(--green)' }} />
           </div>
-          <p
-            className="text-[10px] uppercase tracking-[0.05em] mb-3"
-            style={{ color: 'var(--green)', fontWeight: 700 }}
-          >
-            Réservé aux clients
+          <p className="text-[10px] uppercase tracking-[0.05em] mb-3" style={{ color: 'var(--green)', fontWeight: 700 }}>
+            {t('reserved_for_customers')}
           </p>
           <h2 className="text-titre mb-4" style={{ color: 'var(--ink)' }}>
-            Identifiez-vous
+            {t('sign_in_title')}
           </h2>
           <p className="text-texte mb-10 max-w-xs" style={{ color: 'var(--ink-soft)' }}>
-            Connectez-vous pour noter les plats que vous avez pris dans nos frigos.
+            {t('sign_in_to_review')}
           </p>
           <button
             onClick={() => navigate('/app/login?next=/app/avis')}
             className="text-cta px-10 py-4 rounded-full transition-all hover:scale-[0.98]"
-            style={{
-              background: 'var(--green)',
-              color: '#ffffff',
-              fontWeight: 700,
-              boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
-            }}
+            style={{ background: 'var(--green)', color: '#ffffff', fontWeight: 700, boxShadow: '0 8px 24px rgba(49,153,102,0.28)' }}
           >
-            Se connecter
+            {t('sign_in')}
           </button>
         </div>
       </AppLayout>
     );
   }
 
-  // Connecté mais aucun achat
   if (!purchasesLoading && purchases.length === 0) {
     return (
-      <AppLayout title="Mon avis">
+      <AppLayout title={t('my_review')}>
         <div className="flex flex-col items-center justify-center px-6 pt-20 text-center fade-up">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
-            style={{ background: 'var(--peach-soft)' }}
-          >
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ background: 'var(--peach-soft)' }}>
             <ShoppingBag size={22} style={{ color: '#c47b30' }} />
           </div>
           <h2 className="text-titre mb-4" style={{ color: 'var(--ink)' }}>
-            Aucun plat pris
+            {t('no_purchases')}
           </h2>
           <p className="text-texte max-w-xs" style={{ color: 'var(--ink-soft)' }}>
-            Vous pourrez noter un plat après l'avoir pris dans l'un de nos frigos.
+            {t('no_purchases_desc')}
           </p>
         </div>
       </AppLayout>
     );
   }
 
-  // Succès
   if (success) {
     return (
-      <AppLayout title="Mon avis">
+      <AppLayout title={t('my_review')}>
         <div className="flex flex-col items-center justify-center px-6 pt-24 text-center fade-up">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
-            style={{ background: 'var(--green-soft)' }}
-          >
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ background: 'var(--green-soft)' }}>
             <CheckCircle size={28} style={{ color: 'var(--green)' }} />
           </div>
-          <p
-            className="text-[10px] uppercase tracking-[0.05em] mb-3"
-            style={{ color: 'var(--green)', fontWeight: 700 }}
-          >
-            Avis enregistré
+          <p className="text-[10px] uppercase tracking-[0.05em] mb-3" style={{ color: 'var(--green)', fontWeight: 700 }}>
+            {t('review_saved')}
           </p>
           <h2 className="text-titre-gros mb-4" style={{ color: 'var(--ink)' }}>
-            Merci
+            {t('thank_you')}
           </h2>
           <p className="text-texte mb-10" style={{ color: 'var(--ink-soft)' }}>
-            Votre retour nous aide à améliorer nos plats.
+            {t('review_thanks_desc')}
           </p>
           <button
             onClick={() => { setSuccess(false); setRating(0); setComment(''); setDishId(''); }}
             className="text-[13px] underline"
             style={{ color: 'var(--green)', fontWeight: 700 }}
           >
-            Donner un autre avis
+            {t('give_another_review')}
           </button>
         </div>
       </AppLayout>
@@ -194,134 +171,89 @@ export function AvisPage() {
   }
 
   const currentPurchase = purchases.find((p) => p.dishId === dishId);
+  const LABELS: Record<number, string> = {
+    1: t('rating_1'), 2: t('rating_2'), 3: t('rating_3'), 4: t('rating_4'), 5: t('rating_5'),
+  };
 
   return (
-    <AppLayout title="Mon avis">
+    <AppLayout title={t('my_review')}>
       <div className="px-6 pt-8 pb-4 fade-up">
-        <p
-          className="text-[10px] uppercase tracking-[0.05em] mb-3"
-          style={{ color: 'var(--green)', fontWeight: 700 }}
-        >
-          Votre expérience
+        <p className="text-[10px] uppercase tracking-[0.05em] mb-3" style={{ color: 'var(--green)', fontWeight: 700 }}>
+          {t('your_experience')}
         </p>
-        <h1
-          className="text-titre-gros mb-3"
-          style={{ color: 'var(--ink)' }}
-        >
-          Notez un plat
+        <h1 className="text-titre-gros mb-3" style={{ color: 'var(--ink)' }}>
+          {t('rate_a_dish')}
         </h1>
         <p className="text-texte" style={{ color: 'var(--ink-soft)' }}>
-          Partagez votre retour avec la communauté.
+          {t('share_your_experience')}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
-        {/* Plat */}
         <section>
-          <label
-            className="text-[11px] uppercase tracking-[0.05em] block mb-3"
-            style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
-          >
-            Quel plat ?
+          <label className="text-[11px] uppercase tracking-[0.05em] block mb-3" style={{ color: 'var(--ink-faint)', fontWeight: 700 }}>
+            {t('which_dish')}
           </label>
           {purchasesLoading ? (
-            <p className="text-[13px]" style={{ color: 'var(--ink-faint)' }}>Chargement…</p>
+            <p className="text-[13px]" style={{ color: 'var(--ink-faint)' }}>{t('loading')}</p>
           ) : (
             <div className="relative">
               <select
                 value={dishId}
                 onChange={(e) => setDishId(e.target.value)}
                 className="w-full py-4 px-5 pr-12 rounded-2xl text-[14px] focus:outline-none appearance-none"
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid var(--line)',
-                  color: 'var(--ink)',
-                  fontWeight: 500,
-                }}
+                style={{ background: '#ffffff', border: '1px solid var(--line)', color: 'var(--ink)', fontWeight: 500 }}
               >
-                <option value="">Sélectionner un plat…</option>
+                <option value="">{t('select_dish')}</option>
                 {purchases.map((p) => (
                   <option key={p.dishId} value={p.dishId}>
-                    {p.dishName}{p.hasReview ? ' — déjà noté' : ''}
+                    {p.dishName}{p.hasReview ? ` ${t('already_reviewed')}` : ''}
                   </option>
                 ))}
               </select>
-              <ChevronDown
-                size={16}
-                style={{
-                  position: 'absolute',
-                  right: 18,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--ink-faint)',
-                  pointerEvents: 'none',
-                }}
-              />
+              <ChevronDown size={16} style={{ position: 'absolute', right: 18, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-faint)', pointerEvents: 'none' }} />
             </div>
           )}
           {currentPurchase?.hasReview && (
             <p className="text-[12px] mt-3" style={{ color: '#a17600', fontWeight: 600 }}>
-              Vous avez déjà noté ce plat — votre avis sera mis à jour.
+              {t('will_update_review')}
             </p>
           )}
         </section>
 
-        {/* Note */}
         <section>
-          <label
-            className="text-[11px] uppercase tracking-[0.05em] block mb-4"
-            style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
-          >
-            Votre note
+          <label className="text-[11px] uppercase tracking-[0.05em] block mb-4" style={{ color: 'var(--ink-faint)', fontWeight: 700 }}>
+            {t('your_rating')}
           </label>
           <StarRating value={rating} onChange={setRating} />
           {rating > 0 && (
-            <p
-              className="mt-4 text-[18px]"
-              style={{ color: 'var(--ink)', fontWeight: 800 }}
-            >
+            <p className="mt-4 text-[18px]" style={{ color: 'var(--ink)', fontWeight: 800 }}>
               {LABELS[rating]}
             </p>
           )}
         </section>
 
-        {/* Commentaire */}
         <section>
-          <label
-            className="text-[11px] uppercase tracking-[0.05em] block mb-3"
-            style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
-          >
-            Commentaire · optionnel
+          <label className="text-[11px] uppercase tracking-[0.05em] block mb-3" style={{ color: 'var(--ink-faint)', fontWeight: 700 }}>
+            {t('comment_optional')}
           </label>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             maxLength={500}
             rows={4}
-            placeholder="Partagez votre expérience…"
+            placeholder={t('share_experience_placeholder')}
             className="w-full rounded-2xl px-5 py-4 text-[14px] focus:outline-none resize-none"
-            style={{
-              background: '#ffffff',
-              border: '1px solid var(--line)',
-              color: 'var(--ink)',
-              fontFamily: 'inherit',
-            }}
+            style={{ background: '#ffffff', border: '1px solid var(--line)', color: 'var(--ink)', fontFamily: 'inherit' }}
           />
           <p className="text-[11px] text-right mt-2" style={{ color: 'var(--ink-faint)' }}>
             {comment.length}/500
           </p>
         </section>
 
-        {/* Submit flottant */}
-        <div
-          className="sticky bottom-0 z-10 -mx-6 px-6 pt-10 pb-5"
-          style={{ background: 'linear-gradient(to bottom, transparent, var(--cream) 45%)' }}
-        >
+        <div className="sticky bottom-0 z-10 -mx-6 px-6 pt-10 pb-5" style={{ background: 'linear-gradient(to bottom, transparent, var(--cream) 45%)' }}>
           {error && (
-            <p
-              className="text-[13px] rounded-xl px-4 py-3 mb-3"
-              style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}
-            >
+            <p className="text-[13px] rounded-xl px-4 py-3 mb-3" style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fee2e2' }}>
               {error}
             </p>
           )}
@@ -329,14 +261,9 @@ export function AvisPage() {
             type="submit"
             disabled={loading}
             className="text-cta w-full rounded-full py-4 disabled:opacity-50 transition-all hover:scale-[0.99]"
-            style={{
-              background: 'var(--green)',
-              color: '#ffffff',
-              fontWeight: 700,
-              boxShadow: '0 8px 24px rgba(49,153,102,0.28)',
-            }}
+            style={{ background: 'var(--green)', color: '#ffffff', fontWeight: 700, boxShadow: '0 8px 24px rgba(49,153,102,0.28)' }}
           >
-            {loading ? 'Envoi…' : 'Envoyer mon avis'}
+            {loading ? t('sending') : t('send_review')}
           </button>
         </div>
       </form>

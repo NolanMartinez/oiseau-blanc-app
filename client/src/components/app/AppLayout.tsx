@@ -5,11 +5,11 @@ import { useUserAuth } from '../../context/UserAuthContext';
 import { userApi } from '../../services/api';
 import { useLang, SUPPORTED_LANGS, type LangCode } from '../../context/LanguageContext';
 
-const NAV = [
-  { to: '/app/mon-frigo', label: 'Mon Frigo', Icon: Refrigerator },
-  { to: '/app/avis', label: 'Avis', Icon: Star },
-  { to: '/app/sondages', label: 'Sondages', Icon: ClipboardList },
-  { to: '/app/profil', label: 'Profil', Icon: User },
+const NAV_ROUTES = [
+  { to: '/app/mon-frigo', key: 'nav_fridge', Icon: Refrigerator },
+  { to: '/app/avis', key: 'nav_review', Icon: Star },
+  { to: '/app/sondages', key: 'nav_surveys', Icon: ClipboardList },
+  { to: '/app/profil', key: 'nav_profile', Icon: User },
 ];
 
 interface AppLayoutProps {
@@ -125,6 +125,8 @@ function LanguagePicker() {
 export function AppLayout({ children, title, mapMode = false, back = false }: AppLayoutProps) {
   const navigate = useNavigate();
   const { subscriber } = useUserAuth();
+  const { t } = useLang();
+  const NAV = NAV_ROUTES.map(({ to, key, Icon }) => ({ to, label: t(key), Icon }));
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--cream)' }}>

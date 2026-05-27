@@ -51,57 +51,37 @@ function LocationFly() {
 
 function FridgePopup({ fridge }: { fridge: Fridge }) {
   const navigate = useNavigate();
+  const { t } = useLang();
   const available = fridge.dishes.filter((d) => d.stock > 0).length;
 
   return (
     <div style={{ minWidth: 210, padding: '4px 2px' }}>
-      <p
-        style={{
-          fontSize: 17,
-          fontWeight: 800,
-          color: '#000000',
-          marginBottom: 2,
-        }}
-      >
-        {fridge.name}
-      </p>
+      <p style={{ fontSize: 17, fontWeight: 800, color: '#000000', marginBottom: 2 }}>{fridge.name}</p>
       <p style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {fridge.location}
       </p>
       {fridge.online ? (
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 12 }}>
-          <span style={{ fontSize: 22, fontWeight: 800, color: '#319966' }}>
-            {available}
-          </span>
+          <span style={{ fontSize: 22, fontWeight: 800, color: '#319966' }}>{available}</span>
           <span style={{ fontSize: 12, color: '#3a3a3a' }}>
-            plat{available !== 1 ? 's' : ''} disponible{available !== 1 ? 's' : ''}
+            {t('dish_label', available)}
           </span>
           {fridge.temperature !== null && (
             <span style={{ fontSize: 11, color: '#8c8c8c', marginLeft: 'auto' }}>{fridge.temperature}°C</span>
           )}
         </div>
       ) : (
-        <p style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 12 }}>Hors ligne</p>
+        <p style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 12 }}>{t('offline')}</p>
       )}
       <button
         onClick={() => navigate(`/app/frigo/${fridge.id}`)}
         style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 4,
-          fontSize: 13,
-          fontWeight: 700,
-          color: '#ffffff',
-          background: '#319966',
-          borderRadius: 999,
-          padding: '10px 14px',
-          border: 'none',
-          letterSpacing: '0.05em',
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          fontSize: 13, fontWeight: 700, color: '#ffffff', background: '#319966',
+          borderRadius: 999, padding: '10px 14px', border: 'none', letterSpacing: '0.05em',
         }}
       >
-        Voir les plats <ChevronRight size={13} />
+        {t('see_dishes')} <ChevronRight size={13} />
       </button>
     </div>
   );
@@ -110,7 +90,7 @@ function FridgePopup({ fridge }: { fridge: Fridge }) {
 export function CartePage() {
   const [fridges, setFridges] = useState<Fridge[]>([]);
   const navigate = useNavigate();
-  const { lang } = useLang();
+  const { lang, t } = useLang();
 
   useEffect(() => {
     api.get(`/public/frigos?lang=${lang}`).then((res) => setFridges(res.data.fridges)).catch(() => {});
@@ -131,90 +111,40 @@ export function CartePage() {
           />
           <LocationFly />
           {fridges.map((fridge) => (
-            <Marker
-              key={fridge.id}
-              position={[fridge.lat, fridge.lng]}
-              icon={createFridgeIcon(fridge.online)}
-            >
-              <Popup>
-                <FridgePopup fridge={fridge} />
-              </Popup>
+            <Marker key={fridge.id} position={[fridge.lat, fridge.lng]} icon={createFridgeIcon(fridge.online)}>
+              <Popup><FridgePopup fridge={fridge} /></Popup>
             </Marker>
           ))}
         </MapContainer>
 
-        {/* Top overlay card — titre + compteur */}
+        {/* Top overlay */}
         <div
           style={{
-            position: 'absolute',
-            top: 16,
-            left: 16,
-            right: 16,
-            zIndex: 1000,
-            background: 'rgba(255,255,255,0.96)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            borderRadius: 20,
-            padding: '14px 18px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            border: '1px solid var(--line)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
+            position: 'absolute', top: 16, left: 16, right: 16, zIndex: 1000,
+            background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)', borderRadius: 20, padding: '14px 18px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: '1px solid var(--line)',
+            display: 'flex', alignItems: 'center', gap: 12,
           }}
         >
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 14,
-              background: 'var(--green)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
+          <div style={{ width: 40, height: 40, borderRadius: 14, background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <MapPin size={17} color="#ffffff" strokeWidth={2} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p
-              style={{
-                fontSize: 10,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: 'var(--ink-faint)',
-                fontWeight: 600,
-              }}
-            >
-              Nos frigos
+            <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--ink-faint)', fontWeight: 600 }}>
+              {t('our_fridges')}
             </p>
-            <p
-              style={{
-                fontSize: 16,
-                fontWeight: 800,
-                color: 'var(--ink)',
-                marginTop: 1,
-                lineHeight: 1.2,
-              }}
-            >
-              {fridges.length} point{fridges.length !== 1 ? 's' : ''} à proximité
+            <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)', marginTop: 1, lineHeight: 1.2 }}>
+              {t('n_nearby', fridges.length)}
             </p>
           </div>
         </div>
 
-        {/* Bottom horizontal pills */}
+        {/* Bottom pills */}
         <div
           style={{
-            position: 'absolute',
-            bottom: 18,
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-            overflowX: 'auto',
-            paddingLeft: 16,
-            paddingRight: 16,
-            WebkitOverflowScrolling: 'touch',
+            position: 'absolute', bottom: 18, left: 0, right: 0, zIndex: 1000,
+            overflowX: 'auto', paddingLeft: 16, paddingRight: 16, WebkitOverflowScrolling: 'touch',
           }}
         >
           <div style={{ display: 'flex', gap: 8, width: 'max-content' }}>
@@ -225,43 +155,20 @@ export function CartePage() {
                   key={f.id}
                   onClick={() => navigate(`/app/frigo/${f.id}`)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    background: 'rgba(255,255,255,0.98)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    borderRadius: 999,
-                    padding: '9px 16px 9px 11px',
-                    boxShadow: '0 6px 20px rgba(0,0,0,0.08)',
-                    border: '1px solid var(--line)',
-                    cursor: 'pointer',
-                    flexShrink: 0,
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    background: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)', borderRadius: 999, padding: '9px 16px 9px 11px',
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.08)', border: '1px solid var(--line)',
+                    cursor: 'pointer', flexShrink: 0,
                   }}
                 >
-                  <div
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: f.online ? 'var(--green)' : '#ccc',
-                      flexShrink: 0,
-                    }}
-                  />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: f.online ? 'var(--green)' : '#ccc', flexShrink: 0 }} />
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 800,
-                        color: 'var(--ink)',
-                        whiteSpace: 'nowrap',
-                        lineHeight: 1.15,
-                      }}
-                    >
+                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--ink)', whiteSpace: 'nowrap', lineHeight: 1.15 }}>
                       {f.name}
                     </span>
                     <span style={{ fontSize: 10, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>
-                      {f.online ? `${available} plats` : 'Hors ligne'}
+                      {f.online ? t('dishes_pills', available) : t('offline')}
                     </span>
                   </div>
                 </button>

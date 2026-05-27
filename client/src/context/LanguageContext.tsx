@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { translations } from '../i18n/translations';
 
 export const SUPPORTED_LANGS = [
   { code: 'fr', label: 'Français',  flag: '🇫🇷' },
@@ -14,9 +15,14 @@ export type LangCode = (typeof SUPPORTED_LANGS)[number]['code'];
 interface LanguageContextValue {
   lang: LangCode;
   setLang: (lang: LangCode) => void;
+  t: (key: string, count?: number) => string;
 }
 
-const LanguageContext = createContext<LanguageContextValue>({ lang: 'fr', setLang: () => {} });
+const LanguageContext = createContext<LanguageContextValue>({
+  lang: 'fr',
+  setLang: () => {},
+  t: (key) => key,
+});
 
 function getInitialLang(): LangCode {
   const stored = localStorage.getItem('app_lang') as LangCode | null;
@@ -33,7 +39,21 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('app_lang', code);
   }
 
-  return <LanguageContext.Provider value={{ lang, setLang }}>{children}</LanguageContext.Provider>;
+  const t = useCallback((key: string, count?: number): string => {
+    const dict = (translations[lang] ?? translations.fr) as Record<string, string>;
+    if (count !== undefined) {
+      const pluralKey = count === 1 ? `${key}_one` : `${key}_other`;
+      const str = dict[pluralKey] ?? dict[key] ?? key;
+      return str.replace('{{count}}', String(count));
+    }
+    return dict[key] ?? key;
+  }, [lang]);
+
+  return (
+    <LanguageContext.Provider value={{ lang, setLang, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
 }
 
 export const useLang = () => useContext(LanguageContext);
