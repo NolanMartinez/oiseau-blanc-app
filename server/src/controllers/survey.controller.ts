@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma';
+import type { SubscriberRequest } from '../middleware/userAuth';
 
 const questionSchema = z.object({
   id: z.string().min(1),
@@ -113,16 +114,13 @@ export async function listActiveSurveys(_req: Request, res: Response): Promise<v
   res.json({ surveys });
 }
 
-// POST /api/v1/public/surveys/:id/respond
+// POST /api/v1/public/surveys/:id/respond — requiert auth subscriber
 const respondSchema = z.object({
-  email: z.string().email().optional(),
-  phone: z.string().min(6).optional(),
   answers: z.record(z.unknown()),
-}).refine((d) => d.email || d.phone, {
-  message: 'Un email ou un numéro de téléphone est requis',
 });
 
 export async function respondToSurvey(req: Request, res: Response): Promise<void> {
+  const subscriberId = (req as SubscriberRequest).subscriberId;
   const surveyId = req.params['id'] as string;
 
   const survey = await prisma.preferenceSurvey.findUnique({ where: { id: surveyId } });
@@ -141,18 +139,10 @@ export async function respondToSurvey(req: Request, res: Response): Promise<void
     return;
   }
 
-  const { email, phone, answers } = result.data;
-
-  let subscriber = email
-    ? await prisma.subscriber.findUnique({ where: { email } })
-    : null;
-
-  if (!subscriber) {
-    subscriber = await prisma.subscriber.create({ data: { email, phone } });
-  }
+  const { answers } = result.data;
 
   const existing = await prisma.preferenceResponse.findFirst({
-    where: { surveyId, subscriberId: subscriber.id },
+    where: { surveyId, subscriberId },
   });
   if (existing) {
     res.status(409).json({ error: 'Vous avez déjà répondu à ce sondage' });
@@ -160,7 +150,7 @@ export async function respondToSurvey(req: Request, res: Response): Promise<void
   }
 
   const response = await prisma.preferenceResponse.create({
-    data: { surveyId, subscriberId: subscriber.id, answers: answers as object },
+    data: { surveyId, subscriberId, answers: answers as object },
   });
 
   res.status(201).json({ message: 'Réponse enregistrée', response });

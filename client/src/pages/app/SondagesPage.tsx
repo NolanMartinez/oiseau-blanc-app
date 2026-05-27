@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { ClipboardList, CheckCircle, ArrowLeft, ChevronRight } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
-import api from '../../services/api';
+import api, { userApi } from '../../services/api';
 
 type QuestionType = 'text' | 'rating' | 'choice' | 'multi';
 
@@ -177,8 +177,6 @@ function QuestionField({ question, value, onChange }: {
 
 function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -186,7 +184,6 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-    if (!email && !phone) { setError('Veuillez renseigner votre email ou téléphone.'); return; }
     const missing = survey.questions.filter((q) => {
       if (q.type === 'text') return false;
       const a = answers[q.id];
@@ -195,9 +192,7 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
     if (missing.length > 0) { setError('Veuillez répondre à toutes les questions obligatoires.'); return; }
     setLoading(true);
     try {
-      await api.post(`/public/surveys/${survey.id}/respond`, {
-        email: email || undefined, phone: phone || undefined, answers,
-      });
+      await userApi.post(`/public/surveys/${survey.id}/respond`, { answers });
       setSuccess(true);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
@@ -284,45 +279,6 @@ function SurveyForm({ survey, onBack }: { survey: Survey; onBack: () => void }) 
             />
           </section>
         ))}
-
-        {/* Contact */}
-        <section>
-          <p
-            className="text-[11px] uppercase tracking-[0.05em] mb-1"
-            style={{ color: 'var(--ink-faint)', fontWeight: 700 }}
-          >
-            Vos coordonnées
-          </p>
-          <p className="text-[12px] mb-4" style={{ color: 'var(--ink-faint)' }}>
-            Email ou téléphone requis
-          </p>
-          <div className="space-y-2">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="votre@email.fr"
-              className="w-full py-4 px-5 rounded-2xl text-[14px] focus:outline-none"
-              style={{
-                background: '#ffffff',
-                border: '1px solid var(--line)',
-                color: 'var(--ink)',
-              }}
-            />
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="06 00 00 00 00"
-              className="w-full py-4 px-5 rounded-2xl text-[14px] focus:outline-none"
-              style={{
-                background: '#ffffff',
-                border: '1px solid var(--line)',
-                color: 'var(--ink)',
-              }}
-            />
-          </div>
-        </section>
 
         {/* Submit flottant */}
         <div
