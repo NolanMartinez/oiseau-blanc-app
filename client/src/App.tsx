@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { UserAuthProvider } from './context/UserAuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { PrivateRoute } from './components/PrivateRoute';
 import { UserPrivateRoute } from './components/UserPrivateRoute';
 
@@ -28,6 +29,7 @@ import { ProfilPage } from './pages/app/ProfilPage';
 
 function App() {
   return (
+    <LanguageProvider>
     <AuthProvider>
       <UserAuthProvider>
       <BrowserRouter>
@@ -69,6 +71,7 @@ function App() {
       </BrowserRouter>
       </UserAuthProvider>
     </AuthProvider>
+    </LanguageProvider>
   );
 }
 

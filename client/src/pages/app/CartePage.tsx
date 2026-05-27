@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLang } from '../../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -109,10 +110,11 @@ function FridgePopup({ fridge }: { fridge: Fridge }) {
 export function CartePage() {
   const [fridges, setFridges] = useState<Fridge[]>([]);
   const navigate = useNavigate();
+  const { lang } = useLang();
 
   useEffect(() => {
-    api.get('/public/frigos').then((res) => setFridges(res.data.fridges)).catch(() => {});
-  }, []);
+    api.get(`/public/frigos?lang=${lang}`).then((res) => setFridges(res.data.fridges)).catch(() => {});
+  }, [lang]);
 
   return (
     <AppLayout mapMode>

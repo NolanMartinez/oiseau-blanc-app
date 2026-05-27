@@ -1,8 +1,9 @@
-import { type ReactNode, useState, useEffect } from 'react';
+import { type ReactNode, useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Refrigerator, Star, ClipboardList, User, ArrowLeft, Bell } from 'lucide-react';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { userApi } from '../../services/api';
+import { useLang, SUPPORTED_LANGS, type LangCode } from '../../context/LanguageContext';
 
 const NAV = [
   { to: '/app/mon-frigo', label: 'Mon Frigo', Icon: Refrigerator },
@@ -71,6 +72,55 @@ function BellButton() {
   );
 }
 
+function LanguagePicker() {
+  const { lang, setLang } = useLang();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutsideClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onOutsideClick);
+    return () => document.removeEventListener('mousedown', onOutsideClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-10 h-10 flex items-center justify-center rounded-full text-[11px] font-bold transition-all active:scale-95"
+        style={{ background: '#ffffff', border: '1px solid var(--line)', color: 'var(--ink-faint)' }}
+        aria-label="Changer la langue"
+      >
+        {lang.toUpperCase()}
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-12 rounded-2xl py-1 z-50 min-w-[148px]"
+          style={{ background: '#ffffff', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid var(--line)' }}
+        >
+          {SUPPORTED_LANGS.map(({ code, label }) => (
+            <button
+              key={code}
+              onClick={() => { setLang(code as LangCode); setOpen(false); }}
+              className="w-full text-left px-4 py-2.5 text-sm transition-colors"
+              style={{
+                color: code === lang ? 'var(--green)' : 'var(--ink)',
+                fontWeight: code === lang ? 700 : 500,
+                background: code === lang ? 'var(--green-soft)' : 'transparent',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AppLayout({ children, title, mapMode = false, back = false }: AppLayoutProps) {
   const navigate = useNavigate();
   const { subscriber } = useUserAuth();
@@ -105,6 +155,7 @@ export function AppLayout({ children, title, mapMode = false, back = false }: Ap
             </span>
           )}
         </div>
+        <LanguagePicker />
         <BellButton />
       </div>
       </header>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useLang } from '../../context/LanguageContext';
 import { Thermometer, Star, MapPin } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
 import api, { userApi } from '../../services/api';
@@ -59,6 +60,7 @@ export function FrigoDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { subscriber } = useUserAuth();
+  const { lang } = useLang();
   const [fridge, setFridge] = useState<Fridge | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -66,11 +68,11 @@ export function FrigoDetail() {
 
   useEffect(() => {
     if (!id) return;
-    api.get(`/public/frigos/${id}`)
+    api.get(`/public/frigos/${id}?lang=${lang}`)
       .then((res) => setFridge(res.data.fridge))
       .catch((err) => { if (err?.response?.status === 404) setNotFound(true); })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, lang]);
 
   useEffect(() => {
     if (!subscriber) { setPurchasedDishIds(new Set()); return; }

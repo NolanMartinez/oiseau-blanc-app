@@ -1,10 +1,11 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Thermometer, Star, MapPin, Refrigerator, ChevronRight, RefreshCw } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
 import api, { userApi } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { dishImageUrl, type Fridge, type FridgeDish } from '../../types/dish';
+import { useLang } from '../../context/LanguageContext';
 
 function StockBadge({ stock }: { stock: number }) {
   const bg = stock === 0 ? '#fef2f2' : stock <= 2 ? '#fffbeb' : 'var(--green-soft)';
@@ -16,16 +17,10 @@ function StockBadge({ stock }: { stock: number }) {
   );
 }
 
-const SUPPORTED_LANGS = new Set(['en', 'es', 'pt', 'de', 'it']);
-
 export function MonFrigoPage() {
   const { subscriber, updateSubscriber } = useUserAuth();
   const navigate = useNavigate();
-
-  const lang = useMemo(() => {
-    const code = navigator.language.split('-')[0].toLowerCase();
-    return SUPPORTED_LANGS.has(code) ? code : 'fr';
-  }, []);
+  const { lang } = useLang();
 
   const [favoriId, setFavoriId] = useState<string | null>(subscriber?.favoriId ?? null);
   const [fridge, setFridge] = useState<Fridge | null>(null);
