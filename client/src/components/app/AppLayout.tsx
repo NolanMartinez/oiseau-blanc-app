@@ -90,28 +90,29 @@ function LanguagePicker() {
     <div ref={ref} className="relative flex-shrink-0">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-10 h-10 flex items-center justify-center rounded-full text-[11px] font-bold transition-all active:scale-95"
-        style={{ background: '#ffffff', border: '1px solid var(--line)', color: 'var(--ink-faint)' }}
+        className="w-10 h-10 flex items-center justify-center rounded-full text-lg transition-all active:scale-95"
+        style={{ background: '#ffffff', border: '1px solid var(--line)' }}
         aria-label="Changer la langue"
       >
-        {lang.toUpperCase()}
+        {SUPPORTED_LANGS.find((l) => l.code === lang)?.flag}
       </button>
       {open && (
         <div
           className="absolute right-0 top-12 rounded-2xl py-1 z-50 min-w-[148px]"
           style={{ background: '#ffffff', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid var(--line)' }}
         >
-          {SUPPORTED_LANGS.map(({ code, label }) => (
+          {SUPPORTED_LANGS.map(({ code, label, flag }) => (
             <button
               key={code}
               onClick={() => { setLang(code as LangCode); setOpen(false); }}
-              className="w-full text-left px-4 py-2.5 text-sm transition-colors"
+              className="w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2.5"
               style={{
                 color: code === lang ? 'var(--green)' : 'var(--ink)',
                 fontWeight: code === lang ? 700 : 500,
                 background: code === lang ? 'var(--green-soft)' : 'transparent',
               }}
             >
+              <span className="text-base">{flag}</span>
               {label}
             </button>
           ))}

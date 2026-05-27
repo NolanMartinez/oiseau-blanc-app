@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
 export const SUPPORTED_LANGS = [
-  { code: 'fr', label: 'Français' },
-  { code: 'en', label: 'English' },
-  { code: 'es', label: 'Español' },
-  { code: 'pt', label: 'Português' },
-  { code: 'de', label: 'Deutsch' },
-  { code: 'it', label: 'Italiano' },
+  { code: 'fr', label: 'Français',  flag: '🇫🇷' },
+  { code: 'en', label: 'English',   flag: '🇬🇧' },
+  { code: 'es', label: 'Español',   flag: '🇪🇸' },
+  { code: 'pt', label: 'Português', flag: '🇵🇹' },
+  { code: 'de', label: 'Deutsch',   flag: '🇩🇪' },
+  { code: 'it', label: 'Italiano',  flag: '🇮🇹' },
 ] as const;
 
 export type LangCode = (typeof SUPPORTED_LANGS)[number]['code'];
