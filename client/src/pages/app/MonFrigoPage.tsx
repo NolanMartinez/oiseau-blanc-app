@@ -26,7 +26,6 @@ export function MonFrigoPage() {
   const [fridge, setFridge] = useState<Fridge | null>(null);
   const [fridges, setFridges] = useState<Fridge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [purchasedDishIds, setPurchasedDishIds] = useState<Set<string>>(new Set());
   const [choosing, setChoosing] = useState(false);
 
   // Charge le frigo favori
@@ -47,16 +46,6 @@ export function MonFrigoPage() {
       .catch(() => {});
   }, [choosing, favoriId]);
 
-  // Achats pour le bouton "noter"
-  useEffect(() => {
-    if (!subscriber) return;
-    userApi.get('/public/user/purchases')
-      .then((res) => {
-        const ids = new Set<string>(res.data.purchases.map((p: { dishId: string }) => p.dishId));
-        setPurchasedDishIds(ids);
-      })
-      .catch(() => {});
-  }, [subscriber]);
 
   async function handleChoose(frigoId: string) {
     try {
@@ -267,8 +256,7 @@ export function MonFrigoPage() {
                             </span>
                           )}
                         </div>
-                        {purchasedDishIds.has(dish.id) && (
-                          <button
+                        <button
                             onClick={() => navigate(`/app/avis?dish=${dish.id}`)}
                             className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full hover:scale-95 transition-all"
                             style={{ color: '#a17600', background: 'var(--yellow-soft)', fontWeight: 700 }}
@@ -276,7 +264,6 @@ export function MonFrigoPage() {
                             <Star size={11} fill="#f5b400" strokeWidth={0} />
                             Noter ce plat
                           </button>
-                        )}
                       </div>
                     </div>
                   </div>
