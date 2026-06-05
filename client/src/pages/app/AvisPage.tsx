@@ -1,16 +1,17 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Star, CheckCircle, Lock, ShoppingBag, ChevronDown } from 'lucide-react';
+import { Star, CheckCircle, Lock, ChevronDown } from 'lucide-react';
 import { AppLayout } from '../../components/app/AppLayout';
 import { userApi } from '../../services/api';
+import api from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { useLang } from '../../context/LanguageContext';
 
-interface Purchase {
-  dishId: string;
-  dishName: string;
-  frigoName: string;
-  hasReview: boolean;
+interface Dish {
+  id: string;
+  name: string;
+  category: string;
+  hasImage: boolean;
 }
 
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -50,8 +51,9 @@ export function AvisPage() {
   const [params] = useSearchParams();
   const { t } = useLang();
 
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [purchasesLoading, setPurchasesLoading] = useState(false);
+  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [reviewedDishIds, setReviewedDishIds] = useState<Set<string>>(new Set());
+  const [dishesLoading, setDishesLoading] = useState(true);
   const [dishId, setDishId] = useState(params.get('dish') ?? '');
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -60,12 +62,24 @@ export function AvisPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    api.get('/public/dishes')
+      .then((res) => setDishes(res.data.dishes))
+      .catch(() => {})
+      .finally(() => setDishesLoading(false));
+  }, []);
+
+  useEffect(() => {
     if (!subscriber) return;
-    setPurchasesLoading(true);
     userApi.get('/public/user/purchases')
-      .then((res) => setPurchases(res.data.purchases))
-      .catch(() => setPurchases([]))
-      .finally(() => setPurchasesLoading(false));
+      .then((res) => {
+        const reviewed = new Set<string>(
+          (res.data.purchases as { dishId: string; hasReview: boolean }[])
+            .filter((p) => p.hasReview)
+            .map((p) => p.dishId),
+        );
+        setReviewedDishIds(reviewed);
+      })
+      .catch(() => {});
   }, [subscriber]);
 
   async function handleSubmit(e: FormEvent) {
@@ -77,10 +91,8 @@ export function AvisPage() {
     try {
       await userApi.post('/public/reviews', { dish_id: dishId, rating, comment: comment || undefined });
       setSuccess(true);
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 403) setError(t('error_generic'));
-      else setError(t('error_generic'));
+    } catch {
+      setError(t('error_generic'));
     } finally {
       setLoading(false);
     }
@@ -124,24 +136,6 @@ export function AvisPage() {
     );
   }
 
-  if (!purchasesLoading && purchases.length === 0) {
-    return (
-      <AppLayout title={t('my_review')}>
-        <div className="flex flex-col items-center justify-center px-6 pt-20 text-center fade-up">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ background: 'var(--peach-soft)' }}>
-            <ShoppingBag size={22} style={{ color: '#c47b30' }} />
-          </div>
-          <h2 className="text-titre mb-4" style={{ color: 'var(--ink)' }}>
-            {t('no_purchases')}
-          </h2>
-          <p className="text-texte max-w-xs" style={{ color: 'var(--ink-soft)' }}>
-            {t('no_purchases_desc')}
-          </p>
-        </div>
-      </AppLayout>
-    );
-  }
-
   if (success) {
     return (
       <AppLayout title={t('my_review')}>
@@ -170,10 +164,15 @@ export function AvisPage() {
     );
   }
 
-  const currentPurchase = purchases.find((p) => p.dishId === dishId);
+  const alreadyReviewed = dishId ? reviewedDishIds.has(dishId) : false;
   const LABELS: Record<number, string> = {
     1: t('rating_1'), 2: t('rating_2'), 3: t('rating_3'), 4: t('rating_4'), 5: t('rating_5'),
   };
+
+  const byCategory = dishes.reduce<Record<string, Dish[]>>((acc, d) => {
+    (acc[d.category] ??= []).push(d);
+    return acc;
+  }, {});
 
   return (
     <AppLayout title={t('my_review')}>
@@ -194,7 +193,7 @@ export function AvisPage() {
           <label className="text-[11px] uppercase tracking-[0.05em] block mb-3" style={{ color: 'var(--ink-faint)', fontWeight: 700 }}>
             {t('which_dish')}
           </label>
-          {purchasesLoading ? (
+          {dishesLoading ? (
             <p className="text-[13px]" style={{ color: 'var(--ink-faint)' }}>{t('loading')}</p>
           ) : (
             <div className="relative">
@@ -205,16 +204,20 @@ export function AvisPage() {
                 style={{ background: '#ffffff', border: '1px solid var(--line)', color: 'var(--ink)', fontWeight: 500 }}
               >
                 <option value="">{t('select_dish')}</option>
-                {purchases.map((p) => (
-                  <option key={p.dishId} value={p.dishId}>
-                    {p.dishName}{p.hasReview ? ` ${t('already_reviewed')}` : ''}
-                  </option>
+                {Object.entries(byCategory).map(([cat, items]) => (
+                  <optgroup key={cat} label={cat}>
+                    {items.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}{reviewedDishIds.has(d.id) ? ` ${t('already_reviewed')}` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <ChevronDown size={16} style={{ position: 'absolute', right: 18, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-faint)', pointerEvents: 'none' }} />
             </div>
           )}
-          {currentPurchase?.hasReview && (
+          {alreadyReviewed && (
             <p className="text-[12px] mt-3" style={{ color: '#a17600', fontWeight: 600 }}>
               {t('will_update_review')}
             </p>

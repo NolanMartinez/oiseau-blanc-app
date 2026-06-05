@@ -167,6 +167,16 @@ export async function translateAllDishesHandler(_req: Request, res: Response): P
   res.json(result);
 }
 
+// GET /api/v1/public/dishes — liste publique des plats actifs (sans images)
+export async function listPublicDishes(_req: Request, res: Response): Promise<void> {
+  const dishes = await prisma.dish.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, category: true, imageMimeType: true },
+    orderBy: { name: 'asc' },
+  });
+  res.json({ dishes: dishes.map(toDishDTO) });
+}
+
 // GET /api/v1/public/dishes/:id/image — route publique (chargée dans des <img>)
 export async function getDishImage(req: Request, res: Response): Promise<void> {
   const id = req.params['id'] as string;
