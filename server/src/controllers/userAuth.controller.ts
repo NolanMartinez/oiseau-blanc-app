@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 import type { SubscriberRequest } from '../middleware/userAuth';
 
 const SUBSCRIBER_SELECT = {
-  id: true, email: true, phone: true, favoriId: true, consentEmail: true, consentPush: true,
+  id: true, email: true, phone: true, favoriId: true, consentEmail: true, consentPush: true, createdAt: true,
 } as const;
 
 function makeToken(subscriberId: string) {
@@ -166,10 +166,8 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
     { expiresIn: '30d' },
   );
 
-  res.json({
-    token,
-    subscriber: { id: subscriber.id, email: subscriber.email, phone: subscriber.phone, favoriId: subscriber.favoriId },
-  });
+  const fullSub = await prisma.subscriber.findUnique({ where: { id: subscriber.id }, select: SUBSCRIBER_SELECT });
+  res.json({ token, subscriber: fullSub });
 }
 
 const updateMeSchema = z.object({
@@ -201,17 +199,65 @@ export async function updateMe(req: Request, res: Response): Promise<void> {
 export async function getMe(req: Request, res: Response): Promise<void> {
   const subscriberId = (req as SubscriberRequest).subscriberId;
 
-  const subscriber = await prisma.subscriber.findUnique({
+  const row = await prisma.subscriber.findUnique({
     where: { id: subscriberId },
-    select: { id: true, email: true, phone: true, favoriId: true, consentEmail: true, consentPush: true },
+    select: { ...SUBSCRIBER_SELECT, _count: { select: { reviews: true, preferenceResponses: true } } },
   });
+
+  if (!row) {
+    res.status(404).json({ error: 'Compte introuvable' });
+    return;
+  }
+
+  const { _count, ...sub } = row;
+  res.json({ subscriber: { ...sub, reviewsCount: _count.reviews, surveysCount: _count.preferenceResponses } });
+}
+
+// DELETE /public/user/auth/me — suppression RGPD (irréversible)
+export async function deleteMe(req: Request, res: Response): Promise<void> {
+  const subscriberId = (req as SubscriberRequest).subscriberId;
+
+  await prisma.$transaction([
+    prisma.review.deleteMany({ where: { subscriberId } }),
+    prisma.preferenceResponse.deleteMany({ where: { subscriberId } }),
+    prisma.menuVoteResponse.deleteMany({ where: { subscriberId } }),
+    prisma.subscriber.delete({ where: { id: subscriberId } }),
+  ]);
+
+  res.status(204).send();
+}
+
+// GET /public/user/auth/my-data — export RGPD
+export async function exportMyData(req: Request, res: Response): Promise<void> {
+  const subscriberId = (req as SubscriberRequest).subscriberId;
+
+  const [subscriber, reviews, surveyResponses, voteResponses] = await Promise.all([
+    prisma.subscriber.findUnique({
+      where: { id: subscriberId },
+      select: { id: true, email: true, phone: true, favoriId: true, consentEmail: true, consentPush: true, createdAt: true },
+    }),
+    prisma.review.findMany({
+      where: { subscriberId },
+      select: { id: true, dishId: true, rating: true, comment: true, createdAt: true },
+    }),
+    prisma.preferenceResponse.findMany({
+      where: { subscriberId },
+      select: { id: true, surveyId: true, answers: true, createdAt: true },
+    }),
+    prisma.menuVoteResponse.findMany({
+      where: { subscriberId },
+      select: { id: true, menuVoteId: true, selectedOptions: true, createdAt: true },
+    }),
+  ]);
 
   if (!subscriber) {
     res.status(404).json({ error: 'Compte introuvable' });
     return;
   }
 
-  res.json({ subscriber });
+  res.setHeader('Content-Disposition', 'attachment; filename="mes-donnees.json"');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.json({ subscriber, reviews, surveyResponses, voteResponses });
 }
 
 const setFavoriSchema = z.object({ frigoId: z.string().min(1) });

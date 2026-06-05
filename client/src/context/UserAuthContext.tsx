@@ -8,6 +8,9 @@ export interface Subscriber {
   favoriId: string | null;
   consentEmail: boolean;
   consentPush: boolean;
+  createdAt?: string;
+  reviewsCount?: number;
+  surveysCount?: number;
 }
 
 interface UserAuthContextType {
