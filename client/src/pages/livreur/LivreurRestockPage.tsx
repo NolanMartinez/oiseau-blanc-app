@@ -515,7 +515,7 @@ export function LivreurRestockPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', marginBottom: 12,
               }}
             >
-              <Plus size={16} /> Ajouter un plat (directive)
+              <Plus size={16} /> Ajouter un plat
             </button>
           </>
         ) : (
