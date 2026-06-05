@@ -16,8 +16,8 @@ export function AdminLogin() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/admin/dashboard');
+      const { role } = await login(email, password);
+      navigate(role === 'LIVREUR' ? '/livreur' : '/admin/dashboard');
     } catch {
       setError('Email ou mot de passe incorrect');
     } finally {

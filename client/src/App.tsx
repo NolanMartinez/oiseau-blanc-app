@@ -1,9 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { UserAuthProvider } from './context/UserAuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { PrivateRoute } from './components/PrivateRoute';
 import { UserPrivateRoute } from './components/UserPrivateRoute';
+
+// Livreur
+import { LivreurHomePage } from './pages/livreur/LivreurHomePage';
+import { LivreurRestockPage } from './pages/livreur/LivreurRestockPage';
 
 // Admin
 import { AdminLogin } from './pages/admin/Login';
@@ -26,6 +30,13 @@ import { NotificationsPage } from './pages/app/NotificationsPage';
 import { AvisPage } from './pages/app/AvisPage';
 import { SondagesPage } from './pages/app/SondagesPage';
 import { ProfilPage } from './pages/app/ProfilPage';
+
+function LivreurPrivateRoute({ children }: { children: React.ReactNode }) {
+  const { admin, loading } = useAuth();
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="text-gray-500">Chargement...</div></div>;
+  if (!admin) return <Navigate to="/admin/login" replace />;
+  return <>{children}</>;
+}
 
 function App() {
   return (
@@ -50,6 +61,10 @@ function App() {
           <Route path="/sondages" element={<Navigate to="/app/sondages" replace />} />
           <Route path="/app/carte" element={<Navigate to="/app/mon-frigo" replace />} />
           <Route path="/app/votes" element={<Navigate to="/app/mon-frigo" replace />} />
+
+          {/* ── Interface livreur ─────────────────────────────────── */}
+          <Route path="/livreur" element={<LivreurPrivateRoute><LivreurHomePage /></LivreurPrivateRoute>} />
+          <Route path="/livreur/frigo/:id" element={<LivreurPrivateRoute><LivreurRestockPage /></LivreurPrivateRoute>} />
 
           {/* ── Panel admin ────────────────────────────────────────── */}
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />

@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { upsertStock, updateStock, deleteStock } from '../controllers/stock.controller';
-import { requireAuth } from '../middleware/auth';
+import { requireDelivery } from '../middleware/deliveryAuth';
 
 const router = Router();
-router.use(requireAuth);
+router.use(requireDelivery);
 
 router.post('/', upsertStock);
 router.patch('/:id', updateStock);

@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 export interface AdminPayload {
   id: string;
   email: string;
-  role: 'SUPER_ADMIN' | 'ADMIN';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'LIVREUR';
 }
 
 declare global {

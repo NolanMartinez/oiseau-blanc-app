@@ -4,13 +4,13 @@ import api from '../services/api';
 interface Admin {
   id: string;
   email: string;
-  role: 'SUPER_ADMIN' | 'ADMIN';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'LIVREUR';
 }
 
 interface AuthContextType {
   admin: Admin | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ role: 'SUPER_ADMIN' | 'ADMIN' | 'LIVREUR' }>;
   logout: () => void;
 }
 
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.post('/admin/auth/login', { email, password });
     localStorage.setItem('admin_token', res.data.token);
     setAdmin(res.data.admin);
+    return { role: res.data.admin.role as 'SUPER_ADMIN' | 'ADMIN' | 'LIVREUR' };
   }
 
   function logout() {

@@ -7,7 +7,7 @@ import api from '../../services/api';
 interface Admin {
   id: string;
   email: string;
-  role: 'SUPER_ADMIN' | 'ADMIN';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'LIVREUR';
   createdAt: string;
 }
 
@@ -24,7 +24,7 @@ function AdminModal({
 }) {
   const [email, setEmail] = useState(initial?.email ?? '');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'ADMIN' | 'SUPER_ADMIN'>(initial?.role ?? 'ADMIN');
+  const [role, setRole] = useState<'ADMIN' | 'SUPER_ADMIN' | 'LIVREUR'>(initial?.role ?? 'ADMIN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -99,11 +99,12 @@ function AdminModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value as 'ADMIN' | 'SUPER_ADMIN')}
+              onChange={(e) => setRole(e.target.value as 'ADMIN' | 'SUPER_ADMIN' | 'LIVREUR')}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="ADMIN">Admin</option>
               <option value="SUPER_ADMIN">Super Admin</option>
+              <option value="LIVREUR">Livreur</option>
             </select>
           </div>
         </div>
@@ -213,9 +214,11 @@ export function AdminsPage() {
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
                       admin.role === 'SUPER_ADMIN'
                         ? 'bg-purple-100 text-purple-700'
+                        : admin.role === 'LIVREUR'
+                        ? 'bg-orange-100 text-orange-700'
                         : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {admin.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'}
+                      {admin.role === 'SUPER_ADMIN' ? 'Super Admin' : admin.role === 'LIVREUR' ? 'Livreur' : 'Admin'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-500">

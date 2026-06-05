@@ -27,6 +27,7 @@ import dishAdminRoutes from './routes/dish.admin.routes';
 import dishPublicRoutes from './routes/dish.public.routes';
 import stockAdminRoutes from './routes/stock.admin.routes';
 import recommendationRoutes from './routes/recommendation.routes';
+import livreurRoutes from './routes/livreur.routes';
 
 initVapid();
 
@@ -73,6 +74,7 @@ app.use('/api/v1/public/user/purchases', purchaseRoutes);
 app.use('/api/v1/public/user/push', pushPublicRoutes);
 app.use('/api/v1/public/user/notifications', userNotificationsRoutes);
 app.use('/api/v1/admin/notifications', pushAdminRoutes);
+app.use('/api/v1/livreur', livreurRoutes);
 
 // Servir le build React si le dossier dist existe
 const clientDist = path.join(process.cwd(), 'client', 'dist');

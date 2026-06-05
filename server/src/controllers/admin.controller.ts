@@ -6,13 +6,13 @@ import { prisma } from '../utils/prisma';
 const createAdminSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, 'Mot de passe minimum 8 caractères'),
-  role: z.enum(['SUPER_ADMIN', 'ADMIN']).default('ADMIN'),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'LIVREUR']).default('ADMIN'),
 });
 
 const updateAdminSchema = z.object({
   email: z.string().email().optional(),
   password: z.string().min(8).optional(),
-  role: z.enum(['SUPER_ADMIN', 'ADMIN']).optional(),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'LIVREUR']).optional(),
 });
 
 export async function listAdmins(req: Request, res: Response): Promise<void> {
