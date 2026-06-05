@@ -455,7 +455,7 @@ export function LivreurRestockPage() {
                 cursor: 'pointer', transition: 'all 0.15s',
               }}
             >
-              <LayoutList size={14} /> Mode guidé
+              <LayoutList size={14} /> Suggestions
             </button>
             <button
               onClick={() => setMode('quick')}
@@ -468,7 +468,7 @@ export function LivreurRestockPage() {
                 cursor: 'pointer', transition: 'all 0.15s',
               }}
             >
-              <ListOrdered size={14} /> Liste rapide
+              <ListOrdered size={14} /> Saisie libre
             </button>
           </div>
         )}
