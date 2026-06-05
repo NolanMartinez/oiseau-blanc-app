@@ -9,6 +9,7 @@ import {
   Refrigerator,
   UtensilsCrossed,
   Lightbulb,
+  Receipt,
   LogOut,
   X,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ const navItems = [
   { to: '/admin/reviews', icon: Star, label: 'Avis' },
   { to: '/admin/surveys', icon: ClipboardList, label: 'Sondages' },
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
+  { to: '/admin/comptabilite', icon: Receipt, label: 'Comptabilité' },
 ];
 
 const adminOnlyItems = [
