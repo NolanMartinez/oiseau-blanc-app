@@ -17,14 +17,14 @@ import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/frigos', icon: Refrigerator, label: 'Frigos' },
-  { to: '/admin/plats', icon: UtensilsCrossed, label: 'Plats' },
-  { to: '/admin/recommandations', icon: Lightbulb, label: 'Recommandations' },
+  { to: '/admin/frigos', icon: Refrigerator, label: 'Friggos' },
+  { to: '/admin/plats', icon: UtensilsCrossed, label: 'La Carte' },
+  { to: '/admin/comptabilite', icon: Receipt, label: 'Etat des ventes' },
+  { to: '/admin/recommandations', icon: Lightbulb, label: 'Gestion commerciale' },
+  { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
   { to: '/admin/subscribers', icon: UserCircle, label: 'Abonnés' },
   { to: '/admin/reviews', icon: Star, label: 'Avis' },
   { to: '/admin/surveys', icon: ClipboardList, label: 'Sondages' },
-  { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
-  { to: '/admin/comptabilite', icon: Receipt, label: 'Comptabilité' },
 ];
 
 const adminOnlyItems = [
