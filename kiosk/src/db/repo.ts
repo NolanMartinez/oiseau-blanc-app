@@ -7,6 +7,14 @@ export interface LockerMapping {
   expiryDate: string | null;
 }
 
+/** Branchement d'une carte (page Liaisons). */
+export interface DispenserLink {
+  comPort: string | null;
+  baud: number;
+  parity: string;
+  enabled: boolean;
+}
+
 /** Image d'un plat à mettre en cache (issue de la synchro). */
 export interface DishImage {
   bytes: Uint8Array;
@@ -26,17 +34,22 @@ export interface Repo {
 
   // Dispensers
   listDispensers(): Promise<Dispenser[]>;
+  setDispenserLink(board: string, link: DispenserLink): Promise<void>;
 
   // Casiers
   listLockers(board?: string): Promise<Locker[]>;
   setLockerMapping(lockerId: number, mapping: LockerMapping): Promise<void>;
+  setLockerAddress(lockerId: number, address: number | null): Promise<void>;
   clearLocker(lockerId: number): Promise<void>;
   setLockerState(lockerId: number, state: Locker["state"]): Promise<void>;
 
   // Catalogue plats (cache)
   listDishes(): Promise<DishCache[]>;
   getDishImageUrl(dishId: string): Promise<string | null>;
-  upsertDish(dish: Omit<DishCache, "hasImage">, image: DishImage | null): Promise<void>;
+  // La synchro ne touche pas au code-barres (géré localement par l'opérateur).
+  upsertDish(dish: Omit<DishCache, "hasImage" | "barcode">, image: DishImage | null): Promise<void>;
+  getDishByBarcode(barcode: string): Promise<DishCache | null>;
+  setDishBarcode(dishId: string, barcode: string | null): Promise<void>;
 
   // Ventes
   logSale(sale: SaleLog): Promise<void>;

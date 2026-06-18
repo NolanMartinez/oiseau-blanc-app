@@ -24,9 +24,9 @@ export function BoxControlScreen() {
     return unsub;
   }, []);
 
-  async function openBox(boxNumber: number) {
+  async function openBox(boxNumber: number, address: number | null) {
     setBusyBox(boxNumber);
-    await hardware.openLocker(board, boxNumber);
+    await hardware.openLocker(board, address ?? boxNumber);
     setBusyBox(null);
   }
 
@@ -85,7 +85,7 @@ export function BoxControlScreen() {
         {boardLockers.map((l) => (
           <button
             key={l.id}
-            onClick={() => openBox(l.boxNumber)}
+            onClick={() => openBox(l.boxNumber, l.address)}
             disabled={busyBox === l.boxNumber}
             className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 ${
               busyBox === l.boxNumber

@@ -69,7 +69,8 @@ export function CustomerApp() {
       setScreen("opening");
       const unsub = hardware.onLockerEvent((e) => setLockerPhase(e.phase));
       try {
-        await hardware.openLocker(item.locker.board, item.locker.boxNumber);
+        // On envoie l'adresse physique de la porte (override éventuel), pas le n° logique.
+        await hardware.openLocker(item.locker.board, item.locker.address ?? item.locker.boxNumber);
         await finalizeSale(item);
       } finally {
         unsub();

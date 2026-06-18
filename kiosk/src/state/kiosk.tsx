@@ -12,6 +12,7 @@ import {
 } from "react";
 import { getRepo, SETTING_KEYS, type DishCache, type Dispenser, type Locker, type Repo, type Settings } from "../db";
 import { syncMenu } from "../sync";
+import { hardware, type HwMode } from "../hardware";
 
 export interface MenuItem {
   locker: Locker;
@@ -65,6 +66,22 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       }),
     );
     setImageUrls(urls);
+
+    // Pousse la config matérielle (mode + branchements + trames) vers le Device.
+    const mode: HwMode = s[SETTING_KEYS.hwMode] === "real" ? "real" : "sim";
+    await hardware.setHwConfig(mode, {
+      boards: Object.fromEntries(
+        disp.map((d) => [
+          d.board,
+          { comPort: d.comPort ?? "", baud: d.baud, parity: d.parity, enabled: d.enabled },
+        ]),
+      ),
+      frameOpen: s[SETTING_KEYS.frameOpen] ?? "02 {board} {box} {xor}",
+      frameCloseAll: s[SETTING_KEYS.frameCloseAll] ?? "",
+      frameClear: s[SETTING_KEYS.frameClear] ?? "",
+      frameDefrost: s[SETTING_KEYS.frameDefrost] ?? "",
+      boxBase: parseInt(s[SETTING_KEYS.boxBase] ?? "1", 10) || 0,
+    });
   }, []);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 // Implémentation Repo en mémoire + localStorage — repli navigateur (dev/preview
 // UI sans Tauri/SQLite). Reproduit le seed de la migration SQL.
-import type { DishImage, LockerMapping, Repo } from "./repo";
+import type { DishImage, DispenserLink, LockerMapping, Repo } from "./repo";
 import type { DishCache, Dispenser, Locker, SaleLog, Settings } from "./types";
 import { SETTING_KEYS } from "./types";
 
@@ -32,6 +32,14 @@ function defaultStore(): Store {
     [SETTING_KEYS.currency]: "EUR",
     [SETTING_KEYS.adminPin]: "1234",
     [SETTING_KEYS.langDefault]: "fr",
+    [SETTING_KEYS.hwMode]: "sim",
+    [SETTING_KEYS.frameOpen]: "02 {board} {box} {xor}",
+    [SETTING_KEYS.frameCloseAll]: "",
+    [SETTING_KEYS.frameClear]: "",
+    [SETTING_KEYS.frameDefrost]: "",
+    [SETTING_KEYS.boxBase]: "1",
+    [SETTING_KEYS.machineName]: "Frigo 1",
+    [SETTING_KEYS.coldType]: "frozen",
   };
   const lockers: Locker[] = Array.from({ length: 32 }, (_, i) => ({
     id: i + 1,
@@ -41,10 +49,11 @@ function defaultStore(): Store {
     price: null,
     expiryDate: null,
     state: "idle" as const,
+    address: null,
   }));
   return {
     settings,
-    dispensers: [{ board: "A", comPort: "COM1", boxCount: 32, enabled: true }],
+    dispensers: [{ board: "A", comPort: "COM1", boxCount: 32, enabled: true, baud: 9600, parity: "none" }],
     lockers,
     dishes: [],
     sales: [],
@@ -87,6 +96,34 @@ export class MemoryRepo implements Repo {
     return [...this.store.dispensers];
   }
 
+  async setDispenserLink(board: string, link: DispenserLink): Promise<void> {
+    let d = this.store.dispensers.find((x) => x.board === board);
+    if (!d) {
+      d = { board, comPort: link.comPort, boxCount: 32, enabled: link.enabled, baud: link.baud, parity: link.parity };
+      this.store.dispensers.push(d);
+      // Crée les 32 casiers de la nouvelle carte.
+      const startId = this.store.lockers.length;
+      for (let i = 1; i <= 32; i++) {
+        this.store.lockers.push({
+          id: startId + i,
+          board,
+          boxNumber: i,
+          dishId: null,
+          price: null,
+          expiryDate: null,
+          state: "idle",
+          address: null,
+        });
+      }
+    } else {
+      d.comPort = link.comPort;
+      d.enabled = link.enabled;
+      d.baud = link.baud;
+      d.parity = link.parity;
+    }
+    this.persist();
+  }
+
   async listLockers(board?: string): Promise<Locker[]> {
     const all = [...this.store.lockers].sort(
       (a, b) => a.board.localeCompare(b.board) || a.boxNumber - b.boxNumber,
@@ -100,6 +137,14 @@ export class MemoryRepo implements Repo {
       l.dishId = m.dishId;
       l.price = m.price;
       l.expiryDate = m.expiryDate;
+      this.persist();
+    }
+  }
+
+  async setLockerAddress(lockerId: number, address: number | null): Promise<void> {
+    const l = this.store.lockers.find((x) => x.id === lockerId);
+    if (l) {
+      l.address = address;
       this.persist();
     }
   }
@@ -134,6 +179,7 @@ export class MemoryRepo implements Repo {
       hasImage: !!d.imageUrl,
       imageMime: d.imageMime,
       updatedAt: d.updatedAt,
+      barcode: d.barcode ?? null,
     }));
   }
 
@@ -141,17 +187,46 @@ export class MemoryRepo implements Repo {
     return this.store.dishes.find((d) => d.id === dishId)?.imageUrl ?? null;
   }
 
-  async upsertDish(dish: Omit<DishCache, "hasImage">, image: DishImage | null): Promise<void> {
+  async upsertDish(
+    dish: Omit<DishCache, "hasImage" | "barcode">,
+    image: DishImage | null,
+  ): Promise<void> {
     const url = image
       ? URL.createObjectURL(new Blob([image.bytes], { type: image.mime }))
       : null;
     const existing = this.store.dishes.find((d) => d.id === dish.id);
     if (existing) {
+      // On préserve le code-barres (géré localement, hors synchro).
       Object.assign(existing, dish, { imageUrl: url ?? existing.imageUrl });
     } else {
-      this.store.dishes.push({ ...dish, imageUrl: url });
+      this.store.dishes.push({ ...dish, barcode: null, imageUrl: url });
     }
     this.persist();
+  }
+
+  async getDishByBarcode(barcode: string): Promise<DishCache | null> {
+    const d = this.store.dishes.find((x) => x.barcode === barcode);
+    if (!d) return null;
+    return {
+      id: d.id,
+      name: d.name,
+      category: d.category,
+      description: d.description,
+      price: d.price,
+      allergens: d.allergens,
+      hasImage: !!d.imageUrl,
+      imageMime: d.imageMime,
+      updatedAt: d.updatedAt,
+      barcode: d.barcode ?? null,
+    };
+  }
+
+  async setDishBarcode(dishId: string, barcode: string | null): Promise<void> {
+    const d = this.store.dishes.find((x) => x.id === dishId);
+    if (d) {
+      d.barcode = barcode;
+      this.persist();
+    }
   }
 
   async logSale(sale: SaleLog): Promise<void> {

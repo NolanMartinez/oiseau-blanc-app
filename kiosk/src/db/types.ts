@@ -5,6 +5,8 @@ export interface Dispenser {
   comPort: string | null;
   boxCount: number;
   enabled: boolean;
+  baud: number;
+  parity: string; // 'none' | 'even' | 'odd'
 }
 
 export interface Locker {
@@ -15,6 +17,7 @@ export interface Locker {
   price: number | null; // centimes — surcharge éventuelle du prix du plat
   expiryDate: string | null;
   state: "idle" | "open" | "error";
+  address: number | null; // adresse physique de la porte (défaut = boxNumber)
 }
 
 export interface DishCache {
@@ -27,6 +30,7 @@ export interface DishCache {
   hasImage: boolean;
   imageMime: string | null;
   updatedAt: string | null;
+  barcode: string | null; // code-barres produit (douchette)
 }
 
 export interface SaleLog {
@@ -59,4 +63,12 @@ export const SETTING_KEYS = {
   currency: "currency",
   adminPin: "admin_pin",
   langDefault: "lang_default",
+  hwMode: "hw_mode",
+  frameOpen: "frame_open",
+  frameCloseAll: "frame_close_all",
+  frameClear: "frame_clear",
+  frameDefrost: "frame_defrost",
+  boxBase: "box_base",
+  machineName: "machine_name",
+  coldType: "cold_type",
 } as const;

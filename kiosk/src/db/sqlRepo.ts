@@ -1,6 +1,6 @@
 // Implémentation Repo sur SQLite via tauri-plugin-sql (borne réelle).
 import Database from "@tauri-apps/plugin-sql";
-import type { DishImage, LockerMapping, Repo } from "./repo";
+import type { DishImage, DispenserLink, LockerMapping, Repo } from "./repo";
 import type { DishCache, Dispenser, Locker, SaleLog, Settings } from "./types";
 
 const DB_URL = "sqlite:kiosk.db";
@@ -31,14 +31,32 @@ export class SqlRepo implements Repo {
 
   async listDispensers(): Promise<Dispenser[]> {
     const rows = await this.db.select<any[]>(
-      "SELECT board, com_port, box_count, enabled FROM dispensers ORDER BY board",
+      "SELECT board, com_port, box_count, enabled, baud, parity FROM dispensers ORDER BY board",
     );
     return rows.map((r) => ({
       board: r.board,
       comPort: r.com_port,
       boxCount: r.box_count,
       enabled: !!r.enabled,
+      baud: r.baud ?? 9600,
+      parity: r.parity ?? "none",
     }));
+  }
+
+  async setDispenserLink(board: string, link: DispenserLink): Promise<void> {
+    // Crée la carte si elle n'existe pas encore (ex: carte B/C ajoutée).
+    await this.db.execute(
+      `INSERT INTO dispensers (board, com_port, box_count, enabled, baud, parity)
+       VALUES ($1, $2, 32, $3, $4, $5)
+       ON CONFLICT(board) DO UPDATE SET com_port=$2, enabled=$3, baud=$4, parity=$5`,
+      [board, link.comPort, link.enabled ? 1 : 0, link.baud, link.parity],
+    );
+    // Garantit l'existence des 32 casiers de cette carte.
+    await this.db.execute(
+      `WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 32)
+       INSERT OR IGNORE INTO lockers (board, box_number, state) SELECT $1, n, 'idle' FROM seq`,
+      [board],
+    );
   }
 
   async listLockers(board?: string): Promise<Locker[]> {
@@ -56,6 +74,10 @@ export class SqlRepo implements Repo {
     );
   }
 
+  async setLockerAddress(lockerId: number, address: number | null): Promise<void> {
+    await this.db.execute("UPDATE lockers SET address = $1 WHERE id = $2", [address, lockerId]);
+  }
+
   async clearLocker(lockerId: number): Promise<void> {
     await this.db.execute(
       "UPDATE lockers SET dish_id = NULL, price = NULL, expiry_date = NULL, state = 'idle' WHERE id = $1",
@@ -69,19 +91,21 @@ export class SqlRepo implements Repo {
 
   async listDishes(): Promise<DishCache[]> {
     const rows = await this.db.select<any[]>(
-      "SELECT id, name, category, description, price, allergens, image_mime, updated_at, (image_blob IS NOT NULL) AS has_image FROM dishes_cache ORDER BY name",
+      "SELECT id, name, category, description, price, allergens, image_mime, updated_at, barcode, (image_blob IS NOT NULL) AS has_image FROM dishes_cache ORDER BY name",
     );
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      category: r.category,
-      description: r.description,
-      price: r.price,
-      allergens: safeJson(r.allergens),
-      hasImage: !!r.has_image,
-      imageMime: r.image_mime,
-      updatedAt: r.updated_at,
-    }));
+    return rows.map(rowToDish);
+  }
+
+  async getDishByBarcode(barcode: string): Promise<DishCache | null> {
+    const rows = await this.db.select<any[]>(
+      "SELECT id, name, category, description, price, allergens, image_mime, updated_at, barcode, (image_blob IS NOT NULL) AS has_image FROM dishes_cache WHERE barcode = $1 LIMIT 1",
+      [barcode],
+    );
+    return rows[0] ? rowToDish(rows[0]) : null;
+  }
+
+  async setDishBarcode(dishId: string, barcode: string | null): Promise<void> {
+    await this.db.execute("UPDATE dishes_cache SET barcode = $1 WHERE id = $2", [barcode, dishId]);
   }
 
   async getDishImageUrl(dishId: string): Promise<string | null> {
@@ -98,7 +122,7 @@ export class SqlRepo implements Repo {
     return url;
   }
 
-  async upsertDish(dish: Omit<DishCache, "hasImage">, image: DishImage | null): Promise<void> {
+  async upsertDish(dish: Omit<DishCache, "hasImage" | "barcode">, image: DishImage | null): Promise<void> {
     this.imageUrls.delete(dish.id);
     if (image) {
       await this.db.execute(
@@ -144,6 +168,21 @@ export class SqlRepo implements Repo {
   }
 }
 
+function rowToDish(r: any): DishCache {
+  return {
+    id: r.id,
+    name: r.name,
+    category: r.category,
+    description: r.description,
+    price: r.price,
+    allergens: safeJson(r.allergens),
+    hasImage: !!r.has_image,
+    imageMime: r.image_mime,
+    updatedAt: r.updated_at,
+    barcode: r.barcode ?? null,
+  };
+}
+
 function rowToLocker(r: any): Locker {
   return {
     id: r.id,
@@ -153,6 +192,7 @@ function rowToLocker(r: any): Locker {
     price: r.price,
     expiryDate: r.expiry_date,
     state: r.state,
+    address: r.address ?? null,
   };
 }
 

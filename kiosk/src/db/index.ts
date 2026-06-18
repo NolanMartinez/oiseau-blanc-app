@@ -17,5 +17,5 @@ export function getRepo(): Promise<Repo> {
   return repoPromise;
 }
 
-export type { Repo, LockerMapping, DishImage } from "./repo";
+export type { Repo, LockerMapping, DispenserLink, DishImage } from "./repo";
 export * from "./types";

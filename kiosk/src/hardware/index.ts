@@ -30,16 +30,63 @@ export interface PaymentResult {
   outcome: PaymentOutcome;
 }
 
+export type HwMode = "sim" | "real";
+
+export interface BoardLink {
+  comPort: string;
+  baud: number;
+  parity: string;
+  enabled: boolean;
+}
+
+export interface SerialConfig {
+  boards: Record<string, BoardLink>;
+  frameOpen: string;
+  frameCloseAll: string;
+  frameClear: string;
+  frameDefrost: string;
+  boxBase: number;
+}
+
 export interface Hardware {
   openLocker(board: string, boxNumber: number): Promise<void>;
   closeAll(board: string): Promise<void>;
   clearError(board: string): Promise<void>;
+  defrost(board: string): Promise<void>;
   doorState(board: string): Promise<DoorState>;
   readTemperature(board: string): Promise<number>;
   requestPayment(amountCents: number): Promise<PaymentResult>;
   cancelPayment(): Promise<void>;
   onLockerEvent(cb: (e: LockerEvent) => void): () => void;
   onPaymentEvent(cb: (e: PaymentEvent) => void): () => void;
+  // Liaisons matériel
+  listComPorts(): Promise<string[]>;
+  setHwConfig(mode: HwMode, config: SerialConfig): Promise<void>;
+  previewFrame(board: string, boxNumber: number): Promise<string>;
+}
+
+// Encodeur de trame (miroir JS de hardware/frame.rs) — pour l'aperçu en mode
+// navigateur. La borne réelle utilise l'encodeur Rust.
+export function encodeFrame(template: string, board: number, boxAddr: number): string {
+  const out: number[] = [];
+  for (const tok of template.trim().split(/\s+/).filter(Boolean)) {
+    if (tok === "{board}") out.push(board & 0xff);
+    else if (tok === "{box}") out.push(boxAddr & 0xff);
+    else if (tok === "{xor}") out.push(out.reduce((a, b) => a ^ b, 0));
+    else if (tok === "{sum8}") out.push(out.reduce((a, b) => (a + b) & 0xff, 0));
+    else if (tok === "{len}") out.push(out.length & 0xff);
+    else if (/^[0-9a-fA-F]{2}$/.test(tok)) out.push(parseInt(tok, 16));
+    else throw new Error(`jeton inconnu : « ${tok} »`);
+  }
+  if (out.length === 0) throw new Error("gabarit de trame vide");
+  return out.map((b) => b.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+}
+
+export function boardIndex(board: string): number {
+  return board.charCodeAt(0) - 65; // 'A' -> 0
+}
+export function boxAddr(boxNumber: number, boxBase: number): number {
+  return boxBase === 0 ? Math.max(0, boxNumber - 1) : boxNumber;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -73,6 +120,11 @@ class BrowserHardware implements Hardware {
   async clearError(board: string): Promise<void> {
     await sleep(300);
     this.emitLocker({ board, boxNumber: 0, phase: "closed", message: "Erreurs acquittées" });
+  }
+
+  async defrost(board: string): Promise<void> {
+    await sleep(300);
+    this.emitLocker({ board, boxNumber: 0, phase: "closed", message: "Dégivrage lancé (simulé)" });
   }
 
   async doorState(): Promise<DoorState> {
@@ -115,6 +167,21 @@ class BrowserHardware implements Hardware {
     this.paymentCbs.add(cb);
     return () => this.paymentCbs.delete(cb);
   }
+
+  private cfg: SerialConfig | null = null;
+
+  async listComPorts(): Promise<string[]> {
+    // Ports fictifs pour la maquette navigateur.
+    return ["COM1", "COM2", "COM3", "COM4"];
+  }
+  async setHwConfig(_mode: HwMode, config: SerialConfig): Promise<void> {
+    this.cfg = config;
+  }
+  async previewFrame(board: string, boxNumber: number): Promise<string> {
+    const tpl = this.cfg?.frameOpen ?? "02 {board} {box} {xor}";
+    const base = this.cfg?.boxBase ?? 1;
+    return encodeFrame(tpl, boardIndex(board), boxAddr(boxNumber, base));
+  }
 }
 
 // ── Implémentation Tauri (matériel réel via commandes Rust) ──────────────────
@@ -133,6 +200,9 @@ class TauriHardware implements Hardware {
   }
   clearError(board: string) {
     return this.invoke<void>("clear_error", { board });
+  }
+  defrost(board: string) {
+    return this.invoke<void>("defrost", { board });
   }
   doorState(board: string) {
     return this.invoke<DoorState>("door_state", { board });
@@ -164,6 +234,16 @@ class TauriHardware implements Hardware {
       });
     });
     return () => unlisten?.();
+  }
+
+  listComPorts() {
+    return this.invoke<string[]>("list_com_ports");
+  }
+  setHwConfig(mode: HwMode, config: SerialConfig) {
+    return this.invoke<void>("set_hw_config", { mode, config });
+  }
+  previewFrame(board: string, boxNumber: number) {
+    return this.invoke<string>("preview_frame", { board, boxNumber });
   }
 }
 

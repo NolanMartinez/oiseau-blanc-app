@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Wifi, WifiOff, CreditCard, RadioTower, RefreshCw, Thermometer, HardDrive, Cpu } from "lucide-react";
+import { Wifi, WifiOff, CreditCard, RadioTower, RefreshCw, Thermometer, HardDrive, Cpu, Snowflake } from "lucide-react";
 import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
 import { hardware } from "../../hardware";
@@ -17,7 +17,16 @@ export function SystemStatusScreen() {
   const { setting } = useKiosk();
   const [temp, setTemp] = useState<number | null>(null);
   const [online, setOnline] = useState(false);
+  const [defrostMsg, setDefrostMsg] = useState("");
   const mdbEnabled = setting(SETTING_KEYS.mdbEnabled) === "1";
+  const machineName = setting(SETTING_KEYS.machineName, "Frigo 1");
+
+  async function runDefrost() {
+    setDefrostMsg("…");
+    await hardware.defrost("A");
+    setDefrostMsg("✓");
+    window.setTimeout(() => setDefrostMsg(""), 2000);
+  }
 
   useEffect(() => {
     let active = true;
@@ -46,8 +55,18 @@ export function SystemStatusScreen() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-[var(--line)] bg-white px-6 py-4">
+      <div className="flex items-center justify-between border-b border-[var(--line)] bg-white px-6 py-4">
         <h2 className="text-2xl font-extrabold">{t("status_title")}</h2>
+        <div className="flex items-center gap-3">
+          {defrostMsg && <span className="font-mono text-sm text-[var(--ink-faint)]">{defrostMsg}</span>}
+          <button
+            onClick={runDefrost}
+            className="flex items-center gap-2 rounded-xl bg-[var(--blue)] px-4 py-2.5 font-bold text-white active:opacity-80"
+          >
+            <Snowflake size={18} />
+            {t("defrost")}
+          </button>
+        </div>
       </div>
 
       <div className="grid flex-1 grid-cols-1 content-start gap-5 overflow-y-auto p-6 md:grid-cols-2">
@@ -97,6 +116,7 @@ export function SystemStatusScreen() {
             <Cpu size={36} className="text-[var(--ink-soft)]" />
             <div>
               <p className="text-2xl font-extrabold">Friggo Borne {RELEASE}</p>
+              <p className="text-sm text-[var(--ink-faint)]">{machineName}</p>
               <p className={`text-sm font-semibold ${online ? "text-green-600" : "text-red-500"}`}>
                 {online ? t("online") : t("offline")}
               </p>

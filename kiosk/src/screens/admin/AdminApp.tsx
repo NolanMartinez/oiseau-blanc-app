@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Grid3x3, DoorOpen, Activity, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { Grid3x3, DoorOpen, Activity, Settings as SettingsIcon, Cable, LogOut } from "lucide-react";
 import { useLang } from "../../i18n";
 import { MappingScreen } from "./MappingScreen";
 import { BoxControlScreen } from "./BoxControlScreen";
 import { SystemStatusScreen } from "./SystemStatusScreen";
 import { SettingsScreen } from "./SettingsScreen";
+import { LiaisonsScreen } from "./LiaisonsScreen";
 
-type Tab = "mapping" | "box" | "status" | "settings";
+type Tab = "mapping" | "liaisons" | "box" | "status" | "settings";
 
 export function AdminApp({ onExit }: { onExit: () => void }) {
   const { t } = useLang();
@@ -14,6 +15,7 @@ export function AdminApp({ onExit }: { onExit: () => void }) {
 
   const nav: { id: Tab; icon: React.ReactNode; label: string }[] = [
     { id: "mapping", icon: <Grid3x3 size={22} />, label: t("nav_mapping") },
+    { id: "liaisons", icon: <Cable size={22} />, label: t("nav_liaisons") },
     { id: "box", icon: <DoorOpen size={22} />, label: t("nav_box") },
     { id: "status", icon: <Activity size={22} />, label: t("nav_status") },
     { id: "settings", icon: <SettingsIcon size={22} />, label: t("nav_settings") },
@@ -58,6 +60,7 @@ export function AdminApp({ onExit }: { onExit: () => void }) {
       {/* Contenu */}
       <main className="flex-1 overflow-hidden bg-[var(--cream)]">
         {tab === "mapping" && <MappingScreen />}
+        {tab === "liaisons" && <LiaisonsScreen />}
         {tab === "box" && <BoxControlScreen />}
         {tab === "status" && <SystemStatusScreen />}
         {tab === "settings" && <SettingsScreen />}

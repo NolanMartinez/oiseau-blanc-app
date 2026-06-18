@@ -42,15 +42,6 @@ export function SettingsScreen() {
 
   const get = (k: string, fb = "") => settings[k] ?? fb;
 
-  const comPorts: { key: string; label: string }[] = [
-    { key: SETTING_KEYS.mainboardA, label: `${t("mainboard")} A` },
-    { key: SETTING_KEYS.mainboardB, label: `${t("mainboard")} B` },
-    { key: SETTING_KEYS.mainboardC, label: `${t("mainboard")} C` },
-    { key: SETTING_KEYS.mainboardD, label: `${t("mainboard")} D` },
-    { key: SETTING_KEYS.mainboardE, label: `${t("mainboard")} E` },
-    { key: SETTING_KEYS.paymentCom, label: t("payment_port") },
-  ];
-
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-[var(--line)] bg-white px-6 py-4">
@@ -72,6 +63,30 @@ export function SettingsScreen() {
       )}
 
       <div className="grid flex-1 grid-cols-1 content-start gap-5 overflow-y-auto p-6 lg:grid-cols-2">
+        {/* Machine */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <p className="mb-4 text-lg font-bold">{t("machine_section")}</p>
+          <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("machine_name")}</label>
+          <input
+            defaultValue={get(SETTING_KEYS.machineName, "Frigo 1")}
+            onBlur={(e) => save(SETTING_KEYS.machineName, e.target.value)}
+            className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2.5"
+            placeholder="Frigo 1"
+          />
+
+          <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("cold_type")}</label>
+          <select
+            value={get(SETTING_KEYS.coldType, "frozen")}
+            onChange={(e) => save(SETTING_KEYS.coldType, e.target.value)}
+            className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2.5"
+          >
+            <option value="frozen">{t("frozen")}</option>
+            <option value="chill">{t("chill")}</option>
+          </select>
+
+          <p className="text-xs text-[var(--ink-faint)]">{t("max_size")} : 250 × 185 × 55 mm</p>
+        </section>
+
         {/* Connexion serveur */}
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <p className="mb-4 text-lg font-bold">{t("backend_url")}</p>
@@ -89,24 +104,6 @@ export function SettingsScreen() {
             className="w-full rounded-xl border border-gray-300 px-3 py-2.5"
             placeholder="f1"
           />
-        </section>
-
-        {/* Ports COM */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
-          <p className="mb-4 text-lg font-bold">{t("com_ports")}</p>
-          <div className="grid grid-cols-2 gap-3">
-            {comPorts.map((c) => (
-              <div key={c.key}>
-                <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{c.label}</label>
-                <input
-                  defaultValue={get(c.key)}
-                  onBlur={(e) => save(c.key, e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2.5"
-                  placeholder="COM1"
-                />
-              </div>
-            ))}
-          </div>
         </section>
 
         {/* Activation */}

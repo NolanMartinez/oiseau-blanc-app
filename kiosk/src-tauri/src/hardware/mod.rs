@@ -1,19 +1,27 @@
 //! Couche d'abstraction matérielle de la borne.
 //!
 //! Le frontend ne parle jamais directement au matériel : il passe par les
-//! commandes Tauri (`commands.rs`) qui délèguent à une implémentation de
-//! [`HardwareController`]. Aujourd'hui l'implémentation active est
-//! [`mock::MockHardware`] (simulateur). Quand le protocole série Bicom + MDB
-//! sera disponible, il suffira de fournir une implémentation `serial::SerialHardware`
-//! sans toucher au reste de l'application.
+//! commandes Tauri (`commands.rs`) qui délèguent à [`device::Device`]. Le Device
+//! aiguille selon le mode :
+//!   - `Sim`  -> [`mock::MockHardware`] (simulateur)
+//!   - `Real` -> port série réel ([`serial`]) piloté par la configuration des
+//!              « Liaisons » (port COM par carte + trame d'ouverture).
+//!
+//! Tout est piloté par config : pour brancher un vrai frigo, l'exploitant remplit
+//! la page Liaisons (aucune recompilation). Paiement MDB et lecture température
+//! restent simulés tant que leur protocole n'est pas connu.
 
+pub mod device;
+pub mod frame;
 pub mod mock;
 pub mod serial;
+
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 
-/// État physique de la porte d'un casier / d'un compartiment.
+/// État physique de la porte d'un casier.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum DoorState {
@@ -22,7 +30,7 @@ pub enum DoorState {
     Unknown,
 }
 
-/// Résultat d'une demande de paiement sur le TPE / MDB.
+/// Résultat d'une demande de paiement.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum PaymentOutcome {
@@ -37,11 +45,60 @@ pub struct PaymentResult {
     pub outcome: PaymentOutcome,
 }
 
-/// Nom des événements émis vers le frontend (écoutés via `listen`).
+/// Mode du pilote matériel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode {
+    #[default]
+    Sim,
+    Real,
+}
+
+/// Branchement d'une carte (dispenser) : port COM + paramètres série.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BoardLink {
+    pub com_port: String,
+    #[serde(default = "default_baud")]
+    pub baud: u32,
+    #[serde(default = "default_parity")]
+    pub parity: String,
+    #[serde(default)]
+    pub enabled: bool,
+}
+
+fn default_baud() -> u32 {
+    9600
+}
+fn default_parity() -> String {
+    "none".to_string()
+}
+
+/// Configuration complète des liaisons (envoyée par le frontend).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SerialConfig {
+    /// Carte ('A'..'E') -> branchement.
+    pub boards: HashMap<String, BoardLink>,
+    /// Trame d'ouverture d'un casier (gabarit). Ex: `02 {board} {box} {xor}`.
+    pub frame_open: String,
+    /// Trame optionnelle « tout fermer » (vide = non envoyée).
+    #[serde(default)]
+    pub frame_close_all: String,
+    /// Trame optionnelle « acquitter erreurs » (vide = non envoyée).
+    #[serde(default)]
+    pub frame_clear: String,
+    /// Trame optionnelle « dégivrage / Close Brina » (vide = non envoyée).
+    #[serde(default)]
+    pub frame_defrost: String,
+    /// Base de numérotation des portes : 1 (1..32) ou 0 (0..31).
+    #[serde(default)]
+    pub box_base: u8,
+}
+
 pub const EVENT_LOCKER: &str = "hw://locker";
 pub const EVENT_PAYMENT: &str = "hw://payment";
 
-/// Payload de l'événement `hw://locker`.
 #[derive(Debug, Clone, Serialize)]
 pub struct LockerEvent {
     pub board: String,
@@ -51,7 +108,6 @@ pub struct LockerEvent {
     pub message: Option<String>,
 }
 
-/// Payload de l'événement `hw://payment`.
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentEvent {
     /// "waiting" | "processing" | "approved" | "declined" | "cancelled" | "timeout"
@@ -59,27 +115,14 @@ pub struct PaymentEvent {
     pub amount_cents: u32,
 }
 
-/// Contrat que doit respecter tout pilote matériel (mock ou série réel).
+/// Contrat du pilote simulé (le Device l'utilise en mode Sim).
 #[async_trait::async_trait]
 pub trait HardwareController: Send + Sync {
-    /// Ouvre le casier `box_number` de la carte `board` (A–E).
     async fn open_locker(&self, app: &AppHandle, board: String, box_number: u32) -> Result<(), String>;
-
-    /// Referme/réinitialise tous les casiers d'une carte (bouton CLOSE ALL).
     async fn close_all(&self, app: &AppHandle, board: String) -> Result<(), String>;
-
-    /// Acquitte les erreurs d'une carte (bouton Clear error).
     async fn clear_error(&self, app: &AppHandle, board: String) -> Result<(), String>;
-
-    /// Lit l'état de la porte principale d'une carte.
     async fn door_state(&self, board: String) -> DoorState;
-
-    /// Lit la température (°C) remontée par une carte.
     async fn read_temperature(&self, board: String) -> f32;
-
-    /// Lance une demande de paiement de `amount_cents` centimes sur le TPE.
     async fn request_payment(&self, app: &AppHandle, amount_cents: u32) -> PaymentResult;
-
-    /// Annule la demande de paiement en cours.
     async fn cancel_payment(&self);
 }

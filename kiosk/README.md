@@ -59,6 +59,21 @@ npm run tauri dev
 Depuis l'écran client, **5 appuis rapides dans le coin supérieur gauche** ouvrent
 l'écran PIN. PIN par défaut : `1234` (modifiable dans Réglages).
 
+### Brancher un frigo (page « Liaisons »)
+Tout se configure **à la souris/tactile**, sans recompiler :
+1. **Mode matériel** : Simulateur ↔ Matériel réel.
+2. **Cartes & ports COM** : pour chaque carte (A–E), choisir le port COM détecté
+   automatiquement, le débit (baud), la parité, et l'activer.
+3. **Trame d'ouverture** : gabarit de la trame envoyée pour ouvrir un casier, avec
+   aperçu en direct. Jetons : `{board}`, `{box}`, `{xor}`, `{sum8}`, `{len}` +
+   octets hex (ex. `02 {board} {box} {xor}`). Base de numérotation 0/1.
+4. **Adresses physiques** : si le câblage des portes ne suit pas 1..32, saisir
+   l'adresse réelle de chaque porte.
+5. **Tester** : bouton qui envoie réellement la trame au casier choisi.
+
+Paiement MDB et lecture température restent **simulés** tant que leur protocole
+n'est pas fourni (clairement indiqué dans l'UI).
+
 ### Synchro du menu
 Dans **Réglages** : renseigner l'URL du serveur (ex. `http://192.168.1.10:3001`)
 et l'identifiant du frigo, puis **Synchroniser**. La borne récupère le menu, les
@@ -78,17 +93,36 @@ npm run tauri build     # génère un .msi / .exe dans src-tauri/target/release/
   l'app au démarrage (Shell Launcher de Windows IoT, ou dossier Démarrage), et
   réserver la sortie à l'admin (PIN).
 
-## Intégration matériel réel (étape suivante)
+## Intégration matériel réel
 
-Le protocole série Bicom (cartes casiers A–E) et MDB (paiement) n'est pas encore
-disponible. Quand il le sera :
+Le **transport série existe déjà** (crate `serialport`, [src-tauri/src/hardware/serial.rs](src-tauri/src/hardware/serial.rs))
+et tout est **piloté par la configuration** de la page Liaisons :
+[device.rs](src-tauri/src/hardware/device.rs) aiguille vers le port série en mode
+`Real`, encode la trame d'ouverture ([frame.rs](src-tauri/src/hardware/frame.rs))
+et l'envoie sur le bon COM.
 
-1. Implémenter `HardwareController` pour `SerialHardware`
-   (`src-tauri/src/hardware/serial.rs`) avec `tauri-plugin-serialport`.
-2. Dans `src-tauri/src/lib.rs`, remplacer
-   `Arc::new(MockHardware::new())` par `Arc::new(SerialHardware::new(config))`.
+Pour brancher un vrai frigo, dans la plupart des cas il suffit de **remplir la
+page Liaisons** (port COM + gabarit de trame) — aucune recompilation.
 
-**Aucun changement frontend requis.**
+Cas nécessitant du code : si une carte parle un protocole plus riche que
+« trame fixe d'ouverture » (réponses à lire, handshake, lecture température/porte),
+étendre [device.rs](src-tauri/src/hardware/device.rs) en s'appuyant sur
+`serial::send_frame`. Le **paiement MDB** reste à implémenter (interface MDB↔série
++ dialogue cashless) ; en attendant, `request_payment` utilise le simulateur.
+
+## Workflow code-barres (page Casiers)
+
+Comme le Totem Bicom, on peut affecter un plat à un tiroir avec la **douchette
+USB** (reconnue comme clavier) : activer **Mode scan**, scanner le code-barres du
+plat puis celui du tiroir. Un code inconnu propose de le **lier** à un plat
+(mémorisé sur `dishes_cache.barcode`). La saisie manuelle reste disponible.
+
+## Indépendance
+
+L'application est **autonome** : aucune dépendance à un cloud ou compte tiers.
+Données locales (SQLite) + synchro avec **votre** backend uniquement. Elle pilote
+le matériel du frigo (cartes/serrures) de façon **générique** via la page Liaisons
+(trame configurable) — aucun code propriétaire en dur.
 
 ## Remontée des ventes (optionnel)
 
