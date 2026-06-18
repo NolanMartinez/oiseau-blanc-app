@@ -205,6 +205,8 @@ interface ModalState {
   availableDishes: { id: string; name: string }[];
   initialQuantity?: number;
   initialExpiryDate?: string | null;
+  stockId?: string | null;
+  initialPromoPercent?: number | null;
 }
 
 export function Frigos() {
@@ -250,6 +252,8 @@ export function Frigos() {
       availableDishes: [],
       initialQuantity: dish.stock,
       initialExpiryDate: dish.expiryDate,
+      stockId: dish.stockId,
+      initialPromoPercent: dish.promoPercent,
     });
   }
 
@@ -306,6 +310,8 @@ export function Frigos() {
           availableDishes={modal.availableDishes}
           initialQuantity={modal.initialQuantity}
           initialExpiryDate={modal.initialExpiryDate}
+          stockId={modal.stockId}
+          initialPromoPercent={modal.initialPromoPercent}
           onClose={() => setModal(null)}
           onSaved={handleSaved}
         />

@@ -11,6 +11,8 @@ interface StockModalProps {
   availableDishes: { id: string; name: string }[];
   initialQuantity?: number;
   initialExpiryDate?: string | null;
+  stockId?: string | null;
+  initialPromoPercent?: number | null;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -22,6 +24,8 @@ export function StockModal({
   availableDishes,
   initialQuantity,
   initialExpiryDate,
+  stockId,
+  initialPromoPercent,
   onClose,
   onSaved,
 }: StockModalProps) {
@@ -31,6 +35,7 @@ export function StockModal({
   const [expiryDate, setExpiryDate] = useState(
     initialExpiryDate ? initialExpiryDate.slice(0, 10) : '',
   );
+  const [promoPercent, setPromoPercent] = useState(String(initialPromoPercent ?? 0));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,15 +46,25 @@ export function StockModal({
     if (!dishId) { setError('Choisissez un plat.'); return; }
     const qty = parseInt(quantity, 10);
     if (Number.isNaN(qty) || qty < 0) { setError('La quantité doit être un entier positif.'); return; }
+    const promo = promoPercent !== '' ? parseInt(promoPercent, 10) : 0;
+    if (Number.isNaN(promo) || promo < 0 || promo > 95) { setError('La remise doit être comprise entre 0 et 95%.'); return; }
 
     setLoading(true);
     try {
-      await api.post('/admin/stock', {
-        frigoId,
-        dishId,
-        quantity: qty,
-        expiryDate: expiryDate || null,
-      });
+      if (stockId) {
+        await api.patch(`/admin/stock/${stockId}`, {
+          quantity: qty,
+          expiryDate: expiryDate || null,
+          promoPercent: promo > 0 ? promo : null,
+        });
+      } else {
+        await api.post('/admin/stock', {
+          frigoId,
+          dishId,
+          quantity: qty,
+          expiryDate: expiryDate || null,
+        });
+      }
       onSaved();
     } catch {
       setError('Une erreur est survenue. Veuillez réessayer.');
@@ -128,6 +143,28 @@ export function StockModal({
               Utilisée pour suggérer des promotions à l'approche de la péremption.
             </p>
           </div>
+
+          {/* Remise promotionnelle — uniquement en mode édition */}
+          {isEdit && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Remise promotionnelle (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="95"
+                step="1"
+                value={promoPercent}
+                onChange={(e) => setPromoPercent(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                0 = pas de promotion. Uniquement pour ce frigo.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

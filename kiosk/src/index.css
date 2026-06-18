@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* ─── Charte Friggo (alignée sur l'app web client/) ───────────────────── */
+:root {
+  --green:      #319966; /* primaire, CTA, état actif */
+  --green-soft: #d6f4e3;
+  --green-tint: #e8faf0;
+  --blue:       #70C8F2; /* accent secondaire */
+  --blue-soft:  #d8eefa;
+  --yellow:     #FECB37; /* accent / highlights */
+  --mint:       #A3FFD1;
+  --peach:      #FFD5AB;
+
+  --cream:      #fafafa; /* fond global */
+  --ink:        #111111;
+  --ink-soft:   #3a3a3a;
+  --ink-faint:  #8c8c8c;
+  --line:       #e8e8e8;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mode borne : on neutralise les interactions « bureau ». */
+* {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Masque la barre de défilement (écran tactile). */
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Empêche le menu contextuel / le drag d'images. */
+img { -webkit-user-drag: none; user-drag: none; }
