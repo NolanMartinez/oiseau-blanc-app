@@ -1,7 +1,7 @@
 # Proxy des appels API de l'app web (Netlify) vers le serveur (Railway).
 # ⚠️ REMPLACE l'URL ci-dessous par l'URL PUBLIQUE de TON serveur Railway
 #    (ex. https://oiseau-blanc-server-production.up.railway.app)
-/api/*  https://REMPLACE-PAR-TON-URL-RAILWAY.up.railway.app/api/:splat  200
+/api/*  https://friggo-app-production.up.railway.app/api/:splat  200
 
 # Fallback SPA (routage React) — laisse cette ligne en dernier.
 /*  /index.html  200
