@@ -10,6 +10,7 @@ export function BoxControlScreen() {
   const [board, setBoard] = useState("A");
   const [busyBox, setBusyBox] = useState<number | null>(null);
   const [lastEvent, setLastEvent] = useState<LockerEvent | null>(null);
+  const [targetBox, setTargetBox] = useState("");
 
   const boardLockers = useMemo(
     () => lockers.filter((l) => l.board === board).sort((a, b) => a.boxNumber - b.boxNumber),
@@ -28,6 +29,15 @@ export function BoxControlScreen() {
     setBusyBox(boxNumber);
     await hardware.openLocker(board, address ?? boxNumber);
     setBusyBox(null);
+  }
+
+  async function openTargetBox() {
+    const n = parseInt(targetBox, 10);
+    if (!Number.isFinite(n) || n < 1 || n > 32) return;
+    setBusyBox(n);
+    await hardware.openLocker(board, n);
+    setBusyBox(null);
+    setTargetBox("");
   }
 
   return (
@@ -78,6 +88,30 @@ export function BoxControlScreen() {
             {lastEvent.message ?? `${t("box")} ${lastEvent.boxNumber} · ${lastEvent.phase}`}
           </span>
         )}
+      </div>
+
+      {/* Ouverture ciblée par numéro (carte {board}, casier 1–32) */}
+      <div className="flex items-center gap-3 border-b border-[var(--line)] bg-white px-6 py-3">
+        <span className="text-sm font-medium text-[var(--ink-soft)]">{t("open_box_by_number")}</span>
+        <input
+          type="number"
+          min={1}
+          max={32}
+          inputMode="numeric"
+          value={targetBox}
+          onChange={(e) => setTargetBox(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && openTargetBox()}
+          placeholder="1–32"
+          className="w-24 rounded-lg border-2 border-gray-200 px-3 py-2 text-center text-lg font-bold focus:border-[var(--green)] focus:outline-none"
+        />
+        <button
+          onClick={openTargetBox}
+          disabled={!targetBox}
+          className="flex items-center gap-2 rounded-xl bg-[var(--green)] px-4 py-2.5 font-bold text-white active:opacity-80 disabled:opacity-40"
+        >
+          <DoorOpen size={18} />
+          {t("open")}
+        </button>
       </div>
 
       {/* Grille */}

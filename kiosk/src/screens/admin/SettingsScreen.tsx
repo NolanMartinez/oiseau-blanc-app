@@ -117,14 +117,55 @@ export function SettingsScreen() {
             <span className="font-medium">{t("free_sale")}</span>
             <Toggle on={get(SETTING_KEYS.venteLibre) === "1"} onChange={(v) => save(SETTING_KEYS.venteLibre, v ? "1" : "0")} />
           </div>
-          <div className="mt-3">
-            <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("currency")}</label>
-            <input
-              defaultValue={get(SETTING_KEYS.currency, "EUR")}
-              onBlur={(e) => save(SETTING_KEYS.currency, e.target.value.toUpperCase())}
-              className="w-32 rounded-xl border border-gray-300 px-3 py-2.5"
-            />
+          <div className="flex items-center justify-between py-2">
+            <span className="font-medium">{t("payment_test")}</span>
+            <Toggle on={get(SETTING_KEYS.paymentTest) === "1"} onChange={(v) => save(SETTING_KEYS.paymentTest, v ? "1" : "0")} />
           </div>
+          <div className="mt-3 flex flex-wrap gap-6">
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("currency")}</label>
+              <input
+                defaultValue={get(SETTING_KEYS.currency, "EUR")}
+                onBlur={(e) => save(SETTING_KEYS.currency, e.target.value.toUpperCase())}
+                className="w-32 rounded-xl border border-gray-300 px-3 py-2.5"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("open_hold_secs")}</label>
+              <input
+                type="number"
+                min="1"
+                max="120"
+                defaultValue={get(SETTING_KEYS.openHoldSecs, "8")}
+                onBlur={(e) => save(SETTING_KEYS.openHoldSecs, e.target.value)}
+                className="w-32 rounded-xl border border-gray-300 px-3 py-2.5"
+              />
+              <p className="mt-1 text-xs text-[var(--ink-faint)]">{t("open_hold_secs_hint")}</p>
+            </div>
+          </div>
+
+          {/* Carte de paiement MDB (TPE) */}
+          <div className="mt-3 flex flex-wrap items-end gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("payment_card_port")}</label>
+              <input
+                defaultValue={get(SETTING_KEYS.paymentCom)}
+                onBlur={(e) => save(SETTING_KEYS.paymentCom, e.target.value.toUpperCase())}
+                placeholder="COM2"
+                className="w-32 rounded-xl border border-gray-300 px-3 py-2.5"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("payment_baud")}</label>
+              <input
+                type="number"
+                defaultValue={get(SETTING_KEYS.paymentBaud, "115200")}
+                onBlur={(e) => save(SETTING_KEYS.paymentBaud, e.target.value)}
+                className="w-32 rounded-xl border border-gray-300 px-3 py-2.5"
+              />
+            </div>
+          </div>
+          <p className="mt-1 text-xs text-[var(--ink-faint)]">{t("payment_port_hint")}</p>
         </section>
 
         {/* Température / alarme / PIN / langue */}

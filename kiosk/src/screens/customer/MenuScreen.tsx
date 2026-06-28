@@ -1,74 +1,189 @@
-import { UtensilsCrossed } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { UtensilsCrossed, Plus, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLang } from "../../i18n";
-import { useKiosk, type MenuItem } from "../../state/kiosk";
+import { useKiosk, type GroupedDish } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
 import { formatPrice } from "../../utils/format";
+import { categoryEmoji } from "../../utils/emoji";
 import { LangSwitcher } from "../../components/LangSwitcher";
 
 export function MenuScreen({
-  onSelect,
+  category,
+  onCategoryChange,
+  onOpenDetail,
+  onAddToCart,
+  reservedByDish,
+  cartCount,
+  cartTotalCents,
+  onViewCart,
   onBack,
 }: {
-  onSelect: (item: MenuItem) => void;
+  category: string;
+  onCategoryChange: (c: string) => void;
+  onOpenDetail: (g: GroupedDish) => void;
+  onAddToCart: (g: GroupedDish) => void;
+  reservedByDish: Record<string, number>;
+  cartCount: number;
+  cartTotalCents: number;
+  onViewCart: () => void;
   onBack: () => void;
 }) {
   const { t } = useLang();
-  const { menuItems, setting } = useKiosk();
+  const { groupedMenu, categories, setting } = useKiosk();
   const currency = setting(SETTING_KEYS.currency, "EUR");
-  const venteLibre = setting(SETTING_KEYS.venteLibre) === "1";
+
+  const shown = useMemo(
+    () => (category ? groupedMenu.filter((g) => g.dish.category === category) : groupedMenu),
+    [groupedMenu, category],
+  );
+
+  // Pagination : 6 plats par page (grille 3×2), navigation par flèches.
+  const PAGE_SIZE = 6;
+  const [page, setPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  // Revient en page valide quand la catégorie change ou que la liste se réduit.
+  useEffect(() => {
+    setPage((p) => Math.min(p, totalPages - 1));
+  }, [totalPages]);
+  useEffect(() => {
+    setPage(0);
+  }, [category]);
+  const pageItems = shown.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const remaining = (g: GroupedDish) => g.quantity - (reservedByDish[g.dish.id] ?? 0);
 
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between bg-white px-8 py-5 shadow-sm">
+      <header className="flex items-center justify-between bg-white px-8 py-4 shadow-sm">
         <button onClick={onBack} className="text-2xl font-bold text-[var(--green)] active:opacity-60">
           ‹ {t("back")}
         </button>
-        <h1 className="text-3xl font-extrabold">{t("menu_title")}</h1>
+        <h1 className="text-2xl font-extrabold">{t("menu_title")}</h1>
         <LangSwitcher />
       </header>
 
-      {venteLibre && (
-        <div className="bg-[var(--yellow)] py-2 text-center text-sm font-bold text-[var(--ink)]">
-          ⚠ {t("free_sale")}
-        </div>
-      )}
+      {/* Onglets catégories */}
+      <div className="flex gap-2 overflow-x-auto border-b border-[var(--line)] bg-white px-6 py-3">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => onCategoryChange(cat)}
+            className={`shrink-0 rounded-full px-5 py-2 text-base font-bold ${
+              category === cat ? "bg-[var(--green)] text-white" : "bg-gray-100 text-[var(--ink-soft)]"
+            }`}
+          >
+            {categoryEmoji(cat)} {cat}
+          </button>
+        ))}
+      </div>
 
-      {/* Grille de plats */}
-      {menuItems.length === 0 ? (
+      {/* Grille de plats groupés — paginée (3×2), flèches de navigation */}
+      {shown.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-[var(--ink-faint)]">
           <UtensilsCrossed size={56} />
           <p className="text-2xl">{t("no_dishes")}</p>
         </div>
       ) : (
-        <div className="grid flex-1 grid-cols-2 gap-5 overflow-y-auto p-6 lg:grid-cols-3">
-          {menuItems.map((item) => (
-            <button
-              key={item.locker.id}
-              onClick={() => onSelect(item)}
-              className="flex flex-col overflow-hidden rounded-3xl bg-white text-left shadow-md transition active:scale-[0.98]"
-            >
-              <div className="aspect-[4/3] w-full overflow-hidden bg-[var(--green-tint)]">
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.dish.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[var(--green)]">
-                    <UtensilsCrossed size={48} />
+        <div className="flex flex-1 items-stretch gap-2 overflow-hidden p-4">
+          {/* Flèche précédent */}
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            aria-label={t("prev")}
+            className="flex w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-[var(--green)] shadow-md active:scale-95 disabled:opacity-30"
+          >
+            <ChevronLeft size={40} />
+          </button>
+
+          {/* Page courante : 3 colonnes × 2 lignes */}
+          <div className="grid flex-1 grid-cols-3 grid-rows-2 gap-4">
+            {pageItems.map((g) => {
+              const left = remaining(g);
+              return (
+                <div
+                  key={g.dish.id}
+                  className="flex min-h-0 flex-col overflow-hidden rounded-3xl bg-white shadow-md"
+                >
+                  <button
+                    onClick={() => onOpenDetail(g)}
+                    className="flex min-h-0 flex-1 flex-col text-left transition active:scale-[0.99]"
+                  >
+                    {/* Image : occupe l'espace restant de la carte (jamais de débordement). */}
+                    <div className="relative w-full min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)]">
+                      {g.imageUrl ? (
+                        <img src={g.imageUrl} alt={g.dish.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-6xl">
+                          {categoryEmoji(g.dish.category)}
+                        </div>
+                      )}
+                      <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-[var(--green)] shadow">
+                        {t("qty_available", { n: left })}
+                      </span>
+                    </div>
+                    {/* Titre + prix : hauteur naturelle, toujours visibles. */}
+                    <div className="shrink-0 px-4 pt-2">
+                      <p className="line-clamp-2 text-base font-bold leading-tight">{g.dish.name}</p>
+                      <p className="text-xl font-extrabold text-[var(--green)]">
+                        {formatPrice(g.priceCents, currency)}
+                      </p>
+                    </div>
+                  </button>
+
+                  <div className="shrink-0 px-3 pb-3 pt-2">
+                    <button
+                      onClick={() => onAddToCart(g)}
+                      disabled={left <= 0}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--green)] py-2.5 text-base font-extrabold text-white active:scale-[0.98] disabled:opacity-40"
+                    >
+                      <Plus size={18} />
+                      {t("add_to_cart")}
+                    </button>
                   </div>
-                )}
-              </div>
-              <div className="flex flex-1 flex-col gap-2 p-4">
-                <p className="line-clamp-2 text-xl font-bold leading-tight">{item.dish.name}</p>
-                {item.dish.category && (
-                  <p className="text-sm text-[var(--ink-faint)]">{item.dish.category}</p>
-                )}
-                <p className="mt-auto text-2xl font-extrabold text-[var(--green)]">
-                  {formatPrice(item.priceCents, currency)}
-                </p>
-              </div>
-            </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Flèche suivant */}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+            aria-label={t("next")}
+            className="flex w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-[var(--green)] shadow-md active:scale-95 disabled:opacity-30"
+          >
+            <ChevronRight size={40} />
+          </button>
+        </div>
+      )}
+
+      {/* Indicateur de page */}
+      {shown.length > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-2 bg-white pb-2 text-sm font-bold text-[var(--ink-faint)]">
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <span
+              key={i}
+              className={`h-2.5 rounded-full transition-all ${
+                i === page ? "w-6 bg-[var(--green)]" : "w-2.5 bg-gray-300"
+              }`}
+            />
           ))}
         </div>
+      )}
+
+      {/* Barre panier */}
+      {cartCount > 0 && (
+        <button
+          onClick={onViewCart}
+          className="flex items-center justify-between bg-[var(--green)] px-8 py-5 text-white shadow-[0_-4px_20px_rgba(0,0,0,0.15)] active:opacity-90"
+        >
+          <span className="flex items-center gap-3 text-xl font-bold">
+            <ShoppingCart size={26} />
+            {t("view_cart")} ({cartCount})
+          </span>
+          <span className="text-2xl font-extrabold">{formatPrice(cartTotalCents, currency)}</span>
+        </button>
       )}
     </div>
   );

@@ -28,5 +28,41 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0003_bicom.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "donnees de demonstration",
+            sql: include_str!("../migrations/0004_demo.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 5,
+            description: "force mode simulateur (demo)",
+            sql: include_str!("../migrations/0005_force_sim.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 6,
+            description: "renommage categories demo",
+            sql: include_str!("../migrations/0006_demo_categories.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 7,
+            description: "active materiel reel MIDA (COM1/57600)",
+            sql: include_str!("../migrations/0007_real_midalite.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 8,
+            description: "DLC en jours par plat",
+            sql: include_str!("../migrations/0008_dlc_days.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 9,
+            description: "carte paiement MDB (COM2/115200)",
+            sql: include_str!("../migrations/0009_payment_mdb.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

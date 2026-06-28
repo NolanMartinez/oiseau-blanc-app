@@ -1,19 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Trash2, Check, ScanLine, Link2 } from "lucide-react";
+import { RefreshCw, Trash2, Check, ScanLine, Link2, CheckSquare } from "lucide-react";
 import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
 import { SETTING_KEYS, type DishCache, type Locker } from "../../db";
 import { formatPrice } from "../../utils/format";
+import { byCategoryThenName } from "../../utils/categories";
 import { useBarcodeScanner } from "../../hooks/useBarcodeScanner";
+
+const MAX_DLC_DAYS = 10;
+const DEFAULT_DLC_DAYS = 3;
+
+/** Date ISO (YYYY-MM-DD) à aujourd'hui + n jours. */
+function isoDatePlus(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 export function MappingScreen() {
   const { t } = useLang();
   const { dispensers, lockers, dishes, repo, reload, runSync, setting } = useKiosk();
   const [board, setBoard] = useState("A");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [multiMode, setMultiMode] = useState(false);
   const [dishId, setDishId] = useState("");
   const [priceEuros, setPriceEuros] = useState("");
   const [expiry, setExpiry] = useState("");
+  const [dlcError, setDlcError] = useState("");
   const [syncMsg, setSyncMsg] = useState("");
   const [syncing, setSyncing] = useState(false);
   // Mode scan (douchette)
@@ -29,33 +42,88 @@ export function MappingScreen() {
     [lockers, board],
   );
   const dishById = useMemo(() => new Map(dishes.map((d) => [d.id, d])), [dishes]);
-  const selected = boardLockers.find((l) => l.id === selectedId) ?? null;
+  // Plats regroupés par catégorie, dans l'ordre voulu (Entrées, Salades, Plats à
+  // chauffer, Desserts) puis alphabétique — pour les menus déroulants.
+  const dishGroups = useMemo(() => {
+    const sorted = [...dishes].sort((a, b) =>
+      byCategoryThenName(a.category, a.name, b.category, b.name),
+    );
+    const groups: { category: string; items: DishCache[] }[] = [];
+    for (const d of sorted) {
+      const cat = d.category ?? "Autres";
+      let g = groups.find((x) => x.category === cat);
+      if (!g) {
+        g = { category: cat, items: [] };
+        groups.push(g);
+      }
+      g.items.push(d);
+    }
+    return groups;
+  }, [dishes]);
+  // Casier unique sélectionné (édition « simple »). En multi, single = null.
+  const single = selectedIds.length === 1 ? boardLockers.find((l) => l.id === selectedIds[0]) ?? null : null;
 
-  // Pré-remplit l'éditeur quand on sélectionne un casier.
+  function selectOnly(id: number) {
+    setSelectedIds([id]);
+  }
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      if (multiMode) return prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      return [id];
+    });
+  }
+
+  // Pré-remplit l'éditeur sur sélection simple ; vide quand on déselectionne tout.
+  // En multi-sélection (>1), on garde les champs comme gabarit d'affectation groupée.
   useEffect(() => {
-    if (!selected) return;
-    setDishId(selected.dishId ?? "");
-    setPriceEuros(selected.price != null ? (selected.price / 100).toFixed(2) : "");
-    setExpiry(selected.expiryDate ? selected.expiryDate.slice(0, 10) : "");
-  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedIds.length === 1) {
+      const l = boardLockers.find((x) => x.id === selectedIds[0]);
+      if (l) {
+        setDishId(l.dishId ?? "");
+        setPriceEuros(l.price != null ? (l.price / 100).toFixed(2) : "");
+        setExpiry(l.expiryDate ? l.expiryDate.slice(0, 10) : "");
+        setDlcError("");
+      }
+    } else if (selectedIds.length === 0) {
+      setDishId("");
+      setPriceEuros("");
+      setExpiry("");
+      setDlcError("");
+    }
+  }, [selectedIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save() {
-    if (!repo || !selected) return;
+    if (!repo || selectedIds.length === 0) return;
+    setDlcError("");
+    // DLC obligatoire et bornée à aujourd'hui + 10 jours (uniquement si un plat est affecté).
+    if (dishId) {
+      if (!expiry) {
+        setDlcError(t("dlc_required"));
+        return;
+      }
+      if (expiry < isoDatePlus(0) || expiry > isoDatePlus(MAX_DLC_DAYS)) {
+        setDlcError(t("dlc_max_10"));
+        return;
+      }
+    }
     const price = priceEuros.trim() ? Math.round(parseFloat(priceEuros) * 100) : null;
-    await repo.setLockerMapping(selected.id, {
-      dishId: dishId || null,
-      price: Number.isNaN(price as number) ? null : price,
-      expiryDate: expiry || null,
-    });
+    // Affectation (groupée) à tous les casiers sélectionnés.
+    for (const id of selectedIds) {
+      await repo.setLockerMapping(id, {
+        dishId: dishId || null,
+        price: Number.isNaN(price as number) ? null : price,
+        expiryDate: dishId ? expiry : null,
+      });
+    }
     await reload();
-    setSelectedId(null);
+    setSelectedIds([]);
   }
 
   async function clear() {
-    if (!repo || !selected) return;
-    await repo.clearLocker(selected.id);
+    if (!repo || selectedIds.length === 0) return;
+    for (const id of selectedIds) await repo.clearLocker(id);
     await reload();
-    setSelectedId(null);
+    setSelectedIds([]);
   }
 
   async function doSync() {
@@ -83,12 +151,13 @@ export function MappingScreen() {
         await repo.setLockerMapping(locker.id, {
           dishId: pendingDish.id,
           price: pendingDish.price,
-          expiryDate: null,
+          // DLC obligatoire : on met une valeur par défaut (ajustable dans l'éditeur).
+          expiryDate: isoDatePlus(DEFAULT_DLC_DAYS),
         });
         await reload();
         setScanMsg(`${t("box")} ${asNum} ← ${pendingDish.name}`);
       } else {
-        setSelectedId(locker.id);
+        selectOnly(locker.id);
         setScanMsg(`${t("box")} ${asNum}`);
       }
       return;
@@ -141,7 +210,7 @@ export function MappingScreen() {
                   key={d.board}
                   onClick={() => {
                     setBoard(d.board);
-                    setSelectedId(null);
+                    setSelectedIds([]);
                   }}
                   className={`h-10 w-10 rounded-lg text-lg font-bold ${
                     board === d.board ? "bg-[var(--green)] text-white" : "bg-gray-100 text-[var(--ink-soft)]"
@@ -152,6 +221,18 @@ export function MappingScreen() {
               ))}
             </div>
           </div>
+          <button
+            onClick={() => {
+              setMultiMode((v) => !v);
+              setSelectedIds([]);
+            }}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 font-bold active:opacity-80 ${
+              multiMode ? "bg-[var(--green)] text-white" : "border-2 border-gray-200 text-[var(--ink-soft)]"
+            }`}
+          >
+            <CheckSquare size={18} />
+            {t("multi_select")}
+          </button>
           <button
             onClick={toggleScan}
             className={`flex items-center gap-2 rounded-xl px-4 py-2.5 font-bold active:opacity-80 ${
@@ -197,8 +278,12 @@ export function MappingScreen() {
                 className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
               >
                 <option value="">{t("link_barcode")}…</option>
-                {dishes.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
+                {dishGroups.map((g) => (
+                  <optgroup key={g.category} label={g.category}>
+                    {g.items.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <button
@@ -221,9 +306,9 @@ export function MappingScreen() {
             return (
               <button
                 key={l.id}
-                onClick={() => setSelectedId(l.id)}
+                onClick={() => toggleSelect(l.id)}
                 className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 p-1 text-center ${
-                  selectedId === l.id
+                  selectedIds.includes(l.id)
                     ? "border-[var(--green)] bg-[var(--green-tint)]"
                     : name
                       ? "border-transparent bg-white shadow-sm"
@@ -241,12 +326,17 @@ export function MappingScreen() {
           })}
         </div>
 
-        {/* Éditeur de casier */}
-        {selected && (
+        {/* Éditeur de casier (simple ou groupé) */}
+        {selectedIds.length > 0 && (
           <div className="w-80 shrink-0 overflow-y-auto border-l border-[var(--line)] bg-white p-6">
-            <p className="mb-4 text-xl font-extrabold">
-              {t("box")} {selected.boxNumber}
+            <p className="mb-1 text-xl font-extrabold">
+              {single ? `${t("box")} ${single.boxNumber}` : t("n_boxes_selected", { n: selectedIds.length })}
             </p>
+            {!single && (
+              <p className="mb-3 text-xs text-[var(--ink-faint)]">
+                {t("apply_to_all_selected")}
+              </p>
+            )}
 
             <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("dish")}</label>
             <select
@@ -255,14 +345,24 @@ export function MappingScreen() {
                 setDishId(e.target.value);
                 const d = dishById.get(e.target.value);
                 if (d && !priceEuros) setPriceEuros((d.price / 100).toFixed(2));
+                // DLC : pré-remplit la date limite = aujourd'hui + DLC (jours) de la
+                // fiche produit, bornée à 10 jours max.
+                if (d && d.dlcDays != null) {
+                  setExpiry(isoDatePlus(Math.min(d.dlcDays, MAX_DLC_DAYS)));
+                  setDlcError("");
+                }
               }}
               className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2.5"
             >
               <option value="">{t("none")}</option>
-              {dishes.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
+              {dishGroups.map((g) => (
+                <optgroup key={g.category} label={g.category}>
+                  {g.items.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
 
@@ -279,15 +379,24 @@ export function MappingScreen() {
               placeholder="0.00"
             />
 
-            <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("expiry")}</label>
+            <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">
+              {t("expiry")} <span className="text-red-500">*</span>
+            </label>
             <input
               type="date"
               value={expiry}
-              onChange={(e) => setExpiry(e.target.value)}
-              className="mb-6 w-full rounded-xl border border-gray-300 px-3 py-2.5"
+              min={isoDatePlus(0)}
+              max={isoDatePlus(MAX_DLC_DAYS)}
+              onChange={(e) => {
+                setExpiry(e.target.value);
+                setDlcError("");
+              }}
+              className="w-full rounded-xl border border-gray-300 px-3 py-2.5"
             />
+            <p className="mb-4 mt-1 text-xs text-[var(--ink-faint)]">{t("dlc_max_10")}</p>
+            {dlcError && <p className="mb-3 -mt-2 text-sm font-semibold text-red-600">{dlcError}</p>}
 
-            {selected.price == null && dishId && dishById.get(dishId) && (
+            {(single ? single.price == null : true) && dishId && dishById.get(dishId) && (
               <p className="mb-4 -mt-3 text-xs text-[var(--ink-faint)]">
                 Prix catalogue : {formatPrice(dishById.get(dishId)!.price, currency)}
               </p>

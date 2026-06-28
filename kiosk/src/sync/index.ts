@@ -15,6 +15,7 @@ export interface BackendDish {
   finalPrice: number; // euros (promo appliquée)
   allergens: string[];
   hasImage: boolean;
+  dlcDays?: number | null; // DLC en jours (fiche produit)
 }
 
 export interface SyncResult {
@@ -65,6 +66,7 @@ export async function syncMenu(
           allergens: d.allergens ?? [],
           imageMime: image?.mime ?? null,
           updatedAt: new Date().toISOString(),
+          dlcDays: d.dlcDays ?? null,
         },
         image,
       );
@@ -72,6 +74,60 @@ export async function syncMenu(
     return { ok: true, dishCount: dishes.length };
   } catch (e) {
     return { ok: false, dishCount: 0, error: e instanceof Error ? e.message : "Échec réseau" };
+  }
+}
+
+/**
+ * Pousse l'inventaire réel de la borne vers le serveur (1 entrée par plat encore
+ * présent dans un casier). Le serveur met à jour les stocks du frigo → affichage
+ * du stock réel sur l'app web client. Best-effort (silencieux hors ligne).
+ */
+export async function pushStock(
+  backendUrl: string,
+  frigoId: string,
+  stocks: { dishId: string; quantity: number }[],
+): Promise<boolean> {
+  if (!backendUrl || !frigoId) return false;
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/stock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stocks }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export interface RemoteCommand {
+  id: string;
+  board: string;
+  boxNumber: number;
+  action: "open" | "close_all";
+}
+
+/**
+ * Récupère (et vide côté serveur) les commandes d'ouverture/fermeture à distance
+ * empilées par le site admin pour ce frigo. Best-effort (silencieux hors ligne).
+ */
+export async function pullCommands(
+  backendUrl: string,
+  frigoId: string,
+  apiKey?: string,
+): Promise<RemoteCommand[]> {
+  if (!backendUrl || !frigoId) return [];
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/commands`, {
+      headers: apiKey ? { "x-kiosk-key": apiKey } : undefined,
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.commands) ? (data.commands as RemoteCommand[]) : [];
+  } catch {
+    return [];
   }
 }
 

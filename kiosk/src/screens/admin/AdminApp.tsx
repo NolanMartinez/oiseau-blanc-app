@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Grid3x3, DoorOpen, Activity, Settings as SettingsIcon, Cable, LogOut } from "lucide-react";
+import { Grid3x3, DoorOpen, Activity, Settings as SettingsIcon, LogOut, Power, Cable } from "lucide-react";
 import { useLang } from "../../i18n";
+import { quitApp } from "../../platform/app";
 import { MappingScreen } from "./MappingScreen";
 import { BoxControlScreen } from "./BoxControlScreen";
 import { SystemStatusScreen } from "./SystemStatusScreen";
@@ -50,10 +51,17 @@ export function AdminApp({ onExit }: { onExit: () => void }) {
 
         <button
           onClick={onExit}
-          className="m-3 flex items-center gap-2 rounded-lg px-3 py-3 text-sm text-gray-400 active:bg-gray-800"
+          className="mx-3 mt-3 flex items-center gap-2 rounded-lg px-3 py-3 text-sm text-gray-400 active:bg-gray-800"
         >
           <LogOut size={20} />
           {t("exit_admin")}
+        </button>
+        <button
+          onClick={() => quitApp()}
+          className="mx-3 mb-3 mt-1 flex items-center gap-2 rounded-lg bg-red-600/90 px-3 py-3 text-sm font-semibold text-white active:bg-red-700"
+        >
+          <Power size={20} />
+          {t("quit_app")}
         </button>
       </aside>
 

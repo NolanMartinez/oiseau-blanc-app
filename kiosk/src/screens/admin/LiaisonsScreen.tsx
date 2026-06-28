@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Check, Play, ChevronDown, ChevronRight, Cpu, AlertTriangle } from "lucide-react";
+import { RefreshCw, Check, Play, ChevronDown, ChevronRight, Cpu } from "lucide-react";
 import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
@@ -29,7 +29,6 @@ export function LiaisonsScreen() {
   const [testBox, setTestBox] = useState(1);
   const [testResult, setTestResult] = useState("");
 
-  const mode = settings[SETTING_KEYS.hwMode] === "real" ? "real" : "sim";
   const frameOpen = settings[SETTING_KEYS.frameOpen] ?? "02 {board} {box} {xor}";
   const boxBase = parseInt(settings[SETTING_KEYS.boxBase] ?? "1", 10) || 0;
 
@@ -72,12 +71,6 @@ export function LiaisonsScreen() {
     () => lockers.filter((l) => l.board === addrBoard).sort((a, b) => a.boxNumber - b.boxNumber),
     [lockers, addrBoard],
   );
-
-  async function saveMode(m: "sim" | "real") {
-    await setSetting(SETTING_KEYS.hwMode, m);
-    await reload();
-    flash(t("saved"));
-  }
 
   async function saveLink(board: string) {
     if (!repo) return;
@@ -141,27 +134,6 @@ export function LiaisonsScreen() {
       )}
 
       <div className="flex-1 space-y-5 overflow-y-auto p-6">
-        {/* Mode matériel */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
-          <p className="mb-3 text-lg font-bold">{t("hw_mode")}</p>
-          <div className="inline-flex rounded-xl bg-gray-100 p-1">
-            {(["sim", "real"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => saveMode(m)}
-                className={`rounded-lg px-6 py-2.5 font-bold transition ${
-                  mode === m ? "bg-[var(--green)] text-white shadow" : "text-[var(--ink-soft)]"
-                }`}
-              >
-                {m === "sim" ? t("mode_sim") : t("mode_real")}
-              </button>
-            ))}
-          </div>
-          <p className="mt-3 flex items-center gap-2 text-sm text-[var(--ink-faint)]">
-            <AlertTriangle size={15} /> {t("payment_sim_note")}
-          </p>
-        </section>
-
         {/* Cartes & ports COM */}
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <p className="mb-4 text-lg font-bold">{t("board_links")}</p>

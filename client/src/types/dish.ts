@@ -32,6 +32,7 @@ export interface CatalogDish {
   description: string | null;
   price: number;
   allergens: string[];
+  dlcDays: number | null;
   hasImage: boolean;
   isActive: boolean;
   createdAt: string;

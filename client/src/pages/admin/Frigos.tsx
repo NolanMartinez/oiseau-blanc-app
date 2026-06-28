@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Refrigerator, Wifi, WifiOff, ChevronDown, ChevronUp, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Refrigerator, Wifi, WifiOff, ChevronDown, ChevronUp, Plus, Pencil, Trash2, DoorOpen, Lock } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { StockModal } from '../../components/admin/StockModal';
 import api from '../../services/api';
@@ -64,6 +64,66 @@ function PriceCell({ dish }: { dish: FridgeDish }) {
     );
   }
   return <span className="text-gray-700 font-medium">{dish.price.toFixed(2)} €</span>;
+}
+
+// Ouverture/fermeture à distance d'un casier : empile une commande que la borne
+// récupère et exécute en local (quelques secondes si elle est en ligne).
+function RemoteLockerControl({ fridgeId }: { fridgeId: string }) {
+  const [box, setBox] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function send(action: 'open' | 'close_all') {
+    setBusy(true);
+    setMsg('');
+    try {
+      const boxNumber = action === 'open' ? parseInt(box, 10) : 0;
+      if (action === 'open' && (!Number.isFinite(boxNumber) || boxNumber < 1 || boxNumber > 32)) {
+        setMsg('Numéro de casier invalide (1–32).');
+        return;
+      }
+      await api.post(`/admin/frigos/${fridgeId}/commands`, { board: 'A', boxNumber, action });
+      setMsg(action === 'open' ? `Ouverture du casier ${boxNumber} envoyée.` : 'Fermeture envoyée.');
+      if (action === 'open') setBox('');
+    } catch {
+      setMsg("Échec de l'envoi de la commande.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ouverture à distance</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="number"
+          min={1}
+          max={32}
+          value={box}
+          onChange={(e) => setBox(e.target.value)}
+          placeholder="N° casier"
+          className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+        />
+        <button
+          onClick={() => send('open')}
+          disabled={busy || !box}
+          className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+        >
+          <DoorOpen size={15} /> Ouvrir
+        </button>
+        <button
+          onClick={() => send('close_all')}
+          disabled={busy}
+          className="flex items-center gap-1.5 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+        >
+          <Lock size={15} /> Tout fermer
+        </button>
+        {msg && <span className="text-xs text-gray-500">{msg}</span>}
+      </div>
+      <p className="text-[11px] text-gray-400 mt-1">La borne exécute la commande sous quelques secondes (si en ligne).</p>
+    </div>
+  );
 }
 
 function FridgeCard({
@@ -192,6 +252,7 @@ function FridgeCard({
               Ajouter un plat à ce frigo
             </button>
           </div>
+          <RemoteLockerControl fridgeId={fridge.id} />
         </div>
       )}
     </div>

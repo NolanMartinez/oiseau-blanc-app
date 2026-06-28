@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../utils/prisma';
 import { MOCK_FRIDGES, getFridgeMeta, type MockFridge } from '../services/bicom.mock';
+import { enqueueCommand, drainCommands } from '../services/remoteCommands';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -24,6 +26,7 @@ async function stockByFridge(lang: string): Promise<Map<string, ReturnType<typeo
           description: true,
           price: true,
           allergens: true,
+          dlcDays: true,
           isActive: true,
           imageMimeType: true,
           translations: {
@@ -56,7 +59,8 @@ function toDishEntry(stock: {
     category: string;
     description: string | null;
     price: number;
-    allergens: string[];
+    allergens: unknown; // JSON (tableau de chaînes) en MySQL
+    dlcDays: number | null;
     imageMimeType: string | null;
     translations: { name: string; description: string | null }[];
   };
@@ -77,7 +81,8 @@ function toDishEntry(stock: {
     category: dish.category,
     description: displayDescription,
     price: dish.price,
-    allergens: dish.allergens,
+    allergens: Array.isArray(dish.allergens) ? (dish.allergens as string[]) : [],
+    dlcDays: dish.dlcDays,
     stock: stock.quantity,
     expiryDate: stock.expiryDate,
     promoPercent: stock.promoPercent,
@@ -109,4 +114,102 @@ export async function getFridge(req: Request, res: Response): Promise<void> {
   const lang = parseLang(req.query['lang']);
   const byFridge = await stockByFridge(lang);
   res.json({ fridge: buildFridge(meta, byFridge.get(id) ?? []), isMock: true });
+}
+
+// Snapshot de stock envoyé par la borne (1 entrée par plat encore présent).
+const stockSyncSchema = z.object({
+  stocks: z.array(
+    z.object({
+      dishId: z.string().min(1),
+      quantity: z.number().int().min(0),
+    }),
+  ),
+});
+
+// POST /api/v1/public/frigos/:id/stock
+// La borne pousse l'inventaire réel (nombre de casiers remplis par plat). On met
+// à jour les quantités du frigo et on remet à 0 les plats absents du snapshot
+// (vendus / retirés) → l'app web client reflète le stock réel de la borne.
+export async function syncFridgeStock(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+  if (!getFridgeMeta(id)) {
+    res.status(404).json({ error: 'Frigo introuvable' });
+    return;
+  }
+
+  // Protection optionnelle : si KIOSK_API_KEY est défini, exiger l'en-tête.
+  const expectedKey = process.env['KIOSK_API_KEY'];
+  if (expectedKey && req.header('x-kiosk-key') !== expectedKey) {
+    res.status(401).json({ error: 'Clé borne invalide' });
+    return;
+  }
+
+  const parsed = stockSyncSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { stocks } = parsed.data;
+
+  // On ne garde que les plats existants (contrainte de clé étrangère).
+  const known = await prisma.dish.findMany({
+    where: { id: { in: stocks.map((s) => s.dishId) } },
+    select: { id: true },
+  });
+  const valid = new Set(known.map((d) => d.id));
+  const toApply = stocks.filter((s) => valid.has(s.dishId));
+
+  for (const s of toApply) {
+    await prisma.fridgeStock.upsert({
+      where: { frigoId_dishId: { frigoId: id, dishId: s.dishId } },
+      create: { frigoId: id, dishId: s.dishId, quantity: s.quantity },
+      update: { quantity: s.quantity },
+    });
+  }
+
+  // Plats de ce frigo absents du snapshot → stock épuisé.
+  await prisma.fridgeStock.updateMany({
+    where: { frigoId: id, dishId: { notIn: toApply.map((s) => s.dishId) } },
+    data: { quantity: 0 },
+  });
+
+  res.json({ ok: true, updated: toApply.length });
+}
+
+// ── Ouverture/fermeture à distance des casiers ──────────────────────────────
+const remoteCmdSchema = z.object({
+  board: z.string().min(1).max(1).default('A'),
+  boxNumber: z.number().int().min(0).max(32).default(0),
+  action: z.enum(['open', 'close_all']).default('open'),
+});
+
+// POST /api/v1/admin/frigos/:id/commands — l'opérateur empile une commande.
+export async function queueFridgeCommand(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+  if (!getFridgeMeta(id)) {
+    res.status(404).json({ error: 'Frigo introuvable' });
+    return;
+  }
+  const parsed = remoteCmdSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const cmd = enqueueCommand({ frigoId: id, ...parsed.data });
+  res.status(201).json({ command: cmd });
+}
+
+// GET /api/v1/public/frigos/:id/commands — la borne récupère (et vide) ses commandes.
+export async function pullFridgeCommands(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+  if (!getFridgeMeta(id)) {
+    res.status(404).json({ error: 'Frigo introuvable' });
+    return;
+  }
+  const expectedKey = process.env['KIOSK_API_KEY'];
+  if (expectedKey && req.header('x-kiosk-key') !== expectedKey) {
+    res.status(401).json({ error: 'Clé borne invalide' });
+    return;
+  }
+  res.json({ commands: drainCommands(id) });
 }

@@ -40,7 +40,8 @@ app.use(cors({
     const allowed = process.env.CLIENT_URL ?? 'http://localhost:5173';
     const isLocalNetwork = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(origin ?? '');
     const isRailway = /\.railway\.app$/.test(origin ?? '');
-    if (!origin || origin === allowed || isLocalNetwork || isRailway) {
+    const isNetlify = /\.netlify\.app$/.test(origin ?? '');
+    if (!origin || origin === allowed || isLocalNetwork || isRailway || isNetlify) {
       cb(null, true);
     } else {
       cb(new Error(`CORS: origine non autorisée — ${origin}`));

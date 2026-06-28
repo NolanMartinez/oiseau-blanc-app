@@ -24,3 +24,9 @@ Thumbs.db
 
 # Claude Code (settings locaux, ne pas versionner)
 .claude/settings.local.json
+
+# Binaires Bicom décompilés (analyse locale, volumineux)
+fichier a analyser/
+
+# Export/import BDD OVH (généré localement, contient des données)
+server/prisma/ovh/

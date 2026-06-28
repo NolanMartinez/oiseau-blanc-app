@@ -12,7 +12,21 @@ interface Store {
   sales: SaleLog[];
 }
 
-const LS_KEY = "friggo_kiosk_store";
+const LS_KEY = "friggo_kiosk_store_demo2";
+
+// Menu de démonstration (miroir de la migration 0004_demo.sql).
+const DEMO_DISHES: { id: string; name: string; category: string; description: string; price: number; allergens: string[] }[] = [
+  { id: "demo-1", name: "Tagliatelles au saumon", category: "Plats à chauffer", description: "Tagliatelles fraîches, saumon fumé, crème citronnée à l'aneth", price: 990, allergens: ["gluten", "poisson", "lait"] },
+  { id: "demo-2", name: "Boeuf bourguignon & grenailles", category: "Plats à chauffer", description: "Mijoté de boeuf au vin rouge, champignons, pommes grenailles", price: 890, allergens: ["sulfites"] },
+  { id: "demo-3", name: "Couscous boulettes de boeuf", category: "Plats à chauffer", description: "Semoule, légumes du couscous, boulettes de boeuf épicées", price: 950, allergens: ["gluten", "celeri"] },
+  { id: "demo-4", name: "Risotto chorizo & courgettes", category: "Plats à chauffer", description: "Risotto crémeux, chorizo doux, courgettes poêlées", price: 850, allergens: ["lait", "sulfites"] },
+  { id: "demo-5", name: "Pavé de merlu, crème de crustacés", category: "Plats à chauffer", description: "Merlu rôti, linguines, crème de crustacés", price: 1090, allergens: ["gluten", "poisson", "crustaces", "lait"] },
+  { id: "demo-6", name: "Linguine cacio e pepe", category: "Plats à chauffer", description: "Linguines, pecorino, poivre noir", price: 790, allergens: ["gluten", "lait"] },
+  { id: "demo-7", name: "Tajine poulet citron & olives", category: "Plats à chauffer", description: "Poulet fondant, citron confit, olives, semoule", price: 920, allergens: [] },
+  { id: "demo-8", name: "Salade César au poulet", category: "Salades", description: "Salade, poulet grillé, parmesan, croûtons, sauce César", price: 750, allergens: ["gluten", "oeuf", "lait", "poisson"] },
+  { id: "demo-9", name: "Salade de quinoa & légumes croquants", category: "Salades", description: "Quinoa, concombre, tomates cerises, feta, vinaigrette citron", price: 720, allergens: ["lait"] },
+  { id: "demo-10", name: "Tarte au citron meringuée", category: "Desserts", description: "Pâte sablée, crème de citron, meringue dorée", price: 450, allergens: ["gluten", "oeuf", "lait"] },
+];
 
 function defaultStore(): Store {
   const settings: Settings = {
@@ -45,17 +59,31 @@ function defaultStore(): Store {
     id: i + 1,
     board: "A",
     boxNumber: i + 1,
-    dishId: null,
+    // Casiers 1..10 pré-remplis avec le menu de démo.
+    dishId: i < DEMO_DISHES.length ? DEMO_DISHES[i].id : null,
     price: null,
     expiryDate: null,
     state: "idle" as const,
     address: null,
   }));
+  const dishes = DEMO_DISHES.map((d) => ({
+    id: d.id,
+    name: d.name,
+    category: d.category,
+    description: d.description,
+    price: d.price,
+    allergens: d.allergens,
+    imageMime: null,
+    updatedAt: "2026-06-19",
+    barcode: null,
+    dlcDays: null,
+    imageUrl: null,
+  }));
   return {
     settings,
     dispensers: [{ board: "A", comPort: "COM1", boxCount: 32, enabled: true, baud: 9600, parity: "none" }],
     lockers,
-    dishes: [],
+    dishes,
     sales: [],
   };
 }
@@ -180,6 +208,7 @@ export class MemoryRepo implements Repo {
       imageMime: d.imageMime,
       updatedAt: d.updatedAt,
       barcode: d.barcode ?? null,
+      dlcDays: d.dlcDays ?? null,
     }));
   }
 
@@ -218,6 +247,7 @@ export class MemoryRepo implements Repo {
       imageMime: d.imageMime,
       updatedAt: d.updatedAt,
       barcode: d.barcode ?? null,
+      dlcDays: d.dlcDays ?? null,
     };
   }
 

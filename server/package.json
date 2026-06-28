@@ -5,13 +5,16 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/index.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed-client": "tsx prisma/seed-client.ts",
+    "db:export-ovh": "tsx scripts/export-mysql.ts",
+    "db:schema-ovh": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > prisma/ovh/schema.sql",
+    "db:build-ovh": "tsx scripts/build-import.ts",
     "push:generate-keys": "tsx scripts/generate-vapid.ts"
   },
   "dependencies": {
@@ -32,7 +35,9 @@
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.20.0",
     "@types/web-push": "^3.6.4",
+    "pg": "^8.22.0",
     "prisma": "^6.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"

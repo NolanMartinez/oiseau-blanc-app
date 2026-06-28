@@ -23,6 +23,7 @@ function DishModal({
   const [name, setName] = useState(initial?.name ?? '');
   const [category, setCategory] = useState(initial?.category ?? '');
   const [price, setPrice] = useState(initial ? String(initial.price) : '');
+  const [dlcDays, setDlcDays] = useState(initial?.dlcDays != null ? String(initial.dlcDays) : '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [allergens, setAllergens] = useState<string[]>(initial?.allergens ?? []);
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
@@ -90,6 +91,7 @@ function DishModal({
         name: name.trim(),
         category: category.trim(),
         price: priceNum,
+        dlcDays: dlcDays.trim() ? Math.round(Number(dlcDays.replace(',', '.'))) : null,
         description: description.trim() || null,
         allergens,
         isActive,
@@ -199,6 +201,19 @@ function DishModal({
                 placeholder="8.50"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">DLC (jours)</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={dlcDays}
+                onChange={(e) => setDlcDays(e.target.value)}
+                placeholder="Ex : 5"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">Durée de conservation. Pré-remplit la date limite à la borne.</p>
             </div>
           </div>
 

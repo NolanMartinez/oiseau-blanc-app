@@ -91,14 +91,14 @@ export class SqlRepo implements Repo {
 
   async listDishes(): Promise<DishCache[]> {
     const rows = await this.db.select<any[]>(
-      "SELECT id, name, category, description, price, allergens, image_mime, updated_at, barcode, (image_blob IS NOT NULL) AS has_image FROM dishes_cache ORDER BY name",
+      "SELECT id, name, category, description, price, allergens, image_mime, updated_at, barcode, dlc_days, (image_blob IS NOT NULL) AS has_image FROM dishes_cache ORDER BY name",
     );
     return rows.map(rowToDish);
   }
 
   async getDishByBarcode(barcode: string): Promise<DishCache | null> {
     const rows = await this.db.select<any[]>(
-      "SELECT id, name, category, description, price, allergens, image_mime, updated_at, barcode, (image_blob IS NOT NULL) AS has_image FROM dishes_cache WHERE barcode = $1 LIMIT 1",
+      "SELECT id, name, category, description, price, allergens, image_mime, updated_at, barcode, dlc_days, (image_blob IS NOT NULL) AS has_image FROM dishes_cache WHERE barcode = $1 LIMIT 1",
       [barcode],
     );
     return rows[0] ? rowToDish(rows[0]) : null;
@@ -126,22 +126,22 @@ export class SqlRepo implements Repo {
     this.imageUrls.delete(dish.id);
     if (image) {
       await this.db.execute(
-        `INSERT INTO dishes_cache (id, name, category, description, price, allergens, image_blob, image_mime, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-         ON CONFLICT(id) DO UPDATE SET name=$2, category=$3, description=$4, price=$5, allergens=$6, image_blob=$7, image_mime=$8, updated_at=$9`,
+        `INSERT INTO dishes_cache (id, name, category, description, price, allergens, image_blob, image_mime, updated_at, dlc_days)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         ON CONFLICT(id) DO UPDATE SET name=$2, category=$3, description=$4, price=$5, allergens=$6, image_blob=$7, image_mime=$8, updated_at=$9, dlc_days=$10`,
         [
           dish.id, dish.name, dish.category, dish.description, dish.price,
-          JSON.stringify(dish.allergens), Array.from(image.bytes), image.mime, dish.updatedAt,
+          JSON.stringify(dish.allergens), Array.from(image.bytes), image.mime, dish.updatedAt, dish.dlcDays,
         ],
       );
     } else {
       await this.db.execute(
-        `INSERT INTO dishes_cache (id, name, category, description, price, allergens, image_mime, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-         ON CONFLICT(id) DO UPDATE SET name=$2, category=$3, description=$4, price=$5, allergens=$6, image_mime=$7, updated_at=$8`,
+        `INSERT INTO dishes_cache (id, name, category, description, price, allergens, image_mime, updated_at, dlc_days)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         ON CONFLICT(id) DO UPDATE SET name=$2, category=$3, description=$4, price=$5, allergens=$6, image_mime=$7, updated_at=$8, dlc_days=$9`,
         [
           dish.id, dish.name, dish.category, dish.description, dish.price,
-          JSON.stringify(dish.allergens), dish.imageMime, dish.updatedAt,
+          JSON.stringify(dish.allergens), dish.imageMime, dish.updatedAt, dish.dlcDays,
         ],
       );
     }
@@ -180,6 +180,7 @@ function rowToDish(r: any): DishCache {
     imageMime: r.image_mime,
     updatedAt: r.updated_at,
     barcode: r.barcode ?? null,
+    dlcDays: r.dlc_days ?? null,
   };
 }
 

@@ -7,18 +7,29 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { getRepo, SETTING_KEYS, type DishCache, type Dispenser, type Locker, type Repo, type Settings } from "../db";
-import { syncMenu } from "../sync";
+import { syncMenu, pushStock, pullCommands } from "../sync";
 import { hardware, type HwMode } from "../hardware";
+import { sortCategories, byCategoryThenName, CATEGORY_ORDER } from "../utils/categories";
 
 export interface MenuItem {
   locker: Locker;
   dish: DishCache;
   imageUrl: string | null;
   priceCents: number;
+}
+
+/** Plat regroupé : un plat = une carte, avec tous ses casiers disponibles. */
+export interface GroupedDish {
+  dish: DishCache;
+  imageUrl: string | null;
+  priceCents: number;
+  quantity: number;
+  lockers: Locker[];
 }
 
 interface KioskContextType {
@@ -29,6 +40,8 @@ interface KioskContextType {
   lockers: Locker[];
   dishes: DishCache[];
   menuItems: MenuItem[];
+  groupedMenu: GroupedDish[];
+  categories: string[];
   imageUrls: Record<string, string | null>;
   reload: () => Promise<void>;
   setSetting: (key: string, value: string) => Promise<void>;
@@ -81,7 +94,20 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       frameClear: s[SETTING_KEYS.frameClear] ?? "",
       frameDefrost: s[SETTING_KEYS.frameDefrost] ?? "",
       boxBase: parseInt(s[SETTING_KEYS.boxBase] ?? "1", 10) || 0,
+      openHoldSecs: parseInt(s[SETTING_KEYS.openHoldSecs] ?? "8", 10) || 8,
+      paymentCom: s[SETTING_KEYS.paymentCom] ?? "",
+      paymentBaud: parseInt(s[SETTING_KEYS.paymentBaud] ?? "115200", 10) || 115200,
+      paymentTest: s[SETTING_KEYS.paymentTest] === "1",
     });
+
+    // Pousse l'inventaire réel (casiers remplis par plat) vers le serveur, pour
+    // que le stock s'affiche sur l'app web client. Best-effort (non bloquant).
+    const stockMap: Record<string, number> = {};
+    for (const l of lk) {
+      if (l.dishId && l.state !== "error") stockMap[l.dishId] = (stockMap[l.dishId] ?? 0) + 1;
+    }
+    const snapshot = Object.entries(stockMap).map(([dishId, quantity]) => ({ dishId, quantity }));
+    void pushStock(s[SETTING_KEYS.backendUrl] ?? "", s[SETTING_KEYS.frigoId] ?? "", snapshot);
   }, []);
 
   useEffect(() => {
@@ -92,6 +118,42 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       setReady(true);
     })();
   }, [loadAll]);
+
+  // Réf vers les réglages courants pour la boucle de polling (évite de relancer
+  // le minuteur à chaque changement de réglage).
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
+  // Ouverture/fermeture à distance : interroge le serveur toutes les 3 s et
+  // exécute en local les commandes empilées par le site admin. La borne doit être
+  // en ligne. Best-effort (silencieux hors ligne).
+  useEffect(() => {
+    if (!ready) return;
+    let running = false;
+    const tick = async () => {
+      if (running) return; // évite le chevauchement (un seul port COM)
+      running = true;
+      try {
+        const s = settingsRef.current;
+        const backendUrl = s[SETTING_KEYS.backendUrl] ?? "";
+        const frigoId = s[SETTING_KEYS.frigoId] ?? "";
+        if (!backendUrl || !frigoId) return;
+        const cmds = await pullCommands(backendUrl, frigoId);
+        for (const c of cmds) {
+          try {
+            if (c.action === "close_all") await hardware.closeAll(c.board || "A");
+            else await hardware.openLocker(c.board || "A", c.boxNumber);
+          } catch {
+            /* échec matériel : ignoré, l'opérateur relancera */
+          }
+        }
+      } finally {
+        running = false;
+      }
+    };
+    const iv = window.setInterval(() => void tick(), 3000);
+    return () => window.clearInterval(iv);
+  }, [ready]);
 
   const reload = useCallback(async () => {
     if (repo) await loadAll(repo);
@@ -137,6 +199,38 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       });
   }, [lockers, dishes, imageUrls]);
 
+  // Regroupement par plat : une entrée par dish.id, avec la liste des casiers.
+  const groupedMenu = useMemo<GroupedDish[]>(() => {
+    const map = new Map<string, GroupedDish>();
+    for (const item of menuItems) {
+      const existing = map.get(item.dish.id);
+      if (existing) {
+        existing.lockers.push(item.locker);
+        existing.quantity += 1;
+      } else {
+        map.set(item.dish.id, {
+          dish: item.dish,
+          imageUrl: item.imageUrl,
+          priceCents: item.priceCents,
+          quantity: 1,
+          lockers: [item.locker],
+        });
+      }
+    }
+    return [...map.values()].sort((a, b) =>
+      byCategoryThenName(a.dish.category, a.dish.name, b.dish.category, b.dish.name),
+    );
+  }, [menuItems]);
+
+  // Catégories affichées : on montre toujours les 4 catégories canoniques
+  // (Entrées, Salades, Plats à chauffer, Desserts), plus toute autre catégorie
+  // réellement présente dans le menu, dans l'ordre voulu par le client.
+  const categories = useMemo<string[]>(() => {
+    const set = new Set<string>(CATEGORY_ORDER);
+    for (const g of groupedMenu) if (g.dish.category) set.add(g.dish.category);
+    return sortCategories([...set]);
+  }, [groupedMenu]);
+
   const value: KioskContextType = {
     ready,
     repo,
@@ -145,6 +239,8 @@ export function KioskProvider({ children }: { children: ReactNode }) {
     lockers,
     dishes,
     menuItems,
+    groupedMenu,
+    categories,
     imageUrls,
     reload,
     setSetting,

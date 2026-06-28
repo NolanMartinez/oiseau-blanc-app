@@ -13,6 +13,8 @@
 
 pub mod device;
 pub mod frame;
+pub mod mdb;
+pub mod midalite;
 pub mod mock;
 pub mod serial;
 
@@ -94,6 +96,26 @@ pub struct SerialConfig {
     /// Base de numérotation des portes : 1 (1..32) ou 0 (0..31).
     #[serde(default)]
     pub box_base: u8,
+    /// Durée (s) de maintien du verrou relâché si le capteur de porte ne réagit
+    /// pas (le maintien s'arrête dès que la porte est détectée ouverte).
+    #[serde(default = "default_hold_secs")]
+    pub open_hold_secs: u32,
+    /// Port COM de la carte de paiement MDB (vide = paiement simulé).
+    #[serde(default)]
+    pub payment_com: String,
+    /// Baud de la carte MDB (défaut 115200).
+    #[serde(default = "default_payment_baud")]
+    pub payment_baud: u32,
+    /// Mode test : simule un paiement accepté sans toucher au lecteur ni débiter.
+    #[serde(default)]
+    pub payment_test: bool,
+}
+
+fn default_hold_secs() -> u32 {
+    8
+}
+fn default_payment_baud() -> u32 {
+    115200
 }
 
 pub const EVENT_LOCKER: &str = "hw://locker";

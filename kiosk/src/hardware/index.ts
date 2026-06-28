@@ -46,6 +46,10 @@ export interface SerialConfig {
   frameClear: string;
   frameDefrost: string;
   boxBase: number;
+  openHoldSecs: number;
+  paymentCom: string;
+  paymentBaud: number;
+  paymentTest: boolean;
 }
 
 export interface Hardware {
@@ -105,11 +109,11 @@ class BrowserHardware implements Hardware {
   }
 
   async openLocker(board: string, boxNumber: number): Promise<void> {
+    // Simule l'ouverture (rapide, comme le matériel réel) ; l'affichage du
+    // numéro de casier est géré par l'appelant (CustomerApp).
     this.emitLocker({ board, boxNumber, phase: "opening" });
-    await sleep(900);
+    await sleep(700);
     this.emitLocker({ board, boxNumber, phase: "open" });
-    await sleep(4000);
-    this.emitLocker({ board, boxNumber, phase: "closed" });
   }
 
   async closeAll(board: string): Promise<void> {

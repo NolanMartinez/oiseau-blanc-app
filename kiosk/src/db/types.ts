@@ -31,6 +31,7 @@ export interface DishCache {
   imageMime: string | null;
   updatedAt: string | null;
   barcode: string | null; // code-barres produit (douchette)
+  dlcDays: number | null; // DLC en jours (fiche produit) -> date limite auto à la borne
 }
 
 export interface SaleLog {
@@ -55,6 +56,8 @@ export const SETTING_KEYS = {
   mainboardD: "mainboard_d",
   mainboardE: "mainboard_e",
   paymentCom: "payment_com",
+  paymentBaud: "payment_baud",
+  paymentTest: "payment_test",
   mdbEnabled: "mdb_enabled",
   venteLibre: "vente_libre",
   tempThresholdF: "temp_threshold_f",
@@ -69,6 +72,7 @@ export const SETTING_KEYS = {
   frameClear: "frame_clear",
   frameDefrost: "frame_defrost",
   boxBase: "box_base",
+  openHoldSecs: "open_hold_secs",
   machineName: "machine_name",
   coldType: "cold_type",
 } as const;

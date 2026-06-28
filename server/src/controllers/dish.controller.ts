@@ -10,6 +10,7 @@ const dishSelect = {
   description: true,
   price: true,
   allergens: true,
+  dlcDays: true,
   imageMimeType: true,
   isActive: true,
   createdAt: true,
@@ -33,6 +34,7 @@ const createDishSchema = z.object({
   description: z.string().max(1000).nullable().optional(),
   price: z.number().nonnegative(),
   allergens: z.array(z.string().min(1).max(40)).default([]),
+  dlcDays: z.number().int().positive().max(365).nullable().optional(),
   isActive: z.boolean().default(true),
   image: imageSchema.nullable().optional(),
 });
@@ -43,6 +45,7 @@ const updateDishSchema = z.object({
   description: z.string().max(1000).nullable().optional(),
   price: z.number().nonnegative().optional(),
   allergens: z.array(z.string().min(1).max(40)).optional(),
+  dlcDays: z.number().int().positive().max(365).nullable().optional(),
   isActive: z.boolean().optional(),
   image: imageSchema.nullable().optional(),
 });

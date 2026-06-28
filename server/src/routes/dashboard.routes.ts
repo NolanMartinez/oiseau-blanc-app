@@ -54,19 +54,19 @@ router.get('/stats', async (_req, res) => {
 
     // Avis par jour — 30 derniers jours
     prisma.$queryRaw<{ date: string; count: number }[]>`
-      SELECT TO_CHAR(DATE("created_at"), 'YYYY-MM-DD') as date, COUNT(*)::int as count
-      FROM reviews
-      WHERE "created_at" >= ${thirtyDaysAgo}
-      GROUP BY DATE("created_at")
+      SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as date, COUNT(*) as count
+      FROM avis
+      WHERE created_at >= ${thirtyDaysAgo}
+      GROUP BY DATE(created_at)
       ORDER BY date ASC
     `,
 
     // Abonnés par jour — 30 derniers jours
     prisma.$queryRaw<{ date: string; count: number }[]>`
-      SELECT TO_CHAR(DATE("created_at"), 'YYYY-MM-DD') as date, COUNT(*)::int as count
-      FROM subscribers
-      WHERE "created_at" >= ${thirtyDaysAgo}
-      GROUP BY DATE("created_at")
+      SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as date, COUNT(*) as count
+      FROM abonnes
+      WHERE created_at >= ${thirtyDaysAgo}
+      GROUP BY DATE(created_at)
       ORDER BY date ASC
     `,
 
