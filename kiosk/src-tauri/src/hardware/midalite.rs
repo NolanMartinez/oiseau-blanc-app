@@ -154,14 +154,29 @@ pub fn close_all(port_name: &str, baud: u32) -> Result<(), String> {
 
 /// Lit la température de la sonde NTC (°C). Renvoie une erreur si la sonde est HS
 /// ou si la carte ne répond pas.
+///
+/// La valeur brute NTC bruite fortement (octet de poids faible qui saute). On
+/// prend donc plusieurs mesures et on garde la **médiane** → valeur stable
+/// (équivalent de la moyenne « TA » loggée par Brina). Sans ça, l'affichage
+/// fluctue de plusieurs degrés en quelques secondes.
 pub fn read_temperature(port_name: &str, baud: u32) -> Result<f32, String> {
     let mut port = open_port(port_name, baud)?;
-    let vals = read_status(&mut *port).ok_or("Pas de réponse de la carte MIDA")?;
-    // raw 16 bits = MSB(val[1]) << 8 | LSB(val[2]) (mapping validé en live).
-    let raw = (vals[1] << 8) | vals[2];
-    if raw == 0 {
-        return Err("Sonde HS (valeur nulle)".into());
+    let mut raws: Vec<u32> = Vec::new();
+    for _ in 0..9 {
+        if let Some(vals) = read_status(&mut *port) {
+            // raw 16 bits = MSB(val[1]) << 8 | LSB(val[2]) (mapping validé en live).
+            let raw = (vals[1] << 8) | vals[2];
+            if raw > 0 {
+                raws.push(raw);
+            }
+        }
     }
+    if raws.is_empty() {
+        return Err("Sonde HS ou pas de réponse".into());
+    }
+    raws.sort_unstable();
+    let raw = raws[raws.len() / 2]; // médiane (rejette le bruit et les pics)
+
     let tmv = (raw * 4700 / 4096) as f64;
     if tmv <= 0.0 {
         return Err("Sonde HS".into());

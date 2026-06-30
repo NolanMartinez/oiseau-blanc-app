@@ -46,6 +46,10 @@ router.get('/stats', async (_req, res) => {
     subscribersRaw,
     ratingsByDishRaw,
     dishes,
+    salesCount,
+    revenueAgg,
+    salesRaw,
+    salesByDishRaw,
   ] = await Promise.all([
     prisma.subscriber.count(),
     prisma.review.count(),
@@ -79,6 +83,18 @@ router.get('/stats', async (_req, res) => {
 
     // Noms des plats (en base)
     prisma.dish.findMany({ select: { id: true, name: true } }),
+
+    // Ventes : total, chiffre d'affaires, par jour, par plat
+    prisma.sale.count(),
+    prisma.sale.aggregate({ _sum: { amount: true } }),
+    prisma.$queryRaw<{ date: string; count: number }[]>`
+      SELECT DATE_FORMAT(sold_at, '%Y-%m-%d') as date, COUNT(*) as count
+      FROM ventes
+      WHERE sold_at >= ${thirtyDaysAgo}
+      GROUP BY DATE(sold_at)
+      ORDER BY date ASC
+    `,
+    prisma.sale.groupBy({ by: ['dishId'], _count: { _all: true }, _sum: { amount: true } }),
   ]);
 
   // Carte id → nom des plats
@@ -95,6 +111,16 @@ router.get('/stats', async (_req, res) => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
 
+  const topSellers = salesByDishRaw
+    .map((s) => ({
+      dishId: s.dishId,
+      name: dishNameMap.get(s.dishId) ?? s.dishId,
+      count: s._count._all,
+      revenue: Math.round((s._sum.amount ?? 0)) / 100,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+
   res.json({
     subscribers,
     reviews,
@@ -103,6 +129,10 @@ router.get('/stats', async (_req, res) => {
     reviewsLast30Days: fillDailyArray(reviewsRaw, thirtyDaysAgo, now),
     subscribersLast30Days: fillDailyArray(subscribersRaw, thirtyDaysAgo, now),
     ratingsByDish,
+    salesCount,
+    revenue: Math.round(revenueAgg._sum.amount ?? 0) / 100,
+    salesLast30Days: fillDailyArray(salesRaw, thirtyDaysAgo, now),
+    topSellers,
   });
 });
 

@@ -37,8 +37,8 @@ export function MenuScreen({
     [groupedMenu, category],
   );
 
-  // Pagination : 6 plats par page (grille 3×2), navigation par flèches.
-  const PAGE_SIZE = 6;
+  // Pagination : 4 plats par page (grille 2×2) pour de grandes images.
+  const PAGE_SIZE = 4;
   const [page, setPage] = useState(0);
   const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
   // Revient en page valide quand la catégorie change ou que la liste se réduit.
@@ -96,8 +96,8 @@ export function MenuScreen({
             <ChevronLeft size={40} />
           </button>
 
-          {/* Page courante : 3 colonnes × 2 lignes */}
-          <div className="grid flex-1 grid-cols-3 grid-rows-2 gap-4">
+          {/* Page courante : 2 colonnes × 2 lignes (grandes images) */}
+          <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-5">
             {pageItems.map((g) => {
               const left = remaining(g);
               return (

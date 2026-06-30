@@ -37,7 +37,7 @@ export function SettingsScreen() {
     setSyncing(true);
     const res = await runSync();
     setSyncing(false);
-    flash(res.ok ? t("synced", { n: res.dishCount }) : t("sync_failed"));
+    flash(res.ok ? t("synced", { n: res.dishCount }) : `${t("sync_failed")} : ${res.error ?? ""}`);
   }
 
   const get = (k: string, fb = "") => settings[k] ?? fb;

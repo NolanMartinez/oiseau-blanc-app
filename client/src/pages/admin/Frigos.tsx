@@ -126,16 +126,107 @@ function RemoteLockerControl({ fridgeId }: { fridgeId: string }) {
   );
 }
 
+// Création / modification d'un frigo (nom, n° de série, emplacement).
+function FridgeFormModal({
+  initial,
+  onClose,
+  onSaved,
+}: {
+  initial: { id?: string; name: string; serialNumber: string; location: string };
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(initial.name);
+  const [serialNumber, setSerialNumber] = useState(initial.serialNumber);
+  const [location, setLocation] = useState(initial.location);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function save() {
+    if (!name.trim()) {
+      setError('Le nom est requis.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const payload = {
+        name: name.trim(),
+        serialNumber: serialNumber.trim() || null,
+        location: location.trim() || null,
+      };
+      if (initial.id) await api.patch(`/admin/frigos/${initial.id}`, payload);
+      else await api.post('/admin/frigos', payload);
+      onSaved();
+    } catch {
+      setError("Erreur lors de l'enregistrement.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="mb-4 text-lg font-bold text-gray-800">
+          {initial.id ? 'Modifier le frigo' : 'Ajouter un frigo'}
+        </h3>
+        <label className="mb-1 block text-sm font-medium text-gray-700">Nom *</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Frigo ..."
+          className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+        <label className="mb-1 block text-sm font-medium text-gray-700">Numéro de série</label>
+        <input
+          value={serialNumber}
+          onChange={(e) => setSerialNumber(e.target.value)}
+          placeholder="SN-..."
+          className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+        <label className="mb-1 block text-sm font-medium text-gray-700">Emplacement</label>
+        <input
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="Adresse / lieu"
+          className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FridgeCard({
   fridge,
   onAddDish,
   onEditDish,
   onRemoveDish,
+  onEditFridge,
+  onDeleteFridge,
 }: {
   fridge: Fridge;
   onAddDish: (fridge: Fridge) => void;
   onEditDish: (fridge: Fridge, dish: FridgeDish) => void;
   onRemoveDish: (dish: FridgeDish) => void;
+  onEditFridge: (fridge: Fridge) => void;
+  onDeleteFridge: (fridge: Fridge) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -166,7 +257,13 @@ function FridgeCard({
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-0.5 truncate">{fridge.location}</p>
+            <p className="text-xs text-gray-400 mt-0.5 truncate">
+              {fridge.serialNumber && (
+                <span className="font-mono text-gray-500">N° {fridge.serialNumber}</span>
+              )}
+              {fridge.serialNumber && fridge.location ? ' · ' : ''}
+              {fridge.location}
+            </p>
           </div>
         </div>
 
@@ -185,6 +282,20 @@ function FridgeCard({
             <p className="text-xs text-gray-400">{formatSync(fridge.lastSync)}</p>
             <p className="text-xs text-gray-300">Sync</p>
           </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onEditFridge(fridge); }}
+            title="Modifier le frigo"
+            className="text-gray-400 transition-colors hover:text-gray-700"
+          >
+            <Pencil size={15} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDeleteFridge(fridge); }}
+            title="Supprimer le frigo"
+            className="text-gray-400 transition-colors hover:text-red-500"
+          >
+            <Trash2 size={15} />
+          </button>
           {expanded ? (
             <ChevronUp size={16} className="text-gray-400" />
           ) : (
@@ -275,6 +386,9 @@ export function Frigos() {
   const [catalog, setCatalog] = useState<CatalogDish[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ModalState | null>(null);
+  const [fridgeForm, setFridgeForm] = useState<
+    { id?: string; name: string; serialNumber: string; location: string } | null
+  >(null);
 
   async function fetchData() {
     setLoading(true);
@@ -329,6 +443,17 @@ export function Frigos() {
     fetchData();
   }
 
+  async function handleDeleteFridge(fridge: Fridge) {
+    if (!confirm(`Supprimer le frigo « ${fridge.name} » ? Son stock sera retiré.`)) return;
+    await api.delete(`/admin/frigos/${fridge.id}`);
+    fetchData();
+  }
+
+  function handleSavedFridge() {
+    setFridgeForm(null);
+    fetchData();
+  }
+
   const online = fridges.filter((f) => f.online).length;
 
   return (
@@ -344,6 +469,13 @@ export function Frigos() {
               <p className="text-sm text-gray-400">{fridges.length - online} hors ligne</p>
             </>
           )}
+          <button
+            onClick={() => setFridgeForm({ name: '', serialNumber: '', location: '' })}
+            className="ml-auto flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Plus size={15} />
+            Ajouter un frigo
+          </button>
         </div>
       )}
 
@@ -358,6 +490,8 @@ export function Frigos() {
               onAddDish={handleAddDish}
               onEditDish={handleEditDish}
               onRemoveDish={handleRemoveDish}
+              onEditFridge={(f) => setFridgeForm({ id: f.id, name: f.name, serialNumber: f.serialNumber ?? '', location: f.location ?? '' })}
+              onDeleteFridge={handleDeleteFridge}
             />
           ))}
         </div>
@@ -375,6 +509,14 @@ export function Frigos() {
           initialPromoPercent={modal.initialPromoPercent}
           onClose={() => setModal(null)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {fridgeForm && (
+        <FridgeFormModal
+          initial={fridgeForm}
+          onClose={() => setFridgeForm(null)}
+          onSaved={handleSavedFridge}
         />
       )}
     </AdminLayout>

@@ -31,9 +31,8 @@ use super::PaymentOutcome;
 // Index du lecteur cashless : 0 = Cash10 (adr. MDB 0x10), 1 = Cash60 (0x60).
 const CASHLESS_DEVICE: u8 = 0;
 
-// Délais (s) : attente présentation carte, puis attente autorisation banque.
-const WAIT_CARD_SECS: u64 = 60;
-const WAIT_AUTH_SECS: u64 = 35;
+// Fenêtre (s) de paiement : afficher le montant, présenter la carte, autorisation.
+const PAYMENT_WINDOW_SECS: u64 = 90;
 
 /// Construit une trame passerelle à partir des octets de données.
 fn build_frame(data: &[u8]) -> Vec<u8> {
@@ -119,28 +118,10 @@ pub fn run_payment(
     let _ = send_recv(&mut *port, &[0x00, 0x01]); // firmware
     let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable
 
-    // 1) Attente de la présentation d'une carte (DevState == 3).
+    // Demande d'autorisation ENVOYÉE TOUT DE SUITE (le client a déjà choisi dans
+    // le panier) → le TPE affiche le montant et demande la carte. Sinon il reste
+    // bloqué sur « Votre choix ».
     on_phase("waiting");
-    let card_deadline = Instant::now() + Duration::from_secs(WAIT_CARD_SECS);
-    loop {
-        if cancel.load(Ordering::SeqCst) {
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]); // disable
-            on_phase("cancelled");
-            return PaymentOutcome::Cancelled;
-        }
-        if poll_devstate(&mut *port) == Some(3) {
-            break;
-        }
-        if Instant::now() >= card_deadline {
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]);
-            on_phase("timeout");
-            return PaymentOutcome::Timeout;
-        }
-        sleep(Duration::from_millis(250));
-    }
-
-    // 2) Demande d'autorisation pour le montant (centimes), produit = 0.
-    on_phase("processing");
     let a = amount_cents;
     let vend = [
         0x00, 0x71, 0x14, CASHLESS_DEVICE,
@@ -149,16 +130,23 @@ pub fn run_payment(
     ];
     let _ = send_recv(&mut *port, &vend);
 
-    // 3) Attente de la réponse banque (DevState 5 = approuvé, 6 = refusé).
-    let auth_deadline = Instant::now() + Duration::from_secs(WAIT_AUTH_SECS);
+    // Attente de la réponse banque (DevState 5 = approuvé, 6 = refusé). On
+    // ré-émet la demande la 1re fois que le lecteur ouvre une session (DevState 3).
+    let deadline = Instant::now() + Duration::from_secs(PAYMENT_WINDOW_SECS);
+    let mut card_seen = false;
     loop {
         if cancel.load(Ordering::SeqCst) {
             let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]); // vend failed
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]);
+            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]); // disable
             on_phase("cancelled");
             return PaymentOutcome::Cancelled;
         }
         match poll_devstate(&mut *port) {
+            Some(3) if !card_seen => {
+                card_seen = true;
+                on_phase("processing");
+                let _ = send_recv(&mut *port, &vend); // (re)confirme la demande dans la session
+            }
             Some(5) => {
                 let _ = send_recv(&mut *port, &[0x00, 0x71, 0x15, CASHLESS_DEVICE]); // vend success
                 let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]);
@@ -173,7 +161,7 @@ pub fn run_payment(
             }
             _ => {}
         }
-        if Instant::now() >= auth_deadline {
+        if Instant::now() >= deadline {
             let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]);
             let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]);
             on_phase("timeout");

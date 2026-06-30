@@ -1,42 +1,54 @@
-import { useEffect, useMemo, useState } from "react";
-import { DoorOpen, Lock, AlertTriangle, CheckSquare } from "lucide-react";
+import { useMemo, useState } from "react";
+import { DoorOpen, Lock, Trash2, CheckSquare } from "lucide-react";
 import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
-import { hardware, type LockerEvent } from "../../hardware";
+import { hardware } from "../../hardware";
+import type { Locker } from "../../db";
 
 export function BoxControlScreen() {
   const { t } = useLang();
-  const { dispensers, lockers } = useKiosk();
+  const { dispensers, lockers, dishes, repo, reload } = useKiosk();
   const [board, setBoard] = useState("A");
   const [busyBox, setBusyBox] = useState<number | null>(null);
-  const [lastEvent, setLastEvent] = useState<LockerEvent | null>(null);
+  const [msg, setMsg] = useState("");
   const [targetBox, setTargetBox] = useState("");
 
   const boardLockers = useMemo(
     () => lockers.filter((l) => l.board === board).sort((a, b) => a.boxNumber - b.boxNumber),
     [lockers, board],
   );
+  const dishById = useMemo(() => new Map(dishes.map((d) => [d.id, d])), [dishes]);
 
-  useEffect(() => {
-    const unsub = hardware.onLockerEvent((e) => {
-      setLastEvent(e);
-      if (e.phase === "closed") setBusyBox(null);
-    });
-    return unsub;
-  }, []);
+  function flash(m: string) {
+    setMsg(m);
+    window.setTimeout(() => setMsg(""), 2800);
+  }
 
-  async function openBox(boxNumber: number, address: number | null) {
-    setBusyBox(boxNumber);
-    await hardware.openLocker(board, address ?? boxNumber);
+  // Ouvre le casier ET le vide (retire le plat) — usage livreur : il enlève le
+  // plat du casier, qui redevient donc disponible/vide.
+  async function openAndEmpty(l: Locker) {
+    setBusyBox(l.boxNumber);
+    await hardware.openLocker(board, l.address ?? l.boxNumber);
+    if (l.dishId && repo) {
+      await repo.clearLocker(l.id);
+      await reload();
+    }
     setBusyBox(null);
+    flash(`${t("box")} ${l.boxNumber} — ${t("opened_emptied")}`);
   }
 
   async function openTargetBox() {
     const n = parseInt(targetBox, 10);
     if (!Number.isFinite(n) || n < 1 || n > 32) return;
-    setBusyBox(n);
-    await hardware.openLocker(board, n);
-    setBusyBox(null);
+    const l = boardLockers.find((x) => x.boxNumber === n);
+    if (l) {
+      await openAndEmpty(l);
+    } else {
+      setBusyBox(n);
+      await hardware.openLocker(board, n);
+      setBusyBox(null);
+      flash(`${t("box")} ${n} · ${t("open")}`);
+    }
     setTargetBox("");
   }
 
@@ -75,22 +87,14 @@ export function BoxControlScreen() {
         </div>
       </div>
 
-      {/* Bandeau d'état */}
-      <div className="flex items-center gap-6 bg-[var(--green-tint)] px-6 py-2 text-sm">
-        <span className="flex items-center gap-2 font-medium text-[var(--green)]">
-          <CheckSquare size={16} /> {t("door_closed")}
-        </span>
-        <span className="flex items-center gap-2 text-[var(--ink-faint)]">
-          <AlertTriangle size={16} /> {t("alarm")}: —
-        </span>
-        {lastEvent && (
-          <span className="ml-auto text-[var(--ink-faint)]">
-            {lastEvent.message ?? `${t("box")} ${lastEvent.boxNumber} · ${lastEvent.phase}`}
-          </span>
-        )}
+      {/* Bandeau : explication + message */}
+      <div className="flex items-center gap-3 bg-[var(--green-tint)] px-6 py-2 text-sm">
+        <Trash2 size={16} className="text-[var(--green)]" />
+        <span className="font-medium text-[var(--green)]">{t("open_empty_hint")}</span>
+        {msg && <span className="ml-auto font-semibold text-[var(--ink-soft)]">{msg}</span>}
       </div>
 
-      {/* Ouverture ciblée par numéro (carte {board}, casier 1–32) */}
+      {/* Ouverture ciblée par numéro */}
       <div className="flex items-center gap-3 border-b border-[var(--line)] bg-white px-6 py-3">
         <span className="text-sm font-medium text-[var(--ink-soft)]">{t("open_box_by_number")}</span>
         <input
@@ -114,23 +118,32 @@ export function BoxControlScreen() {
         </button>
       </div>
 
-      {/* Grille */}
+      {/* Grille : chaque casier montre son plat (s'il est rempli) */}
       <div className="grid flex-1 grid-cols-4 content-start gap-3 overflow-y-auto p-6 sm:grid-cols-6 lg:grid-cols-8">
-        {boardLockers.map((l) => (
-          <button
-            key={l.id}
-            onClick={() => openBox(l.boxNumber, l.address)}
-            disabled={busyBox === l.boxNumber}
-            className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 ${
-              busyBox === l.boxNumber
-                ? "border-[var(--blue)] bg-[var(--blue-soft)]"
-                : "border-transparent bg-white shadow-sm active:bg-gray-50"
-            }`}
-          >
-            <span className="text-xl font-extrabold">{l.boxNumber}</span>
-            <DoorOpen size={16} className="text-[var(--ink-faint)]" />
-          </button>
-        ))}
+        {boardLockers.map((l) => {
+          const name = l.dishId ? dishById.get(l.dishId)?.name : null;
+          return (
+            <button
+              key={l.id}
+              onClick={() => openAndEmpty(l)}
+              disabled={busyBox === l.boxNumber}
+              className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 p-1 text-center ${
+                busyBox === l.boxNumber
+                  ? "border-[var(--blue)] bg-[var(--blue-soft)]"
+                  : name
+                    ? "border-transparent bg-white shadow-sm active:bg-gray-50"
+                    : "border-dashed border-gray-300 bg-gray-50 active:bg-gray-100"
+              }`}
+            >
+              <span className="text-xl font-extrabold">{l.boxNumber}</span>
+              {name ? (
+                <span className="line-clamp-2 text-[10px] leading-tight text-[var(--ink-soft)]">{name}</span>
+              ) : (
+                <span className="text-[10px] text-gray-400">{t("none")}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

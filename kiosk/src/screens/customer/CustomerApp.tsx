@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { hardware, type LockerPhase, type PaymentPhase } from "../../hardware";
 import { useKiosk, type GroupedDish } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
+import { pushSale } from "../../sync";
 import type { CartLine } from "../../state/cart";
 import { IdleScreen } from "./IdleScreen";
 import { CategoryScreen } from "./CategoryScreen";
@@ -88,21 +89,30 @@ export function CustomerApp() {
     setCart((prev) => prev.filter((l) => l.lockerId !== lockerId));
   }, []);
 
-  // ── Vente d'une ligne : journal + vidage du casier ────────────────────────
+  // ── Vente d'une ligne : journal local + remontée serveur + vidage du casier ─
   const finalizeLine = useCallback(
     async (line: CartLine) => {
       if (!repo) return;
+      const soldAt = new Date().toISOString();
+      const mode = requiresPayment ? "paid" : "free";
       await repo.logSale({
         lockerId: line.lockerId,
         dishId: line.dishId,
         amount: line.priceCents,
-        mode: requiresPayment ? "paid" : "free",
-        paidAt: new Date().toISOString(),
+        mode,
+        paidAt: soldAt,
         synced: false,
+      });
+      // Remontée best-effort de la vente vers le serveur (suivi des ventes web).
+      void pushSale(setting(SETTING_KEYS.backendUrl), setting(SETTING_KEYS.frigoId), {
+        dishId: line.dishId,
+        amount: line.priceCents,
+        mode,
+        soldAt,
       });
       await repo.clearLocker(line.lockerId);
     },
-    [repo, requiresPayment],
+    [repo, requiresPayment, setting],
   );
 
   // ── Ouverture des casiers : un casier à la fois, avec bouton SUIVANT ───────

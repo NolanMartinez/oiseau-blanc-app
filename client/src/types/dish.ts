@@ -17,7 +17,8 @@ export interface FridgeDish {
 export interface Fridge {
   id: string;
   name: string;
-  location: string;
+  serialNumber: string | null;
+  location: string | null;
   online: boolean;
   temperature: number | null;
   lastSync: string;

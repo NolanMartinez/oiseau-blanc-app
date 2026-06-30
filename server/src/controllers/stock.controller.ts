@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma';
-import { getFridgeMeta } from '../services/bicom.mock';
+import { getFridgeMeta } from '../services/fridges';
 
 const dateSchema = z
   .string()
@@ -29,7 +29,7 @@ export async function upsertStock(req: Request, res: Response): Promise<void> {
   }
   const { frigoId, dishId, quantity, expiryDate } = result.data;
 
-  if (!getFridgeMeta(frigoId)) {
+  if (!(await getFridgeMeta(frigoId))) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }

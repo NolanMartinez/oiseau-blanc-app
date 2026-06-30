@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Star, ClipboardList } from 'lucide-react';
+import { Users, Star, ClipboardList, ShoppingCart, Euro } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -26,6 +26,13 @@ interface DishRating {
   count: number;
 }
 
+interface TopSeller {
+  dishId: string;
+  name: string;
+  count: number;
+  revenue: number;
+}
+
 interface Stats {
   subscribers: number;
   reviews: number;
@@ -33,6 +40,10 @@ interface Stats {
   reviewsLast30Days: DayPoint[];
   subscribersLast30Days: DayPoint[];
   ratingsByDish: DishRating[];
+  salesCount: number;
+  revenue: number;
+  salesLast30Days: DayPoint[];
+  topSellers: TopSeller[];
 }
 
 // Formate "2026-04-14" → "14/04"
@@ -81,6 +92,8 @@ export function Dashboard() {
   }, []);
 
   const kpis = [
+    { label: 'Ventes', value: stats?.salesCount ?? '—', icon: ShoppingCart, color: 'bg-emerald-50 text-emerald-600' },
+    { label: "Chiffre d'affaires", value: stats ? `${stats.revenue.toFixed(2)} €` : '—', icon: Euro, color: 'bg-emerald-50 text-emerald-600' },
     { label: 'Abonnés', value: stats?.subscribers ?? '—', icon: Users, color: 'bg-blue-50 text-blue-600' },
     { label: 'Avis déposés', value: stats?.reviews ?? '—', icon: Star, color: 'bg-yellow-50 text-yellow-600' },
     { label: 'Sondages actifs', value: stats?.activeSurveys ?? '—', icon: ClipboardList, color: 'bg-green-50 text-green-600' },
@@ -107,6 +120,55 @@ export function Dashboard() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Ventes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Ventes — 30 derniers jours</h3>
+          {!stats ? (
+            <div className="h-48 flex items-center justify-center text-sm text-gray-400">Chargement…</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={stats.salesLast30Days} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={fmtDate}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  tickLine={false}
+                  axisLine={false}
+                  ticks={stats.salesLast30Days
+                    .filter((d, i) => tickFilter(d.date, i, stats.salesLast30Days))
+                    .map((d) => d.date)}
+                />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                <Tooltip content={<LineTooltip />} />
+                <Line type="monotone" dataKey="count" stroke="#10b981" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Meilleures ventes</h3>
+          {!stats ? (
+            <div className="h-48 flex items-center justify-center text-sm text-gray-400">Chargement…</div>
+          ) : stats.topSellers.length === 0 ? (
+            <div className="h-48 flex items-center justify-center text-sm text-gray-400">Aucune vente pour le moment</div>
+          ) : (
+            <div className="space-y-2">
+              {stats.topSellers.map((s, i) => (
+                <div key={s.dishId} className="flex items-center gap-3 text-sm">
+                  <span className="w-5 font-semibold text-gray-400">{i + 1}</span>
+                  <span className="flex-1 truncate text-gray-800">{s.name}</span>
+                  <span className="text-gray-500">{s.count} vendu{s.count > 1 ? 's' : ''}</span>
+                  <span className="w-20 text-right font-semibold text-emerald-600">{s.revenue.toFixed(2)} €</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Graphiques */}

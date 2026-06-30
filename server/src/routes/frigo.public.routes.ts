@@ -3,6 +3,7 @@ import {
   listFridges,
   getFridge,
   syncFridgeStock,
+  recordSale,
   pullFridgeCommands,
 } from '../controllers/frigo.controller';
 
@@ -12,6 +13,8 @@ router.get('/frigos', listFridges);
 router.get('/frigos/:id', getFridge);
 // La borne pousse son inventaire réel (stock par plat) ici.
 router.post('/frigos/:id/stock', syncFridgeStock);
+// La borne remonte une vente.
+router.post('/frigos/:id/sales', recordSale);
 // La borne récupère ses commandes d'ouverture/fermeture à distance.
 router.get('/frigos/:id/commands', pullFridgeCommands);
 

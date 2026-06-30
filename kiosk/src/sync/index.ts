@@ -101,6 +101,29 @@ export async function pushStock(
   }
 }
 
+/**
+ * Remonte une vente vers le serveur (pour le suivi des ventes sur l'app web).
+ * Best-effort (silencieux hors ligne).
+ */
+export async function pushSale(
+  backendUrl: string,
+  frigoId: string,
+  sale: { dishId: string; amount: number; mode: string; soldAt: string },
+): Promise<boolean> {
+  if (!backendUrl || !frigoId) return false;
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/sales`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sale),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export interface RemoteCommand {
   id: string;
   board: string;

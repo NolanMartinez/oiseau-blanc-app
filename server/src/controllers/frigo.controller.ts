@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma';
-import { MOCK_FRIDGES, getFridgeMeta, type MockFridge } from '../services/bicom.mock';
+import { getFridgeMeta } from '../services/fridges';
+import { markSeen, getStatus } from '../services/fridgeStatus';
 import { enqueueCommand, drainCommands } from '../services/remoteCommands';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -91,29 +92,92 @@ function toDishEntry(stock: {
   };
 }
 
-function buildFridge(meta: MockFridge, dishes: ReturnType<typeof toDishEntry>[]) {
-  return { ...meta, dishes };
+interface FridgeRow {
+  id: string;
+  name: string;
+  serialNumber: string | null;
+  location: string | null;
+}
+
+function buildFridge(f: FridgeRow, dishes: ReturnType<typeof toDishEntry>[]) {
+  const st = getStatus(f.id);
+  return {
+    id: f.id,
+    name: f.name,
+    serialNumber: f.serialNumber,
+    location: f.location,
+    online: st.online,
+    temperature: st.temperature,
+    lastSync: st.lastSync,
+    dishes,
+  };
 }
 
 // GET /api/v1/admin/frigos  &  GET /api/v1/public/frigos
 export async function listFridges(req: Request, res: Response): Promise<void> {
   const lang = parseLang(req.query['lang']);
   const byFridge = await stockByFridge(lang);
-  const fridges = MOCK_FRIDGES.map((meta) => buildFridge(meta, byFridge.get(meta.id) ?? []));
-  res.json({ fridges, isMock: true });
+  const fridges = await prisma.fridge.findMany({ orderBy: { name: 'asc' } });
+  res.json({ fridges: fridges.map((f) => buildFridge(f, byFridge.get(f.id) ?? [])) });
 }
 
 // GET /api/v1/admin/frigos/:id  &  GET /api/v1/public/frigos/:id
 export async function getFridge(req: Request, res: Response): Promise<void> {
   const id = req.params['id'] as string;
-  const meta = getFridgeMeta(id);
+  const meta = await getFridgeMeta(id);
   if (!meta) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
   const lang = parseLang(req.query['lang']);
   const byFridge = await stockByFridge(lang);
-  res.json({ fridge: buildFridge(meta, byFridge.get(id) ?? []), isMock: true });
+  res.json({ fridge: buildFridge(meta, byFridge.get(id) ?? []) });
+}
+
+// ── CRUD frigo (admin) ──────────────────────────────────────────────────────
+const fridgeSchema = z.object({
+  name: z.string().min(1).max(120),
+  serialNumber: z.string().max(80).nullable().optional(),
+  location: z.string().max(200).nullable().optional(),
+});
+
+// POST /api/v1/admin/frigos
+export async function createFridge(req: Request, res: Response): Promise<void> {
+  const parsed = fridgeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const fridge = await prisma.fridge.create({ data: parsed.data });
+  res.status(201).json({ fridge });
+}
+
+// PATCH /api/v1/admin/frigos/:id
+export async function updateFridge(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+  if (!(await getFridgeMeta(id))) {
+    res.status(404).json({ error: 'Frigo introuvable' });
+    return;
+  }
+  const parsed = fridgeSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const fridge = await prisma.fridge.update({ where: { id }, data: parsed.data });
+  res.json({ fridge });
+}
+
+// DELETE /api/v1/admin/frigos/:id (+ son stock)
+export async function deleteFridge(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+  if (!(await getFridgeMeta(id))) {
+    res.status(404).json({ error: 'Frigo introuvable' });
+    return;
+  }
+  await prisma.fridgeStock.deleteMany({ where: { frigoId: id } });
+  await prisma.fridge.delete({ where: { id } });
+  res.status(204).send();
 }
 
 // Snapshot de stock envoyé par la borne (1 entrée par plat encore présent).
@@ -132,7 +196,7 @@ const stockSyncSchema = z.object({
 // (vendus / retirés) → l'app web client reflète le stock réel de la borne.
 export async function syncFridgeStock(req: Request, res: Response): Promise<void> {
   const id = req.params['id'] as string;
-  if (!getFridgeMeta(id)) {
+  if (!(await getFridgeMeta(id))) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
@@ -173,7 +237,41 @@ export async function syncFridgeStock(req: Request, res: Response): Promise<void
     data: { quantity: 0 },
   });
 
+  markSeen(id); // la borne s'est manifestée → frigo « en ligne »
   res.json({ ok: true, updated: toApply.length });
+}
+
+// ── Remontée des ventes (borne → serveur) ───────────────────────────────────
+const saleSchema = z.object({
+  dishId: z.string().min(1),
+  amount: z.number().int().min(0),
+  mode: z.enum(['paid', 'free']).default('paid'),
+  soldAt: z.string().optional(),
+});
+
+// POST /api/v1/public/frigos/:id/sales — la borne remonte une vente.
+export async function recordSale(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+  if (!(await getFridgeMeta(id))) {
+    res.status(404).json({ error: 'Frigo introuvable' });
+    return;
+  }
+  const expectedKey = process.env['KIOSK_API_KEY'];
+  if (expectedKey && req.header('x-kiosk-key') !== expectedKey) {
+    res.status(401).json({ error: 'Clé borne invalide' });
+    return;
+  }
+  const parsed = saleSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { dishId, amount, mode, soldAt } = parsed.data;
+  const sale = await prisma.sale.create({
+    data: { frigoId: id, dishId, amount, mode, soldAt: soldAt ? new Date(soldAt) : new Date() },
+  });
+  markSeen(id);
+  res.status(201).json({ sale });
 }
 
 // ── Ouverture/fermeture à distance des casiers ──────────────────────────────
@@ -186,7 +284,7 @@ const remoteCmdSchema = z.object({
 // POST /api/v1/admin/frigos/:id/commands — l'opérateur empile une commande.
 export async function queueFridgeCommand(req: Request, res: Response): Promise<void> {
   const id = req.params['id'] as string;
-  if (!getFridgeMeta(id)) {
+  if (!(await getFridgeMeta(id))) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
@@ -202,7 +300,7 @@ export async function queueFridgeCommand(req: Request, res: Response): Promise<v
 // GET /api/v1/public/frigos/:id/commands — la borne récupère (et vide) ses commandes.
 export async function pullFridgeCommands(req: Request, res: Response): Promise<void> {
   const id = req.params['id'] as string;
-  if (!getFridgeMeta(id)) {
+  if (!(await getFridgeMeta(id))) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }

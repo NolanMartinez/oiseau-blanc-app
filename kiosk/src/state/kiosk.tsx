@@ -186,8 +186,11 @@ export function KioskProvider({ children }: { children: ReactNode }) {
 
   const menuItems = useMemo<MenuItem[]>(() => {
     const byId = new Map(dishes.map((d) => [d.id, d]));
+    const today = new Date().toISOString().slice(0, 10);
+    // DLC dépassée -> le plat n'est plus proposé à l'achat (casier exclu du menu).
+    const notExpired = (l: Locker) => !l.expiryDate || l.expiryDate.slice(0, 10) >= today;
     return lockers
-      .filter((l) => l.dishId && l.state !== "error" && byId.has(l.dishId))
+      .filter((l) => l.dishId && l.state !== "error" && byId.has(l.dishId) && notExpired(l))
       .map((l) => {
         const dish = byId.get(l.dishId!)!;
         return {
