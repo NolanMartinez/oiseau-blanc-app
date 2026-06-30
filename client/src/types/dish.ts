@@ -62,5 +62,6 @@ export const ALLERGENS = [
 export const DISH_CATEGORIES = ['Entrée', 'Plat chaud', 'Plat froid', 'Dessert', 'Boisson'];
 
 export function dishImageUrl(dishId: string): string {
-  return `/api/v1/public/dishes/${dishId}/image`;
+  const base = ((import.meta.env.VITE_API_URL as string) || '').replace(/\/$/, '');
+  return `${base}/api/v1/public/dishes/${dishId}/image`;
 }

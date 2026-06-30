@@ -41,9 +41,11 @@ app.use(cors({
     const isLocalNetwork = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(origin ?? '');
     const isRailway = /\.railway\.app$/.test(origin ?? '');
     const isNetlify = /\.netlify\.app$/.test(origin ?? '');
+    // Domaine de prod (app.friggo.fr, www.friggo.fr, friggo.fr).
+    const isFriggo = /(^|\.)friggo\.fr$/.test((origin ?? '').replace(/^https?:\/\//, ''));
     // La borne (Tauri) envoie une origine type `tauri://localhost` / `*.tauri.localhost`.
     const isTauri = (origin ?? '').startsWith('tauri://') || /tauri\.localhost$/.test(origin ?? '');
-    if (!origin || origin === allowed || isLocalNetwork || isRailway || isNetlify || isTauri) {
+    if (!origin || origin === allowed || isLocalNetwork || isRailway || isNetlify || isFriggo || isTauri) {
       cb(null, true);
     } else {
       // Ne JAMAIS throw ici (sinon erreur 500) : on refuse juste les en-têtes CORS.
