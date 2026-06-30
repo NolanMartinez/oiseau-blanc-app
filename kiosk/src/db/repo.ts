@@ -46,6 +46,8 @@ export interface Repo {
   // Catalogue plats (cache)
   listDishes(): Promise<DishCache[]>;
   getDishImageUrl(dishId: string): Promise<string | null>;
+  // Image brute en base64 (pour remonter la carte complète au serveur).
+  getDishImageBase64(dishId: string): Promise<{ base64: string; mime: string } | null>;
   // La synchro ne touche pas au code-barres (géré localement par l'opérateur).
   upsertDish(dish: Omit<DishCache, "hasImage" | "barcode">, image: DishImage | null): Promise<void>;
   getDishByBarcode(barcode: string): Promise<DishCache | null>;

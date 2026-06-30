@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { getRepo, SETTING_KEYS, type DishCache, type Dispenser, type Locker, type Repo, type Settings } from "../db";
-import { syncMenu, pushStock, pullCommands } from "../sync";
+import { syncMenu, pushMenu, pullCommands, type MenuSnapshotDish } from "../sync";
 import { hardware, type HwMode } from "../hardware";
 import { sortCategories, byCategoryThenName, CATEGORY_ORDER } from "../utils/categories";
 
@@ -100,14 +100,48 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       paymentTest: s[SETTING_KEYS.paymentTest] === "1",
     });
 
-    // Pousse l'inventaire réel (casiers remplis par plat) vers le serveur, pour
-    // que le stock s'affiche sur l'app web client. Best-effort (non bloquant).
-    const stockMap: Record<string, number> = {};
+    // Pousse la CARTE COMPLÈTE (plats + catégories + prix + DLC + stock + images)
+    // vers le serveur : il la prend comme source de vérité → l'app web affiche
+    // exactement la même carte que la borne. La sélection correspond à ce que voit
+    // le client : casier rempli, pas en erreur, DLC non dépassée. Best-effort.
+    const today = new Date().toISOString().slice(0, 10);
+    const byId = new Map(ds.map((d) => [d.id, d]));
+    const grouped = new Map<string, MenuSnapshotDish>();
     for (const l of lk) {
-      if (l.dishId && l.state !== "error") stockMap[l.dishId] = (stockMap[l.dishId] ?? 0) + 1;
+      if (!l.dishId || l.state === "error") continue;
+      const dish = byId.get(l.dishId);
+      if (!dish) continue;
+      if (l.expiryDate && l.expiryDate.slice(0, 10) < today) continue; // DLC dépassée
+      const existing = grouped.get(dish.id);
+      if (existing) {
+        existing.quantity += 1;
+        if (l.expiryDate && (!existing.expiryDate || l.expiryDate < existing.expiryDate)) {
+          existing.expiryDate = l.expiryDate;
+        }
+      } else {
+        grouped.set(dish.id, {
+          id: dish.id,
+          name: dish.name,
+          category: dish.category,
+          description: dish.description,
+          price: l.price ?? dish.price,
+          allergens: dish.allergens,
+          dlcDays: dish.dlcDays,
+          expiryDate: l.expiryDate,
+          quantity: 1,
+        });
+      }
     }
-    const snapshot = Object.entries(stockMap).map(([dishId, quantity]) => ({ dishId, quantity }));
-    void pushStock(s[SETTING_KEYS.backendUrl] ?? "", s[SETTING_KEYS.frigoId] ?? "", snapshot);
+    const menuSnapshot = [...grouped.values()];
+    void (async () => {
+      // Joint les images (base64) pour les plats qui en ont une.
+      await Promise.all(
+        menuSnapshot.map(async (d) => {
+          if (byId.get(d.id)?.hasImage) d.image = await r.getDishImageBase64(d.id);
+        }),
+      );
+      await pushMenu(s[SETTING_KEYS.backendUrl] ?? "", s[SETTING_KEYS.frigoId] ?? "", menuSnapshot);
+    })();
   }, []);
 
   useEffect(() => {

@@ -124,6 +124,44 @@ export async function pushSale(
   }
 }
 
+/** Un plat de la carte de la borne, tel qu'affiché au client (carte complète). */
+export interface MenuSnapshotDish {
+  id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  price: number; // centimes (ce que paie le client à la borne)
+  allergens: string[];
+  dlcDays: number | null;
+  expiryDate: string | null;
+  quantity: number; // nombre de casiers disponibles
+  image?: { base64: string; mime: string } | null;
+}
+
+/**
+ * Pousse la CARTE COMPLÈTE de la borne vers le serveur (plats + catégories + prix
+ * + DLC + stock + images). Le serveur la prend comme source de vérité → l'app web
+ * affiche exactement la même carte que la borne. Best-effort (silencieux hors ligne).
+ */
+export async function pushMenu(
+  backendUrl: string,
+  frigoId: string,
+  dishes: MenuSnapshotDish[],
+): Promise<boolean> {
+  if (!backendUrl || !frigoId) return false;
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/menu`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dishes }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export interface RemoteCommand {
   id: string;
   board: string;

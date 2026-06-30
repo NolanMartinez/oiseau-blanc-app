@@ -216,6 +216,11 @@ export class MemoryRepo implements Repo {
     return this.store.dishes.find((d) => d.id === dishId)?.imageUrl ?? null;
   }
 
+  // Mode mémoire (dev/sim) : pas d'octets bruts stockés, on ne remonte pas d'image.
+  async getDishImageBase64(_dishId: string): Promise<{ base64: string; mime: string } | null> {
+    return null;
+  }
+
   async upsertDish(
     dish: Omit<DishCache, "hasImage" | "barcode">,
     image: DishImage | null,

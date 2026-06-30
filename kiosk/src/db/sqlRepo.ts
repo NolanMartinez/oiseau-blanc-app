@@ -122,6 +122,19 @@ export class SqlRepo implements Repo {
     return url;
   }
 
+  async getDishImageBase64(dishId: string): Promise<{ base64: string; mime: string } | null> {
+    const rows = await this.db.select<any[]>(
+      "SELECT image_blob, image_mime FROM dishes_cache WHERE id = $1",
+      [dishId],
+    );
+    const row = rows[0];
+    if (!row || !row.image_blob) return null;
+    const bytes = Uint8Array.from(row.image_blob as number[]);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return { base64: btoa(bin), mime: row.image_mime ?? "image/jpeg" };
+  }
+
   async upsertDish(dish: Omit<DishCache, "hasImage" | "barcode">, image: DishImage | null): Promise<void> {
     this.imageUrls.delete(dish.id);
     if (image) {

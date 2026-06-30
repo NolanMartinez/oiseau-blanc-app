@@ -241,6 +241,91 @@ export async function syncFridgeStock(req: Request, res: Response): Promise<void
   res.json({ ok: true, updated: toApply.length });
 }
 
+// ── Remontée de la carte complète (borne → serveur) ─────────────────────────
+// La borne est la source de vérité : elle pousse toute sa carte (plats + prix +
+// DLC + stock + images). On upsert le catalogue et le stock du frigo, puis on
+// retire les plats absents → l'app web affiche exactement la carte de la borne.
+const menuSyncSchema = z.object({
+  dishes: z.array(
+    z.object({
+      id: z.string().min(1),
+      name: z.string().min(1).max(200),
+      category: z.string().max(80).nullable().optional(),
+      description: z.string().nullable().optional(),
+      price: z.number().int().min(0), // centimes
+      allergens: z.array(z.string()).default([]),
+      dlcDays: z.number().int().nullable().optional(),
+      expiryDate: z.string().nullable().optional(),
+      quantity: z.number().int().min(0),
+      image: z.object({ base64: z.string(), mime: z.string() }).nullable().optional(),
+    }),
+  ),
+});
+
+// POST /api/v1/public/frigos/:id/menu
+export async function syncFridgeMenu(req: Request, res: Response): Promise<void> {
+  const id = req.params['id'] as string;
+  if (!(await getFridgeMeta(id))) {
+    res.status(404).json({ error: 'Frigo introuvable' });
+    return;
+  }
+  const expectedKey = process.env['KIOSK_API_KEY'];
+  if (expectedKey && req.header('x-kiosk-key') !== expectedKey) {
+    res.status(401).json({ error: 'Clé borne invalide' });
+    return;
+  }
+  const parsed = menuSyncSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { dishes } = parsed.data;
+
+  for (const d of dishes) {
+    const base = {
+      name: d.name,
+      category: d.category ?? 'Autre',
+      description: d.description ?? null,
+      price: d.price / 100, // centimes → euros
+      allergens: d.allergens ?? [],
+      dlcDays: d.dlcDays ?? null,
+    };
+    // On ne met à jour l'image que si la borne en fournit une (sinon on garde l'existante).
+    const withImage = d.image
+      ? { ...base, imageData: Buffer.from(d.image.base64, 'base64'), imageMimeType: d.image.mime }
+      : base;
+    await prisma.dish.upsert({
+      where: { id: d.id },
+      create: { id: d.id, ...withImage, isActive: true },
+      update: withImage,
+    });
+    await prisma.fridgeStock.upsert({
+      where: { frigoId_dishId: { frigoId: id, dishId: d.id } },
+      create: {
+        frigoId: id,
+        dishId: d.id,
+        quantity: d.quantity,
+        expiryDate: d.expiryDate ? new Date(d.expiryDate) : null,
+      },
+      update: {
+        quantity: d.quantity,
+        expiryDate: d.expiryDate ? new Date(d.expiryDate) : null,
+      },
+    });
+  }
+
+  // Plats de ce frigo absents de la carte poussée → on les retire (web = borne).
+  // Garde-fou : on ne purge que si la borne a réellement envoyé des plats.
+  if (dishes.length > 0) {
+    await prisma.fridgeStock.deleteMany({
+      where: { frigoId: id, dishId: { notIn: dishes.map((d) => d.id) } },
+    });
+  }
+
+  markSeen(id);
+  res.json({ ok: true, count: dishes.length });
+}
+
 // ── Remontée des ventes (borne → serveur) ───────────────────────────────────
 const saleSchema = z.object({
   dishId: z.string().min(1),

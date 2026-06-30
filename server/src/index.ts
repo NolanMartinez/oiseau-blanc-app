@@ -53,7 +53,8 @@ app.use(cors({
     }
   },
 }));
-app.use(express.json({ limit: '8mb' }));
+// 25 Mo : la borne peut pousser sa carte complète avec les images (base64).
+app.use(express.json({ limit: '25mb' }));
 
 app.get('/api/v1/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
