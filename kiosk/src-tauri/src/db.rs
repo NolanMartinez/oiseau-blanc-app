@@ -64,5 +64,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0009_payment_mdb.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 10,
+            description: "frigos B..E (jusqu'a 5 par borne)",
+            sql: include_str!("../migrations/0010_dispensers_bcde.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
