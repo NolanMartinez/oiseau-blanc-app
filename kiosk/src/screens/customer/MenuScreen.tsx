@@ -5,6 +5,7 @@ import { useKiosk, type GroupedDish } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
 import { formatPrice } from "../../utils/format";
 import { categoryEmoji } from "../../utils/emoji";
+import { DishImage } from "../../components/DishImage";
 import { LangSwitcher } from "../../components/LangSwitcher";
 
 export function MenuScreen({
@@ -110,13 +111,12 @@ export function MenuScreen({
                     onClick={() => onOpenDetail(g)}
                     className="relative min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)] transition active:scale-[0.99]"
                   >
-                    {g.imageUrl ? (
-                      <img src={g.imageUrl} alt={g.dish.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-8xl">
-                        {categoryEmoji(g.dish.category)}
-                      </div>
-                    )}
+                    <DishImage
+                      dishId={g.dish.id}
+                      category={g.dish.category}
+                      localUrl={g.imageUrl}
+                      emojiSize="text-8xl"
+                    />
                     <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-[var(--green)] shadow">
                       {t("qty_available", { n: left })}
                     </span>

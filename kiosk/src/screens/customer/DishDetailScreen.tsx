@@ -3,7 +3,7 @@ import { useLang } from "../../i18n";
 import { useKiosk, type GroupedDish } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
 import { formatPrice } from "../../utils/format";
-import { categoryEmoji } from "../../utils/emoji";
+import { DishImage } from "../../components/DishImage";
 
 export function DishDetailScreen({
   group,
@@ -31,17 +31,16 @@ export function DishDetailScreen({
       <div className="flex flex-1 flex-row overflow-hidden">
         {/* Image (moitié gauche) */}
         <div className="w-1/2 shrink-0 bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)]">
-          {group.imageUrl ? (
-            <img src={group.imageUrl} alt={group.dish.name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-9xl">
-              {categoryEmoji(group.dish.category)}
-            </div>
-          )}
+          <DishImage
+            dishId={group.dish.id}
+            category={group.dish.category}
+            localUrl={group.imageUrl}
+            emojiSize="text-9xl"
+          />
         </div>
 
         {/* Détails (moitié droite) */}
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-8">
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-8">
           <div className="flex items-center gap-3">
             <span className="rounded-full bg-[var(--blue-soft)] px-4 py-1.5 text-base font-semibold text-[var(--ink-soft)]">
               {t("qty_available", { n: remaining })}
@@ -49,6 +48,10 @@ export function DishDetailScreen({
           </div>
 
           <h1 className="text-4xl font-extrabold leading-tight">{group.dish.name}</h1>
+          {/* Prix juste sous le titre → toujours visible, sans scroller. */}
+          <p className="text-5xl font-extrabold text-[var(--green)]">
+            {formatPrice(group.priceCents, currency)}
+          </p>
           {group.dish.description && (
             <p className="text-xl leading-relaxed text-[var(--ink-soft)]">{group.dish.description}</p>
           )}
@@ -67,10 +70,6 @@ export function DishDetailScreen({
               </div>
             </div>
           )}
-
-          <p className="mt-auto text-5xl font-extrabold text-[var(--green)]">
-            {formatPrice(group.priceCents, currency)}
-          </p>
         </div>
       </div>
 
