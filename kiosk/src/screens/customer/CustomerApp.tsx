@@ -151,10 +151,12 @@ export function CustomerApp() {
       setOpenStep(next);
       await openAt(openLines, next);
     } else {
-      await reload();
+      // Fin de vente : on affiche « merci » tout de suite (le rechargement se fait
+      // en arrière-plan) et on revient à l'accueil rapidement.
       setCart([]);
       setScreen("thanks");
-      window.setTimeout(() => goIdle(), 4500);
+      void reload();
+      window.setTimeout(() => goIdle(), 2600);
     }
   }, [openStep, openLines, openAt, reload]);
 
@@ -171,8 +173,10 @@ export function CustomerApp() {
       } finally {
         unsub();
       }
+      // Annulation (sur le TPE ou l'app) → retour panier immédiat. Refus/timeout →
+      // court instant pour lire le message, puis retour panier.
       if (outcome === "approved") startOpening(lines);
-      else window.setTimeout(() => setScreen("cart"), 2200);
+      else window.setTimeout(() => setScreen("cart"), outcome === "cancelled" ? 500 : 1500);
     },
     [startOpening],
   );

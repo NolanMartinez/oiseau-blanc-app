@@ -43,11 +43,6 @@ export function DishDetailScreen({
         {/* Détails (moitié droite) */}
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-8">
           <div className="flex items-center gap-3">
-            {group.dish.category && (
-              <span className="w-fit rounded-full bg-[var(--green-tint)] px-4 py-1.5 text-base font-semibold text-[var(--green)]">
-                {group.dish.category}
-              </span>
-            )}
             <span className="rounded-full bg-[var(--blue-soft)] px-4 py-1.5 text-base font-semibold text-[var(--ink-soft)]">
               {t("qty_available", { n: remaining })}
             </span>

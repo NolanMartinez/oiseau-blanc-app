@@ -12,6 +12,7 @@ export function BoxControlScreen() {
   const [busyBox, setBusyBox] = useState<number | null>(null);
   const [msg, setMsg] = useState("");
   const [targetBox, setTargetBox] = useState("");
+  const [confirm, setConfirm] = useState<Locker | null>(null);
 
   const boardLockers = useMemo(
     () => lockers.filter((l) => l.board === board).sort((a, b) => a.boxNumber - b.boxNumber),
@@ -37,12 +38,18 @@ export function BoxControlScreen() {
     flash(`${t("box")} ${l.boxNumber} — ${t("opened_emptied")}`);
   }
 
+  // Casier rempli → on demande confirmation du produit à retirer. Casier vide → ouverture simple.
+  function requestOpen(l: Locker) {
+    if (l.dishId) setConfirm(l);
+    else void openAndEmpty(l);
+  }
+
   async function openTargetBox() {
     const n = parseInt(targetBox, 10);
     if (!Number.isFinite(n) || n < 1 || n > 32) return;
     const l = boardLockers.find((x) => x.boxNumber === n);
     if (l) {
-      await openAndEmpty(l);
+      requestOpen(l);
     } else {
       setBusyBox(n);
       await hardware.openLocker(board, n);
@@ -125,7 +132,7 @@ export function BoxControlScreen() {
           return (
             <button
               key={l.id}
-              onClick={() => openAndEmpty(l)}
+              onClick={() => requestOpen(l)}
               disabled={busyBox === l.boxNumber}
               className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 p-1 text-center ${
                 busyBox === l.boxNumber
@@ -145,6 +152,39 @@ export function BoxControlScreen() {
           );
         })}
       </div>
+
+      {/* Confirmation : quel produit retire-t-on ? */}
+      {confirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+            <p className="text-lg font-bold">{t("confirm_remove")}</p>
+            <p className="mt-3 text-[var(--ink-soft)]">
+              {t("box")} {confirm.boxNumber} —{" "}
+              <span className="font-semibold text-[var(--ink)]">
+                {confirm.dishId ? dishById.get(confirm.dishId)?.name : ""}
+              </span>
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setConfirm(null)}
+                className="flex-1 rounded-xl border-2 border-gray-200 py-3 font-bold text-[var(--ink-soft)] active:bg-gray-50"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={() => {
+                  const l = confirm;
+                  setConfirm(null);
+                  void openAndEmpty(l);
+                }}
+                className="flex-1 rounded-xl bg-[var(--green)] py-3 font-bold text-white active:opacity-80"
+              >
+                {t("open_and_remove")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

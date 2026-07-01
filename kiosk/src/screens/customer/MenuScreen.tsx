@@ -105,10 +105,10 @@ export function MenuScreen({
                   key={g.dish.id}
                   className="flex min-h-0 flex-col overflow-hidden rounded-3xl bg-white shadow-md"
                 >
-                  {/* Image en grand : occupe toute la carte, titre + prix superposés en bas. */}
+                  {/* Grande image (cliquable → détail), badge dispo en haut à droite. */}
                   <button
                     onClick={() => onOpenDetail(g)}
-                    className="relative min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)] text-left transition active:scale-[0.99]"
+                    className="relative min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)] transition active:scale-[0.99]"
                   >
                     {g.imageUrl ? (
                       <img src={g.imageUrl} alt={g.dish.name} className="h-full w-full object-cover" />
@@ -120,25 +120,23 @@ export function MenuScreen({
                     <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-[var(--green)] shadow">
                       {t("qty_available", { n: left })}
                     </span>
-                    {/* Dégradé + titre + prix par-dessus l'image (toujours lisibles). */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-4 pb-3 pt-12">
-                      <p className="line-clamp-2 text-lg font-bold leading-tight text-white drop-shadow">
-                        {g.dish.name}
-                      </p>
-                      <p className="text-2xl font-extrabold text-white drop-shadow">
-                        {formatPrice(g.priceCents, currency)}
-                      </p>
-                    </div>
                   </button>
 
-                  <div className="shrink-0 p-3">
+                  {/* Titre + prix sous l'image, avec un bouton « + » pour ajouter. */}
+                  <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-3">
+                    <button onClick={() => onOpenDetail(g)} className="min-w-0 flex-1 text-left">
+                      <p className="line-clamp-1 text-base font-bold leading-tight">{g.dish.name}</p>
+                      <p className="text-xl font-extrabold text-[var(--green)]">
+                        {formatPrice(g.priceCents, currency)}
+                      </p>
+                    </button>
                     <button
                       onClick={() => onAddToCart(g)}
                       disabled={left <= 0}
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--green)] py-2.5 text-base font-extrabold text-white active:scale-[0.98] disabled:opacity-40"
+                      aria-label={t("add_to_cart")}
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--green)] text-white shadow active:scale-95 disabled:opacity-40"
                     >
-                      <Plus size={18} />
-                      {t("add_to_cart")}
+                      <Plus size={26} />
                     </button>
                   </div>
                 </div>

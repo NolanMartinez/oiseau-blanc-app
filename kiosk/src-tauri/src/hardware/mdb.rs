@@ -97,6 +97,16 @@ fn poll_devstate(port: &mut dyn SerialPort) -> Option<u8> {
     resp.get(10).copied()
 }
 
+/// Met (ou remet) le lecteur en veille active : il affiche « Votre choix » et
+/// reste prêt à encaisser. À appeler au démarrage et après chaque configuration.
+/// Best-effort (silencieux si le port est indisponible ou déjà pris).
+pub fn enable_reader(port_name: &str, baud: u32) {
+    if let Ok(mut port) = open_port(port_name, baud) {
+        let _ = send_recv(&mut *port, &[0x00, 0x01]); // firmware (ident.)
+        let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable -> « Votre choix »
+    }
+}
+
 /// Déroule un paiement carte complet. `on_phase` remonte les étapes à l'UI
 /// (`waiting`/`processing`/`approved`/`declined`/`cancelled`/`timeout`).
 pub fn run_payment(
@@ -114,13 +124,20 @@ pub fn run_payment(
         }
     };
 
-    // Identification (best-effort) + activation du lecteur.
-    let _ = send_recv(&mut *port, &[0x00, 0x01]); // firmware
-    let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable
+    // Le lecteur DOIT rester activé en permanence (il affiche « Votre choix »).
+    // On (ré)active par sécurité, puis on abandonne une éventuelle session restée
+    // ouverte d'un paiement précédent — c'est ce qui bloquait les transactions
+    // suivantes. On NE désactive JAMAIS le lecteur (pas de 0x0C).
+    let _ = send_recv(&mut *port, &[0x00, 0x01]); // firmware (ident.)
+    let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable / « Votre choix »
+    let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]); // annule toute session résiduelle
+    let _ = port.clear(ClearBuffer::Input);
+    // État de repos de référence (« Votre choix ») : y revenir après une session
+    // signifie que le client a annulé sur le TPE.
+    let idle_state = poll_devstate(&mut *port);
 
     // Demande d'autorisation ENVOYÉE TOUT DE SUITE (le client a déjà choisi dans
-    // le panier) → le TPE affiche le montant et demande la carte. Sinon il reste
-    // bloqué sur « Votre choix ».
+    // le panier) → le TPE quitte « Votre choix » et affiche le montant à payer.
     on_phase("waiting");
     let a = amount_cents;
     let vend = [
@@ -130,40 +147,64 @@ pub fn run_payment(
     ];
     let _ = send_recv(&mut *port, &vend);
 
-    // Attente de la réponse banque (DevState 5 = approuvé, 6 = refusé). On
-    // ré-émet la demande la 1re fois que le lecteur ouvre une session (DevState 3).
+    // Referme la session et laisse le lecteur sur « Votre choix » (jamais disable).
+    let finish = |port: &mut dyn SerialPort, ok: bool| {
+        let sub = if ok { 0x15 } else { 0x0D }; // 0x15 = vend success, 0x0D = vend failed/annulé
+        let _ = send_recv(port, &[0x00, 0x71, sub, CASHLESS_DEVICE]);
+        let _ = send_recv(port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // remet « Votre choix »
+    };
+
+    // Attente de la réponse banque (DevState 5 = approuvé, 6 = refusé). On ré-émet
+    // la demande la 1re fois que le lecteur ouvre une session (DevState 3), et on
+    // détecte l'annulation faite SUR LE TPE (retour à l'état de repos après session).
     let deadline = Instant::now() + Duration::from_secs(PAYMENT_WINDOW_SECS);
     let mut card_seen = false;
+    let mut idle_after_session = 0u8;
     loop {
         if cancel.load(Ordering::SeqCst) {
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]); // vend failed
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]); // disable
+            finish(&mut *port, false);
             on_phase("cancelled");
             return PaymentOutcome::Cancelled;
         }
         match poll_devstate(&mut *port) {
-            Some(3) if !card_seen => {
-                card_seen = true;
-                on_phase("processing");
-                let _ = send_recv(&mut *port, &vend); // (re)confirme la demande dans la session
+            Some(3) => {
+                idle_after_session = 0;
+                if !card_seen {
+                    card_seen = true;
+                    on_phase("processing");
+                    let _ = send_recv(&mut *port, &vend); // (re)confirme la demande dans la session
+                }
             }
             Some(5) => {
-                let _ = send_recv(&mut *port, &[0x00, 0x71, 0x15, CASHLESS_DEVICE]); // vend success
-                let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]);
+                finish(&mut *port, true);
                 on_phase("approved");
                 return PaymentOutcome::Approved;
             }
             Some(6) => {
-                let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]); // vend failed
-                let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]);
+                finish(&mut *port, false);
                 on_phase("declined");
                 return PaymentOutcome::Declined;
             }
-            _ => {}
+            // Client a annulé sur le TPE : après une session, le lecteur revient à
+            // son état de repos de référence (« Votre choix »). On confirme sur
+            // quelques cycles (anti faux positif pendant l'autorisation), puis on
+            // rend la main à l'app (retour panier).
+            Some(s) if card_seen && idle_state == Some(s) => {
+                idle_after_session += 1;
+                if idle_after_session >= 3 {
+                    finish(&mut *port, false);
+                    on_phase("cancelled");
+                    return PaymentOutcome::Cancelled;
+                }
+            }
+            // État intermédiaire (autorisation en cours) : on réinitialise le compteur.
+            Some(_) => {
+                idle_after_session = 0;
+            }
+            None => {}
         }
         if Instant::now() >= deadline {
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]);
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0C, CASHLESS_DEVICE]);
+            finish(&mut *port, false);
             on_phase("timeout");
             return PaymentOutcome::Timeout;
         }

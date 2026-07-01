@@ -35,6 +35,13 @@ impl Device {
     /// Met à jour le mode + la config série (appelé par le frontend au démarrage
     /// et à chaque modification de la page Liaisons).
     pub fn set_config(&self, mode: Mode, serial: SerialConfig) {
+        // Met le lecteur de carte sur « Votre choix » dès le démarrage / à chaque
+        // changement de config (mode réel + port paiement, hors mode test).
+        if mode == Mode::Real && !serial.payment_test && !serial.payment_com.trim().is_empty() {
+            let port = serial.payment_com.clone();
+            let baud = serial.payment_baud;
+            std::thread::spawn(move || mdb::enable_reader(&port, baud));
+        }
         let mut c = self.cfg.lock().unwrap();
         c.mode = mode;
         c.serial = serial;

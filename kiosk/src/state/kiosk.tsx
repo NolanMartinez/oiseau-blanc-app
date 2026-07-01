@@ -150,6 +150,15 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       setRepo(r);
       await loadAll(r);
       setReady(true);
+      // Récupère depuis le serveur les images (et libellés) définis côté admin,
+      // puis rafraîchit l'affichage → les photos admin apparaissent sur la borne.
+      const s = await r.getSettings();
+      const backend = s[SETTING_KEYS.backendUrl] ?? "";
+      const frigo = s[SETTING_KEYS.frigoId] ?? "";
+      if (backend && frigo) {
+        const res = await syncMenu(r, backend, frigo);
+        if (res.ok) await loadAll(r);
+      }
     })();
   }, [loadAll]);
 
