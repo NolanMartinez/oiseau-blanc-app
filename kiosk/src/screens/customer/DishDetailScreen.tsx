@@ -28,9 +28,9 @@ export function DishDetailScreen({
         </button>
       </header>
 
-      <div className="flex flex-1 flex-col overflow-y-auto lg:flex-row">
-        {/* Image */}
-        <div className="aspect-[4/3] w-full bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)] lg:aspect-auto lg:w-1/2">
+      <div className="flex flex-1 flex-row overflow-hidden">
+        {/* Image (moitié gauche) */}
+        <div className="w-1/2 shrink-0 bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)]">
           {group.imageUrl ? (
             <img src={group.imageUrl} alt={group.dish.name} className="h-full w-full object-cover" />
           ) : (
@@ -40,8 +40,8 @@ export function DishDetailScreen({
           )}
         </div>
 
-        {/* Détails */}
-        <div className="flex flex-1 flex-col gap-5 p-8">
+        {/* Détails (moitié droite) */}
+        <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-8">
           <div className="flex items-center gap-3">
             {group.dish.category && (
               <span className="w-fit rounded-full bg-[var(--green-tint)] px-4 py-1.5 text-base font-semibold text-[var(--green)]">

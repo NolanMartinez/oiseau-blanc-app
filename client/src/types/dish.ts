@@ -38,7 +38,17 @@ export interface CatalogDish {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  rating: number | null;
+  ratingCount: number;
+  salesCount: number;
   _count: { fridgeStocks: number };
+}
+
+// Catégorie de plats (endpoint /admin/categories)
+export interface Category {
+  id: string;
+  name: string;
+  position: number;
 }
 
 // Liste des 14 allergènes à déclaration obligatoire (UE)

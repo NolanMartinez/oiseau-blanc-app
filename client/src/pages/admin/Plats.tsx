@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, UtensilsCrossed, ImagePlus, Languages, Sparkles } from 'lucide-react';
+import {
+  Plus, Pencil, Trash2, X, UtensilsCrossed, ImagePlus, Languages, Sparkles,
+  Star, TrendingUp, Tag, ChevronUp, ChevronDown,
+} from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
-import { ALLERGENS, DISH_CATEGORIES, dishImageUrl, type CatalogDish } from '../../types/dish';
+import { ALLERGENS, dishImageUrl, type CatalogDish, type Category } from '../../types/dish';
 import { resizeImageToBase64, type ResizedImage } from '../../utils/image';
 import axios from 'axios';
 
@@ -13,10 +16,12 @@ type ImageChange = ResizedImage | null | undefined;
 
 function DishModal({
   initial,
+  categories,
   onClose,
   onSaved,
 }: {
   initial: CatalogDish | null;
+  categories: Category[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -176,19 +181,23 @@ function DishModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie *</label>
-              <input
-                type="text"
-                list="dish-categories"
+              <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                placeholder="Ex : Plat chaud"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <datalist id="dish-categories">
-                {DISH_CATEGORIES.map((c) => (
-                  <option key={c} value={c} />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">— Choisir une catégorie —</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
                 ))}
-              </datalist>
+                {/* Catégorie héritée non présente dans la liste gérée */}
+                {category && !categories.some((c) => c.name === category) && (
+                  <option value={category}>{category} (ancienne)</option>
+                )}
+              </select>
+              {categories.length === 0 && (
+                <p className="text-xs text-amber-600 mt-1">Créez d'abord des catégories en haut de la page Carte.</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Prix (€) *</label>
@@ -293,10 +302,118 @@ function DishModal({
   );
 }
 
+// ─── Gestion des catégories ─────────────────────────────────────────────────
+
+function CategoryManager({
+  categories,
+  onClose,
+  onChanged,
+}: {
+  categories: Category[];
+  onClose: () => void;
+  onChanged: (cats: Category[]) => void;
+}) {
+  const [items, setItems] = useState<Category[]>(categories);
+  const [newName, setNewName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function reload() {
+    const res = await api.get('/admin/categories');
+    setItems(res.data.categories);
+    onChanged(res.data.categories);
+  }
+
+  async function add() {
+    const name = newName.trim();
+    if (!name) return;
+    setBusy(true); setError('');
+    try {
+      await api.post('/admin/categories', { name });
+      setNewName('');
+      await reload();
+    } catch (e) {
+      setError(axios.isAxiosError(e) && e.response?.status === 409 ? 'Cette catégorie existe déjà.' : 'Une erreur est survenue.');
+    } finally { setBusy(false); }
+  }
+
+  async function rename(c: Category) {
+    const name = prompt('Renommer la catégorie', c.name)?.trim();
+    if (!name || name === c.name) return;
+    setBusy(true); setError('');
+    try {
+      await api.patch(`/admin/categories/${c.id}`, { name });
+      await reload();
+    } catch { setError('Impossible (nom déjà utilisé ?).'); } finally { setBusy(false); }
+  }
+
+  async function remove(c: Category) {
+    if (!confirm(`Supprimer la catégorie « ${c.name} » ? Les plats existants conservent leur libellé.`)) return;
+    setBusy(true);
+    try { await api.delete(`/admin/categories/${c.id}`); await reload(); } finally { setBusy(false); }
+  }
+
+  async function move(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= items.length) return;
+    const reordered = [...items];
+    [reordered[i], reordered[j]] = [reordered[j], reordered[i]];
+    setItems(reordered);
+    setBusy(true);
+    try {
+      await api.put('/admin/categories/reorder', { ids: reordered.map((c) => c.id) });
+      onChanged(reordered);
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="font-semibold text-gray-800">Catégories</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        </div>
+        <div className="overflow-y-auto p-6 space-y-2">
+          {items.length === 0 && <p className="text-sm text-gray-400">Aucune catégorie. Ajoutez-en une ci-dessous.</p>}
+          {items.map((c, i) => (
+            <div key={c.id} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+              <div className="flex flex-col">
+                <button disabled={i === 0 || busy} onClick={() => move(i, -1)} className="text-gray-300 hover:text-gray-600 disabled:opacity-30"><ChevronUp size={14} /></button>
+                <button disabled={i === items.length - 1 || busy} onClick={() => move(i, 1)} className="text-gray-300 hover:text-gray-600 disabled:opacity-30"><ChevronDown size={14} /></button>
+              </div>
+              <span className="flex-1 text-sm font-medium text-gray-800">{c.name}</span>
+              <button onClick={() => rename(c)} title="Renommer" className="text-gray-400 hover:text-gray-700"><Pencil size={15} /></button>
+              <button onClick={() => remove(c)} title="Supprimer" className="text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-4 border-t border-gray-200 space-y-2">
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
+              placeholder="Nouvelle catégorie…"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button onClick={add} disabled={busy || !newName.trim()} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium px-3 py-2 rounded-lg">
+              <Plus size={15} /> Ajouter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page principale ──────────────────────────────────────────────────────────
 
 export function Plats() {
   const [dishes, setDishes] = useState<CatalogDish[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [filterCat, setFilterCat] = useState<string>('all');
+  const [showCatManager, setShowCatManager] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingDish, setEditingDish] = useState<CatalogDish | null>(null);
@@ -313,7 +430,21 @@ export function Plats() {
     }
   }
 
-  useEffect(() => { fetchDishes(); }, []);
+  async function fetchCategories() {
+    try {
+      const res = await api.get('/admin/categories');
+      setCategories(res.data.categories);
+    } catch { /* silencieux */ }
+  }
+
+  useEffect(() => { fetchDishes(); fetchCategories(); }, []);
+
+  // Plats filtrés par la catégorie sélectionnée.
+  const visibleDishes = filterCat === 'all' ? dishes : dishes.filter((d) => d.category === filterCat);
+  // Meilleures ventes : les 3 plats les plus vendus (ventes > 0) → badge « Top ».
+  const topSellerIds = new Set(
+    [...dishes].filter((d) => d.salesCount > 0).sort((a, b) => b.salesCount - a.salesCount).slice(0, 3).map((d) => d.id),
+  );
 
   async function handleDelete(dish: CatalogDish) {
     const label = dish._count.fridgeStocks > 0
@@ -380,6 +511,31 @@ export function Plats() {
         </div>
       </div>
 
+      {/* Barre catégories : filtre + gestion (item Frédéric) */}
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+        <button
+          onClick={() => setFilterCat('all')}
+          className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${filterCat === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+        >
+          Tous
+        </button>
+        {categories.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setFilterCat(c.name)}
+            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${filterCat === c.name ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            {c.name}
+          </button>
+        ))}
+        <button
+          onClick={() => setShowCatManager(true)}
+          className="ml-auto shrink-0 flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-full px-3 py-1.5 transition-colors"
+        >
+          <Tag size={14} /> Gérer les catégories
+        </button>
+      </div>
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-sm text-gray-400">Chargement…</div>
@@ -398,7 +554,8 @@ export function Plats() {
                 <tr>
                   <th className="px-4 py-3" />
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nom</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Catégorie</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Note</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ventes</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Prix</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Frigos</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Statut</th>
@@ -406,7 +563,10 @@ export function Plats() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {dishes.map((dish) => (
+                {visibleDishes.length === 0 && (
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">Aucun plat dans cette catégorie.</td></tr>
+                )}
+                {visibleDishes.map((dish) => (
                   <tr key={dish.id} className={`hover:bg-gray-50 transition-colors ${dish.isActive ? '' : 'opacity-55'}`}>
                     <td className="px-4 py-3">
                       <div className="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
@@ -427,7 +587,27 @@ export function Plats() {
                         <p className="text-xs text-gray-400 mt-0.5">{dish.allergens.join(', ')}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{dish.category}</td>
+                    <td className="px-4 py-3">
+                      {dish.ratingCount > 0 ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Star size={14} className="text-amber-400 fill-amber-400" />
+                          <span className="font-medium text-gray-700">{dish.rating?.toFixed(1)}</span>
+                          <span className="text-xs text-gray-400">({dish.ratingCount})</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="font-medium text-gray-700">{dish.salesCount}</span>
+                        {topSellerIds.has(dish.id) && (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                            <TrendingUp size={11} /> Top
+                          </span>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-gray-700 font-medium">{dish.price.toFixed(2)} €</td>
                     <td className="px-4 py-3 text-gray-500">{dish._count.fridgeStocks}</td>
                     <td className="px-4 py-3">
@@ -466,7 +646,10 @@ export function Plats() {
       </div>
 
       {showModal && (
-        <DishModal initial={editingDish} onClose={() => setShowModal(false)} onSaved={handleSaved} />
+        <DishModal initial={editingDish} categories={categories} onClose={() => setShowModal(false)} onSaved={handleSaved} />
+      )}
+      {showCatManager && (
+        <CategoryManager categories={categories} onClose={() => setShowCatManager(false)} onChanged={setCategories} />
       )}
     </AdminLayout>
   );

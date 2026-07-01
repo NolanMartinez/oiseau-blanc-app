@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import { logger } from './utils/logger';
 import { initVapid } from './services/push.service';
+import { ensureCategories } from './services/categories';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import subscriberPublicRoutes from './routes/subscriber.public.routes';
@@ -24,6 +25,7 @@ import pushPublicRoutes from './routes/push.public.routes';
 import pushAdminRoutes from './routes/push.admin.routes';
 import userNotificationsRoutes from './routes/userNotifications.routes';
 import dishAdminRoutes from './routes/dish.admin.routes';
+import categoryAdminRoutes from './routes/category.admin.routes';
 import dishPublicRoutes from './routes/dish.public.routes';
 import stockAdminRoutes from './routes/stock.admin.routes';
 import recommendationRoutes from './routes/recommendation.routes';
@@ -74,6 +76,7 @@ app.use('/api/v1/admin/dashboard', dashboardRoutes);
 app.use('/api/v1/admin/frigos', frigoAdminRoutes);
 app.use('/api/v1/public', frigoPublicRoutes);
 app.use('/api/v1/admin/dishes', dishAdminRoutes);
+app.use('/api/v1/admin/categories', categoryAdminRoutes);
 app.use('/api/v1/public', dishPublicRoutes);
 app.use('/api/v1/admin/stock', stockAdminRoutes);
 app.use('/api/v1/admin/recommendations', recommendationRoutes);
@@ -97,6 +100,7 @@ if (fs.existsSync(clientDist)) {
 
 app.listen(PORT, () => {
   logger.info(`Serveur démarré sur le port ${PORT}`);
+  void ensureCategories();
 });
 
 export default app;

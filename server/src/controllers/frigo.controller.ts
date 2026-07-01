@@ -4,6 +4,7 @@ import { prisma } from '../utils/prisma';
 import { getFridgeMeta } from '../services/fridges';
 import { markSeen, getStatus } from '../services/fridgeStatus';
 import { enqueueCommand, drainCommands } from '../services/remoteCommands';
+import { notifyFridgeSubscribers } from '../services/push.service';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -131,7 +132,7 @@ export async function getFridge(req: Request, res: Response): Promise<void> {
   }
   const lang = parseLang(req.query['lang']);
   const byFridge = await stockByFridge(lang);
-  res.json({ fridge: buildFridge(meta, byFridge.get(id) ?? []) });
+  res.json({ fridge: buildFridge(meta, byFridge.get(meta.id) ?? []) });
 }
 
 // ── CRUD frigo (admin) ──────────────────────────────────────────────────────
@@ -195,11 +196,12 @@ const stockSyncSchema = z.object({
 // à jour les quantités du frigo et on remet à 0 les plats absents du snapshot
 // (vendus / retirés) → l'app web client reflète le stock réel de la borne.
 export async function syncFridgeStock(req: Request, res: Response): Promise<void> {
-  const id = req.params['id'] as string;
-  if (!(await getFridgeMeta(id))) {
+  const meta = await getFridgeMeta(req.params['id'] as string);
+  if (!meta) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
+  const fid = meta.id;
 
   // Protection optionnelle : si KIOSK_API_KEY est défini, exiger l'en-tête.
   const expectedKey = process.env['KIOSK_API_KEY'];
@@ -225,19 +227,19 @@ export async function syncFridgeStock(req: Request, res: Response): Promise<void
 
   for (const s of toApply) {
     await prisma.fridgeStock.upsert({
-      where: { frigoId_dishId: { frigoId: id, dishId: s.dishId } },
-      create: { frigoId: id, dishId: s.dishId, quantity: s.quantity },
+      where: { frigoId_dishId: { frigoId: fid, dishId: s.dishId } },
+      create: { frigoId: fid, dishId: s.dishId, quantity: s.quantity },
       update: { quantity: s.quantity },
     });
   }
 
   // Plats de ce frigo absents du snapshot → stock épuisé.
   await prisma.fridgeStock.updateMany({
-    where: { frigoId: id, dishId: { notIn: toApply.map((s) => s.dishId) } },
+    where: { frigoId: fid, dishId: { notIn: toApply.map((s) => s.dishId) } },
     data: { quantity: 0 },
   });
 
-  markSeen(id); // la borne s'est manifestée → frigo « en ligne »
+  markSeen(fid); // la borne s'est manifestée → frigo « en ligne »
   res.json({ ok: true, updated: toApply.length });
 }
 
@@ -264,11 +266,12 @@ const menuSyncSchema = z.object({
 
 // POST /api/v1/public/frigos/:id/menu
 export async function syncFridgeMenu(req: Request, res: Response): Promise<void> {
-  const id = req.params['id'] as string;
-  if (!(await getFridgeMeta(id))) {
+  const meta = await getFridgeMeta(req.params['id'] as string);
+  if (!meta) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
+  const fid = meta.id;
   const expectedKey = process.env['KIOSK_API_KEY'];
   if (expectedKey && req.header('x-kiosk-key') !== expectedKey) {
     res.status(401).json({ error: 'Clé borne invalide' });
@@ -280,6 +283,13 @@ export async function syncFridgeMenu(req: Request, res: Response): Promise<void>
     return;
   }
   const { dishes } = parsed.data;
+
+  // État avant mise à jour → sert à repérer les plats réellement nouveaux.
+  const before = await prisma.fridgeStock.findMany({
+    where: { frigoId: fid },
+    select: { dishId: true },
+  });
+  const beforeIds = new Set(before.map((s) => s.dishId));
 
   for (const d of dishes) {
     const base = {
@@ -300,9 +310,9 @@ export async function syncFridgeMenu(req: Request, res: Response): Promise<void>
       update: withImage,
     });
     await prisma.fridgeStock.upsert({
-      where: { frigoId_dishId: { frigoId: id, dishId: d.id } },
+      where: { frigoId_dishId: { frigoId: fid, dishId: d.id } },
       create: {
-        frigoId: id,
+        frigoId: fid,
         dishId: d.id,
         quantity: d.quantity,
         expiryDate: d.expiryDate ? new Date(d.expiryDate) : null,
@@ -318,11 +328,28 @@ export async function syncFridgeMenu(req: Request, res: Response): Promise<void>
   // Garde-fou : on ne purge que si la borne a réellement envoyé des plats.
   if (dishes.length > 0) {
     await prisma.fridgeStock.deleteMany({
-      where: { frigoId: id, dishId: { notIn: dishes.map((d) => d.id) } },
+      where: { frigoId: fid, dishId: { notIn: dishes.map((d) => d.id) } },
     });
   }
 
-  markSeen(id);
+  markSeen(fid);
+
+  // Notification automatique : dès qu'un plat est physiquement ajouté à la borne
+  // (donc nouveau dans ce frigo), on prévient les abonnés de ce frigo. Le garde-fou
+  // `beforeIds.size > 0` évite d'alerter lors du tout premier garnissage du frigo.
+  if (beforeIds.size > 0) {
+    const added = dishes.filter((d) => !beforeIds.has(d.id));
+    if (added.length > 0) {
+      const noms = added.map((d) => d.name).join(', ');
+      void notifyFridgeSubscribers(fid, {
+        title: `Nouveau au ${meta.name}`,
+        body: added.length === 1 ? `${noms} vient d'arriver !` : `Nouveaux plats : ${noms}`,
+        url: '/app/mon-frigo',
+        tag: `newdish-${fid}`,
+      }).catch(() => {});
+    }
+  }
+
   res.json({ ok: true, count: dishes.length });
 }
 
@@ -336,8 +363,8 @@ const saleSchema = z.object({
 
 // POST /api/v1/public/frigos/:id/sales — la borne remonte une vente.
 export async function recordSale(req: Request, res: Response): Promise<void> {
-  const id = req.params['id'] as string;
-  if (!(await getFridgeMeta(id))) {
+  const meta = await getFridgeMeta(req.params['id'] as string);
+  if (!meta) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
@@ -353,9 +380,9 @@ export async function recordSale(req: Request, res: Response): Promise<void> {
   }
   const { dishId, amount, mode, soldAt } = parsed.data;
   const sale = await prisma.sale.create({
-    data: { frigoId: id, dishId, amount, mode, soldAt: soldAt ? new Date(soldAt) : new Date() },
+    data: { frigoId: meta.id, dishId, amount, mode, soldAt: soldAt ? new Date(soldAt) : new Date() },
   });
-  markSeen(id);
+  markSeen(meta.id);
   res.status(201).json({ sale });
 }
 
@@ -368,8 +395,8 @@ const remoteCmdSchema = z.object({
 
 // POST /api/v1/admin/frigos/:id/commands — l'opérateur empile une commande.
 export async function queueFridgeCommand(req: Request, res: Response): Promise<void> {
-  const id = req.params['id'] as string;
-  if (!(await getFridgeMeta(id))) {
+  const meta = await getFridgeMeta(req.params['id'] as string);
+  if (!meta) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
@@ -378,14 +405,14 @@ export async function queueFridgeCommand(req: Request, res: Response): Promise<v
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const cmd = enqueueCommand({ frigoId: id, ...parsed.data });
+  const cmd = enqueueCommand({ frigoId: meta.id, ...parsed.data });
   res.status(201).json({ command: cmd });
 }
 
 // GET /api/v1/public/frigos/:id/commands — la borne récupère (et vide) ses commandes.
 export async function pullFridgeCommands(req: Request, res: Response): Promise<void> {
-  const id = req.params['id'] as string;
-  if (!(await getFridgeMeta(id))) {
+  const meta = await getFridgeMeta(req.params['id'] as string);
+  if (!meta) {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
@@ -394,5 +421,5 @@ export async function pullFridgeCommands(req: Request, res: Response): Promise<v
     res.status(401).json({ error: 'Clé borne invalide' });
     return;
   }
-  res.json({ commands: drainCommands(id) });
+  res.json({ commands: drainCommands(meta.id) });
 }

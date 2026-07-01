@@ -50,13 +50,29 @@ const updateDishSchema = z.object({
   image: imageSchema.nullable().optional(),
 });
 
-// GET /api/v1/admin/dishes
+// GET /api/v1/admin/dishes — inclut la note moyenne et le nombre de ventes par plat.
 export async function listDishes(_req: Request, res: Response): Promise<void> {
-  const dishes = await prisma.dish.findMany({
-    select: { ...dishSelect, _count: { select: { fridgeStocks: true } } },
-    orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+  const [dishes, ratings, sales] = await Promise.all([
+    prisma.dish.findMany({
+      select: { ...dishSelect, _count: { select: { fridgeStocks: true } } },
+      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+    }),
+    prisma.review.groupBy({ by: ['dishId'], _avg: { rating: true }, _count: { rating: true } }),
+    prisma.sale.groupBy({ by: ['dishId'], _count: { _all: true } }),
+  ]);
+  const ratingMap = new Map(ratings.map((r) => [r.dishId, r]));
+  const salesMap = new Map(sales.map((s) => [s.dishId, s._count._all]));
+  res.json({
+    dishes: dishes.map((d) => {
+      const r = ratingMap.get(d.id);
+      return {
+        ...toDishDTO(d),
+        rating: r && r._avg.rating != null ? Math.round(r._avg.rating * 10) / 10 : null,
+        ratingCount: r?._count.rating ?? 0,
+        salesCount: salesMap.get(d.id) ?? 0,
+      };
+    }),
   });
-  res.json({ dishes: dishes.map(toDishDTO) });
 }
 
 // POST /api/v1/admin/dishes

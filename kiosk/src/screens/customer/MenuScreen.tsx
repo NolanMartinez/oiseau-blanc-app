@@ -105,33 +105,33 @@ export function MenuScreen({
                   key={g.dish.id}
                   className="flex min-h-0 flex-col overflow-hidden rounded-3xl bg-white shadow-md"
                 >
+                  {/* Image en grand : occupe toute la carte, titre + prix superposés en bas. */}
                   <button
                     onClick={() => onOpenDetail(g)}
-                    className="flex min-h-0 flex-1 flex-col text-left transition active:scale-[0.99]"
+                    className="relative min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)] text-left transition active:scale-[0.99]"
                   >
-                    {/* Image : occupe l'espace restant de la carte (jamais de débordement). */}
-                    <div className="relative w-full min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)]">
-                      {g.imageUrl ? (
-                        <img src={g.imageUrl} alt={g.dish.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-6xl">
-                          {categoryEmoji(g.dish.category)}
-                        </div>
-                      )}
-                      <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-[var(--green)] shadow">
-                        {t("qty_available", { n: left })}
-                      </span>
-                    </div>
-                    {/* Titre + prix : hauteur naturelle, toujours visibles. */}
-                    <div className="shrink-0 px-4 pt-2">
-                      <p className="line-clamp-2 text-base font-bold leading-tight">{g.dish.name}</p>
-                      <p className="text-xl font-extrabold text-[var(--green)]">
+                    {g.imageUrl ? (
+                      <img src={g.imageUrl} alt={g.dish.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-8xl">
+                        {categoryEmoji(g.dish.category)}
+                      </div>
+                    )}
+                    <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-[var(--green)] shadow">
+                      {t("qty_available", { n: left })}
+                    </span>
+                    {/* Dégradé + titre + prix par-dessus l'image (toujours lisibles). */}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-4 pb-3 pt-12">
+                      <p className="line-clamp-2 text-lg font-bold leading-tight text-white drop-shadow">
+                        {g.dish.name}
+                      </p>
+                      <p className="text-2xl font-extrabold text-white drop-shadow">
                         {formatPrice(g.priceCents, currency)}
                       </p>
                     </div>
                   </button>
 
-                  <div className="shrink-0 px-3 pb-3 pt-2">
+                  <div className="shrink-0 p-3">
                     <button
                       onClick={() => onAddToCart(g)}
                       disabled={left <= 0}

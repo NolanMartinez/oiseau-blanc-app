@@ -75,3 +75,24 @@ export async function broadcastPush(payload: PushPayload): Promise<{ sent: numbe
   const sent = results.filter((r) => r.status === 'fulfilled' && r.value).length;
   return { sent, total: subscribers.length };
 }
+
+/**
+ * Notifie uniquement les abonnés dont le frigo favori est `frigoId`
+ * (utilisé pour l'alerte automatique « nouveau plat »).
+ */
+export async function notifyFridgeSubscribers(
+  frigoId: string,
+  payload: PushPayload,
+): Promise<{ sent: number; total: number }> {
+  const subscribers = await prisma.subscriber.findMany({
+    where: { favoriId: frigoId, consentPush: true, pushToken: { not: null } },
+    select: { id: true },
+  });
+
+  const results = await Promise.allSettled(
+    subscribers.map((s) => sendToSubscriber(s.id, payload)),
+  );
+
+  const sent = results.filter((r) => r.status === 'fulfilled' && r.value).length;
+  return { sent, total: subscribers.length };
+}
