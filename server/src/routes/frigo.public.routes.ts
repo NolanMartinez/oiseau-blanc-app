@@ -7,6 +7,7 @@ import {
   recordSale,
   pullFridgeCommands,
 } from '../controllers/frigo.controller';
+import { loyaltyLookup, loyaltyRedeem } from '../controllers/loyalty.controller';
 
 const router = Router();
 
@@ -20,5 +21,8 @@ router.post('/frigos/:id/menu', syncFridgeMenu);
 router.post('/frigos/:id/sales', recordSale);
 // La borne récupère ses commandes d'ouverture/fermeture à distance.
 router.get('/frigos/:id/commands', pullFridgeCommands);
+// Fidélité : consultation du solde (avant paiement) et échange d'un repas offert.
+router.post('/frigos/:id/loyalty/lookup', loyaltyLookup);
+router.post('/frigos/:id/loyalty/redeem', loyaltyRedeem);
 
 export default router;

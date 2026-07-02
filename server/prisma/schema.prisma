@@ -34,6 +34,7 @@ model Subscriber {
   consentEmail Boolean  @default(false) @map("consent_email")
   consentPush  Boolean  @default(false) @map("consent_push")
   pushToken    String?  @map("push_token") @db.Text
+  loyaltyPoints Int     @default(0) @map("loyalty_points")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -41,8 +42,34 @@ model Subscriber {
   preferenceResponses PreferenceResponse[]
   menuVoteResponses   MenuVoteResponse[]
   purchases           Purchase[]
+  loyaltyEntries      LoyaltyEntry[]
 
   @@map("abonnes")
+}
+
+// Historique des points de fidélité (gain à l'achat, dépense au repas offert).
+model LoyaltyEntry {
+  id           String   @id @default(uuid())
+  subscriberId String   @map("subscriber_id")
+  delta        Int // + gain, - dépense
+  reason       String // "purchase" | "reward" | "manual"
+  frigoId      String?  @map("frigo_id")
+  dishId       String?  @map("dish_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@index([subscriberId])
+  @@map("fidelite_historique")
+}
+
+// Réglages génériques clé/valeur (config fidélité, etc.), modifiables depuis l'admin.
+model AppSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("reglages")
 }
 
 model Review {

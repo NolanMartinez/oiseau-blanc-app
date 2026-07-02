@@ -108,7 +108,7 @@ export async function pushStock(
 export async function pushSale(
   backendUrl: string,
   frigoId: string,
-  sale: { dishId: string; amount: number; mode: string; soldAt: string },
+  sale: { dishId: string; amount: number; mode: string; soldAt: string; contact?: string },
 ): Promise<boolean> {
   if (!backendUrl || !frigoId) return false;
   const base = backendUrl.replace(/\/$/, "");
@@ -121,6 +121,59 @@ export async function pushSale(
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+/** Solde de fidélité renvoyé par le serveur. */
+export interface LoyaltyStatus {
+  subscriberId: string;
+  points: number;
+  pointsReward: number;
+  eurosPerPoint: number;
+  rewardAvailable: boolean;
+  enabled: boolean;
+}
+
+/** Consulte le solde fidélité d'un client par email/téléphone (avant paiement). */
+export async function loyaltyLookup(
+  backendUrl: string,
+  frigoId: string,
+  contact: string,
+): Promise<LoyaltyStatus | null> {
+  if (!backendUrl || !frigoId) return null;
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/loyalty/lookup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contact }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as LoyaltyStatus;
+  } catch {
+    return null;
+  }
+}
+
+/** Échange les points contre un repas offert. Renvoie le nouveau solde, ou null si échec. */
+export async function loyaltyRedeem(
+  backendUrl: string,
+  frigoId: string,
+  contact: string,
+  dishId: string,
+): Promise<LoyaltyStatus | null> {
+  if (!backendUrl || !frigoId) return null;
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/loyalty/redeem`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contact, dishId }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as LoyaltyStatus;
+  } catch {
+    return null;
   }
 }
 

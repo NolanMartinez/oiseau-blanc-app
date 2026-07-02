@@ -22,6 +22,7 @@ import { Recommandations } from './pages/admin/Recommandations';
 import { AdminsPage } from './pages/admin/AdminsPage';
 import { Notifications } from './pages/admin/Notifications';
 import { Comptabilite } from './pages/admin/Comptabilite';
+import { Fidelite } from './pages/admin/Fidelite';
 
 // App utilisateur
 import { LoginPage } from './pages/app/LoginPage';
@@ -81,6 +82,7 @@ function App() {
           <Route path="/admin/admins" element={<PrivateRoute><AdminsPage /></PrivateRoute>} />
           <Route path="/admin/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
           <Route path="/admin/comptabilite" element={<PrivateRoute><Comptabilite /></PrivateRoute>} />
+          <Route path="/admin/fidelite" element={<PrivateRoute><Fidelite /></PrivateRoute>} />
 
           {/* 404 */}
           <Route path="*" element={<div className="p-8 text-center text-sm text-gray-500">Page introuvable</div>} />

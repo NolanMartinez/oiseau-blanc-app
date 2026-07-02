@@ -10,6 +10,7 @@ import {
   UtensilsCrossed,
   Lightbulb,
   Receipt,
+  Gift,
   LogOut,
   X,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/admin/plats', icon: UtensilsCrossed, label: 'La Carte' },
   { to: '/admin/comptabilite', icon: Receipt, label: 'Etat des ventes' },
   { to: '/admin/recommandations', icon: Lightbulb, label: 'Gestion commerciale' },
+  { to: '/admin/fidelite', icon: Gift, label: 'Fidélité' },
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
   { to: '/admin/subscribers', icon: UserCircle, label: 'Abonnés' },
   { to: '/admin/reviews', icon: Star, label: 'Avis' },

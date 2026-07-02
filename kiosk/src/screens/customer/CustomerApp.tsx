@@ -2,24 +2,36 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { hardware, type LockerPhase, type PaymentPhase } from "../../hardware";
 import { useKiosk, type GroupedDish } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
-import { pushSale } from "../../sync";
+import { pushSale, loyaltyRedeem, type LoyaltyStatus } from "../../sync";
+import { useLang } from "../../i18n";
 import type { CartLine } from "../../state/cart";
 import { IdleScreen } from "./IdleScreen";
 import { CategoryScreen } from "./CategoryScreen";
 import { MenuScreen } from "./MenuScreen";
 import { DishDetailScreen } from "./DishDetailScreen";
 import { CartScreen } from "./CartScreen";
+import { IdentifyScreen } from "./IdentifyScreen";
 import { PaymentScreen } from "./PaymentScreen";
 import { OpeningScreen } from "./OpeningScreen";
 import { ThanksScreen } from "./ThanksScreen";
 
-type Screen = "idle" | "categories" | "menu" | "detail" | "cart" | "payment" | "opening" | "thanks";
+type Screen =
+  | "idle"
+  | "categories"
+  | "menu"
+  | "detail"
+  | "cart"
+  | "identify"
+  | "payment"
+  | "opening"
+  | "thanks";
 
 const IDLE_TIMEOUT_MS = 60_000;
 const SHOPPING_SCREENS: Screen[] = ["categories", "menu", "detail", "cart"];
 
 export function CustomerApp() {
   const { repo, reload, setting } = useKiosk();
+  const { t } = useLang();
   const [screen, setScreen] = useState<Screen>("idle");
   const [category, setCategory] = useState("");
   const [detailGroup, setDetailGroup] = useState<GroupedDish | null>(null);
@@ -28,6 +40,11 @@ export function CustomerApp() {
   const [lockerPhase, setLockerPhase] = useState<LockerPhase>("opening");
   const [openLines, setOpenLines] = useState<CartLine[]>([]);
   const [openStep, setOpenStep] = useState(0);
+
+  // ── Fidélité ────────────────────────────────────────────────────────────────
+  const [contact, setContact] = useState(""); // email/tél saisi (vide = anonyme)
+  const [loyalty, setLoyalty] = useState<LoyaltyStatus | null>(null);
+  const [useReward, setUseReward] = useState(false); // le client échange un repas offert
 
   const currency = setting(SETTING_KEYS.currency, "EUR");
   const requiresPayment =
@@ -40,6 +57,24 @@ export function CustomerApp() {
     return m;
   }, [cart]);
   const cartTotalCents = useMemo(() => cart.reduce((s, l) => s + l.priceCents, 0), [cart]);
+
+  // Repas offert : la ligne la plus chère du panier devient gratuite.
+  const freeLine = useMemo(
+    () =>
+      useReward && cart.length > 0
+        ? cart.reduce((max, l) => (l.priceCents > max.priceCents ? l : max), cart[0])
+        : null,
+    [useReward, cart],
+  );
+  const freeLockerId = freeLine?.lockerId ?? null;
+  const discountCents = freeLine?.priceCents ?? 0;
+  const payableCents = Math.max(0, cartTotalCents - discountCents);
+
+  const loyaltyBadge = contact
+    ? useReward
+      ? t("loyalty_reward_used")
+      : t("loyalty_active", { n: loyalty?.points ?? 0 })
+    : null;
 
   // ── Timer d'inactivité : retour accueil + panier vidé ─────────────────────
   const idleTimer = useRef<number | null>(null);
@@ -61,6 +96,9 @@ export function CustomerApp() {
     setCart([]);
     setDetailGroup(null);
     setCategory("");
+    setContact("");
+    setLoyalty(null);
+    setUseReward(false);
     setScreen("idle");
   }
 
@@ -94,25 +132,29 @@ export function CustomerApp() {
     async (line: CartLine) => {
       if (!repo) return;
       const soldAt = new Date().toISOString();
-      const mode = requiresPayment ? "paid" : "free";
+      // Ligne offerte (repas fidélité) → gratuite ; sinon payante (ou libre si borne gratuite).
+      const isFree = line.lockerId === freeLockerId;
+      const mode = isFree || !requiresPayment ? "free" : "paid";
+      const amount = isFree ? 0 : line.priceCents;
       await repo.logSale({
         lockerId: line.lockerId,
         dishId: line.dishId,
-        amount: line.priceCents,
+        amount,
         mode,
         paidAt: soldAt,
         synced: false,
       });
-      // Remontée best-effort de la vente vers le serveur (suivi des ventes web).
+      // Remontée best-effort de la vente vers le serveur (suivi des ventes web + points fidélité).
       void pushSale(setting(SETTING_KEYS.backendUrl), setting(SETTING_KEYS.frigoId), {
         dishId: line.dishId,
-        amount: line.priceCents,
+        amount,
         mode,
         soldAt,
+        contact: contact || undefined,
       });
       await repo.clearLocker(line.lockerId);
     },
-    [repo, requiresPayment, setting],
+    [repo, requiresPayment, setting, freeLockerId, contact],
   );
 
   // ── Ouverture des casiers : un casier à la fois, avec bouton SUIVANT ───────
@@ -134,12 +176,22 @@ export function CustomerApp() {
 
   const startOpening = useCallback(
     async (lines: CartLine[]) => {
+      // Repas offert : on débite les points côté serveur (une seule fois) au moment
+      // où la vente est confirmée. Best-effort — n'empêche jamais l'ouverture.
+      if (useReward && contact && freeLine) {
+        void loyaltyRedeem(
+          setting(SETTING_KEYS.backendUrl),
+          setting(SETTING_KEYS.frigoId),
+          contact,
+          freeLine.dishId,
+        );
+      }
       setOpenLines(lines);
       setOpenStep(0);
       setScreen("opening");
       await openAt(lines, 0);
     },
-    [openAt],
+    [openAt, useReward, contact, freeLine, setting],
   );
 
   // Bouton SUIVANT / Terminé : passe au casier suivant ou clôt la vente.
@@ -160,13 +212,13 @@ export function CustomerApp() {
 
   // ── Paiement (total du panier) ────────────────────────────────────────────
   const startPayment = useCallback(
-    async (lines: CartLine[]) => {
+    async (lines: CartLine[], amountCents: number) => {
       setPaymentPhase("waiting");
       setScreen("payment");
       const unsub = hardware.onPaymentEvent((e) => setPaymentPhase(e.phase));
       let outcome: PaymentPhase = "waiting";
       try {
-        const res = await hardware.requestPayment(lines.reduce((s, l) => s + l.priceCents, 0));
+        const res = await hardware.requestPayment(amountCents);
         outcome = res.outcome;
       } finally {
         unsub();
@@ -181,7 +233,9 @@ export function CustomerApp() {
 
   function checkout() {
     if (cart.length === 0) return;
-    if (requiresPayment) startPayment(cart);
+    // Si tout est offert (repas gratuit couvrant le seul article) ou borne gratuite,
+    // pas de paiement : on ouvre directement.
+    if (requiresPayment && payableCents > 0) startPayment(cart, payableCents);
     else startOpening(cart);
   }
 
@@ -239,13 +293,33 @@ export function CustomerApp() {
           onRemove={removeLine}
           onValidate={checkout}
           onContinue={() => setScreen("menu")}
+          onLoyalty={() => setScreen("identify")}
+          loyaltyBadge={loyaltyBadge}
+          discountCents={discountCents}
+        />
+      )}
+
+      {screen === "identify" && (
+        <IdentifyScreen
+          onValidated={(c, l, r) => {
+            setContact(c);
+            setLoyalty(l);
+            setUseReward(r);
+            setScreen("cart");
+          }}
+          onSkip={() => {
+            setContact("");
+            setLoyalty(null);
+            setUseReward(false);
+            setScreen("cart");
+          }}
         />
       )}
 
       {screen === "payment" && (
         <PaymentScreen
           phase={paymentPhase}
-          amountCents={cartTotalCents}
+          amountCents={payableCents}
           currency={currency}
           onCancel={() => hardware.cancelPayment()}
         />

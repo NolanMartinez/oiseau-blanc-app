@@ -1,4 +1,4 @@
-import { Trash2, ShoppingCart } from "lucide-react";
+import { Trash2, ShoppingCart, Gift } from "lucide-react";
 import { useLang } from "../../i18n";
 import { formatPrice } from "../../utils/format";
 import type { CartLine } from "../../state/cart";
@@ -9,15 +9,22 @@ export function CartScreen({
   onRemove,
   onValidate,
   onContinue,
+  onLoyalty,
+  loyaltyBadge,
+  discountCents = 0,
 }: {
   cart: CartLine[];
   currency: string;
   onRemove: (lockerId: number) => void;
   onValidate: () => void;
   onContinue: () => void;
+  onLoyalty: () => void;
+  loyaltyBadge?: string | null;
+  discountCents?: number;
 }) {
   const { t } = useLang();
   const total = cart.reduce((sum, l) => sum + l.priceCents, 0);
+  const netTotal = Math.max(0, total - discountCents);
 
   return (
     <div className="flex h-full flex-col">
@@ -62,13 +69,34 @@ export function CartScreen({
         </div>
       )}
 
-      {/* Pied : total + valider */}
+      {/* Pied : fidélité + total + valider */}
       {cart.length > 0 && (
-        <div className="bg-white p-6 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        <div className="space-y-3 bg-white p-6 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+          <div className="mx-auto max-w-2xl">
+            {/* Bannière fidélité (cumul / repas offert) */}
+            <button
+              onClick={onLoyalty}
+              className={`flex w-full items-center gap-3 rounded-2xl px-5 py-3 text-left active:scale-[0.99] ${
+                loyaltyBadge
+                  ? "bg-[var(--green-tint)] text-[var(--green)]"
+                  : "border-2 border-dashed border-[var(--green)]/40 text-[var(--green)]"
+              }`}
+            >
+              <Gift size={22} />
+              <span className="flex-1 text-lg font-bold">{loyaltyBadge ?? t("loyalty_earn")}</span>
+              <span className="text-xl">›</span>
+            </button>
+          </div>
+
           <div className="mx-auto flex max-w-2xl items-center justify-between">
             <div>
               <p className="text-sm font-semibold uppercase text-[var(--ink-faint)]">{t("total")}</p>
-              <p className="text-4xl font-extrabold">{formatPrice(total, currency)}</p>
+              {discountCents > 0 && (
+                <p className="text-lg font-semibold text-[var(--ink-faint)] line-through">
+                  {formatPrice(total, currency)}
+                </p>
+              )}
+              <p className="text-4xl font-extrabold">{formatPrice(netTotal, currency)}</p>
             </div>
             <button
               onClick={onValidate}
