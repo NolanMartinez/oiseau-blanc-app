@@ -4,7 +4,7 @@ import { LangProvider } from "./i18n";
 import { KioskProvider, useKiosk } from "./state/kiosk";
 import { CustomerApp } from "./screens/customer/CustomerApp";
 import { AdminApp } from "./screens/admin/AdminApp";
-import { PinLock } from "./screens/admin/PinLock";
+import { PinLock, type AdminRole } from "./screens/admin/PinLock";
 
 type Mode = "customer" | "pin" | "admin";
 
@@ -32,6 +32,7 @@ function AdminHotspot({ onTrigger }: { onTrigger: () => void }) {
 function Shell() {
   const { ready } = useKiosk();
   const [mode, setMode] = useState<Mode>("customer");
+  const [role, setRole] = useState<AdminRole>("admin");
 
   if (!ready) {
     return (
@@ -50,9 +51,15 @@ function Shell() {
         </>
       )}
       {mode === "pin" && (
-        <PinLock onUnlock={() => setMode("admin")} onCancel={() => setMode("customer")} />
+        <PinLock
+          onUnlock={(r) => {
+            setRole(r);
+            setMode("admin");
+          }}
+          onCancel={() => setMode("customer")}
+        />
       )}
-      {mode === "admin" && <AdminApp onExit={() => setMode("customer")} />}
+      {mode === "admin" && <AdminApp role={role} onExit={() => setMode("customer")} />}
     </div>
   );
 }

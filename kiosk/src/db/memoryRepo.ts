@@ -45,6 +45,7 @@ function defaultStore(): Store {
     [SETTING_KEYS.alarmDelay]: "180",
     [SETTING_KEYS.currency]: "EUR",
     [SETTING_KEYS.adminPin]: "1234",
+    [SETTING_KEYS.livreurPin]: "0000",
     [SETTING_KEYS.langDefault]: "fr",
     [SETTING_KEYS.hwMode]: "sim",
     [SETTING_KEYS.frameOpen]: "02 {board} {box} {xor}",
@@ -81,7 +82,7 @@ function defaultStore(): Store {
   }));
   return {
     settings,
-    dispensers: [{ board: "A", comPort: "COM1", boxCount: 32, enabled: true, baud: 9600, parity: "none" }],
+    dispensers: [{ board: "A", comPort: "COM1", boxCount: 32, enabled: true, baud: 57600, parity: "none" }],
     lockers,
     dishes,
     sales: [],
@@ -264,12 +265,22 @@ export class MemoryRepo implements Repo {
     }
   }
 
-  async logSale(sale: SaleLog): Promise<void> {
-    this.store.sales.push({ ...sale, id: this.store.sales.length + 1 });
+  async logSale(sale: SaleLog): Promise<number> {
+    const id = this.store.sales.length + 1;
+    this.store.sales.push({ ...sale, id });
     this.persist();
+    return id;
   }
 
   async listUnsyncedSales(): Promise<SaleLog[]> {
     return this.store.sales.filter((s) => !s.synced);
+  }
+
+  async markSaleSynced(id: number): Promise<void> {
+    const s = this.store.sales.find((x) => x.id === id);
+    if (s) {
+      s.synced = true;
+      this.persist();
+    }
   }
 }

@@ -201,13 +201,26 @@ export function SettingsScreen() {
             </div>
           </div>
 
-          <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("admin_pin")}</label>
-          <input
-            defaultValue={get(SETTING_KEYS.adminPin, "1234")}
-            onBlur={(e) => save(SETTING_KEYS.adminPin, e.target.value)}
-            className="mb-4 w-40 rounded-xl border border-gray-300 px-3 py-2.5"
-            inputMode="numeric"
-          />
+          <div className="mb-4 flex flex-wrap gap-6">
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("admin_pin")}</label>
+              <input
+                defaultValue={get(SETTING_KEYS.adminPin, "1234")}
+                onBlur={(e) => save(SETTING_KEYS.adminPin, e.target.value)}
+                className="w-40 rounded-xl border border-gray-300 px-3 py-2.5"
+                inputMode="numeric"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("livreur_pin")}</label>
+              <input
+                defaultValue={get(SETTING_KEYS.livreurPin, "0000")}
+                onBlur={(e) => save(SETTING_KEYS.livreurPin, e.target.value)}
+                className="w-40 rounded-xl border border-gray-300 px-3 py-2.5"
+                inputMode="numeric"
+              />
+            </div>
+          </div>
 
           <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">{t("language")}</label>
           <div className="flex flex-wrap gap-2">

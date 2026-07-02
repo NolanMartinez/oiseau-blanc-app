@@ -65,6 +65,7 @@ export const SETTING_KEYS = {
   alarmDelay: "alarm_delay",
   currency: "currency",
   adminPin: "admin_pin",
+  livreurPin: "livreur_pin",
   langDefault: "lang_default",
   hwMode: "hw_mode",
   frameOpen: "frame_open",

@@ -136,7 +136,7 @@ export function CustomerApp() {
       const isFree = line.lockerId === freeLockerId;
       const mode = isFree || !requiresPayment ? "free" : "paid";
       const amount = isFree ? 0 : line.priceCents;
-      await repo.logSale({
+      const saleId = await repo.logSale({
         lockerId: line.lockerId,
         dishId: line.dishId,
         amount,
@@ -144,14 +144,19 @@ export function CustomerApp() {
         paidAt: soldAt,
         synced: false,
       });
-      // Remontée best-effort de la vente vers le serveur (suivi des ventes web + points fidélité).
-      void pushSale(setting(SETTING_KEYS.backendUrl), setting(SETTING_KEYS.frigoId), {
-        dishId: line.dishId,
-        amount,
-        mode,
-        soldAt,
-        contact: contact || undefined,
-      });
+      // Remontée best-effort vers le serveur (suivi des ventes web + points fidélité).
+      // Non bloquant : si le réseau est coupé, la vente reste en file et sera
+      // renvoyée automatiquement par resyncSales au retour du réseau (mode dégradé).
+      void (async () => {
+        const ok = await pushSale(setting(SETTING_KEYS.backendUrl), setting(SETTING_KEYS.frigoId), {
+          dishId: line.dishId,
+          amount,
+          mode,
+          soldAt,
+          contact: contact || undefined,
+        });
+        if (ok) await repo.markSaleSynced(saleId);
+      })();
       await repo.clearLocker(line.lockerId);
     },
     [repo, requiresPayment, setting, freeLockerId, contact],

@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { getRepo, SETTING_KEYS, type DishCache, type Dispenser, type Locker, type Repo, type Settings } from "../db";
-import { syncMenu, pushMenu, pullCommands, type MenuSnapshotDish } from "../sync";
+import { syncMenu, pushMenu, pullCommands, resyncSales, type MenuSnapshotDish } from "../sync";
 import { hardware, type HwMode } from "../hardware";
 import { sortCategories, byCategoryThenName } from "../utils/categories";
 
@@ -206,6 +206,8 @@ export function KioskProvider({ children }: { children: ReactNode }) {
         if (backend && frigo) {
           const res = await syncMenu(repo, backend, frigo);
           if (res.ok) await loadAll(repo);
+          // Mode dégradé : renvoie les ventes accumulées hors-ligne.
+          await resyncSales(repo, backend, frigo);
         }
       } finally {
         running = false;

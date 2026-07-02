@@ -70,5 +70,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0010_dispensers_bcde.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 11,
+            description: "baud 57600 par defaut + PIN livreur",
+            sql: include_str!("../migrations/0011_baud57600_livreur_pin.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

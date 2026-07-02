@@ -70,7 +70,7 @@ pub struct BoardLink {
 }
 
 fn default_baud() -> u32 {
-    9600
+    57600
 }
 fn default_parity() -> String {
     "none".to_string()

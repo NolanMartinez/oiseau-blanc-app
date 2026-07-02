@@ -4,13 +4,22 @@ import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
 
-export function PinLock({ onUnlock, onCancel }: { onUnlock: () => void; onCancel: () => void }) {
+export type AdminRole = "admin" | "livreur";
+
+export function PinLock({
+  onUnlock,
+  onCancel,
+}: {
+  onUnlock: (role: AdminRole) => void;
+  onCancel: () => void;
+}) {
   const { t } = useLang();
   const { setting } = useKiosk();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
 
-  const expected = setting(SETTING_KEYS.adminPin, "1234");
+  const adminPin = setting(SETTING_KEYS.adminPin, "1234");
+  const livreurPin = setting(SETTING_KEYS.livreurPin, "0000");
 
   function press(d: string) {
     setError(false);
@@ -19,8 +28,11 @@ export function PinLock({ onUnlock, onCancel }: { onUnlock: () => void; onCancel
   }
 
   function validate() {
-    if (pin === expected) {
-      onUnlock();
+    // Le PIN admin donne accès à tout ; le PIN livreur ouvre un accès restreint.
+    if (pin === adminPin) {
+      onUnlock("admin");
+    } else if (pin === livreurPin) {
+      onUnlock("livreur");
     } else {
       setError(true);
       setPin("");

@@ -309,12 +309,14 @@ export async function syncFridgeMenu(req: Request, res: Response): Promise<void>
       allergens: d.allergens ?? [],
       dlcDays: d.dlcDays ?? null,
     };
-    // Les photos sont gérées côté admin (source de vérité) : on n'écrit JAMAIS
-    // l'image depuis la borne → les photos uploadées dans l'admin sont préservées.
+    // L'ADMIN est la source de vérité du contenu (nom, catégorie, prix, photo,
+    // description, allergènes). La borne ne fait que BOOTSTRAP un plat nouvellement
+    // ajouté physiquement (create) ; sur un plat déjà connu, elle ne réécrit RIEN
+    // (`update: {}`) → plus de divergence (catégorie corrompue, vieux prix/photo).
     await prisma.dish.upsert({
       where: { id: d.id },
       create: { id: d.id, ...base, isActive: true },
-      update: base,
+      update: {},
     });
     await prisma.fridgeStock.upsert({
       where: { frigoId_dishId: { frigoId: fid, dishId: d.id } },

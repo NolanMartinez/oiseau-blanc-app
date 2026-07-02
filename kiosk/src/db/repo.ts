@@ -54,6 +54,7 @@ export interface Repo {
   setDishBarcode(dishId: string, barcode: string | null): Promise<void>;
 
   // Ventes
-  logSale(sale: SaleLog): Promise<void>;
+  logSale(sale: SaleLog): Promise<number>; // renvoie l'id local de la vente
   listUnsyncedSales(): Promise<SaleLog[]>;
+  markSaleSynced(id: number): Promise<void>;
 }

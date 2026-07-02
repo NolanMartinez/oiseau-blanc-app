@@ -50,7 +50,7 @@ export function LiaisonsScreen() {
       const d = byBoard.get(b);
       next[b] = {
         comPort: d?.comPort ?? "",
-        baud: d?.baud ?? 9600,
+        baud: d?.baud ?? 57600,
         parity: d?.parity ?? "none",
         enabled: d?.enabled ?? false,
       };

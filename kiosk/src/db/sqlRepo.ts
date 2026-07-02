@@ -38,7 +38,7 @@ export class SqlRepo implements Repo {
       comPort: r.com_port,
       boxCount: r.box_count,
       enabled: !!r.enabled,
-      baud: r.baud ?? 9600,
+      baud: r.baud ?? 57600,
       parity: r.parity ?? "none",
     }));
   }
@@ -160,11 +160,12 @@ export class SqlRepo implements Repo {
     }
   }
 
-  async logSale(sale: SaleLog): Promise<void> {
-    await this.db.execute(
+  async logSale(sale: SaleLog): Promise<number> {
+    const res = await this.db.execute(
       "INSERT INTO sales_log (locker_id, dish_id, amount, mode, paid_at, synced) VALUES ($1,$2,$3,$4,$5,$6)",
       [sale.lockerId, sale.dishId, sale.amount, sale.mode, sale.paidAt, sale.synced ? 1 : 0],
     );
+    return Number(res.lastInsertId ?? 0);
   }
 
   async listUnsyncedSales(): Promise<SaleLog[]> {
@@ -178,6 +179,10 @@ export class SqlRepo implements Repo {
       paidAt: r.paid_at,
       synced: !!r.synced,
     }));
+  }
+
+  async markSaleSynced(id: number): Promise<void> {
+    await this.db.execute("UPDATE sales_log SET synced = 1 WHERE id = $1", [id]);
   }
 }
 

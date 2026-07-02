@@ -124,6 +124,32 @@ export async function pushSale(
   }
 }
 
+/**
+ * Reprise des ventes hors-ligne : pousse vers le serveur toutes les ventes encore
+ * non synchronisées (mode dégradé → le réseau est revenu). Idempotent, best-effort.
+ */
+export async function resyncSales(repo: Repo, backendUrl: string, frigoId: string): Promise<number> {
+  if (!backendUrl || !frigoId) return 0;
+  let sent = 0;
+  const pending = await repo.listUnsyncedSales();
+  for (const s of pending) {
+    if (s.id == null) continue;
+    const ok = await pushSale(backendUrl, frigoId, {
+      dishId: s.dishId ?? "",
+      amount: s.amount,
+      mode: s.mode,
+      soldAt: s.paidAt,
+    });
+    if (ok) {
+      await repo.markSaleSynced(s.id);
+      sent += 1;
+    } else {
+      break; // toujours hors-ligne : inutile d'insister, on réessaiera plus tard
+    }
+  }
+  return sent;
+}
+
 /** Solde de fidélité renvoyé par le serveur. */
 export interface LoyaltyStatus {
   subscriberId: string;
