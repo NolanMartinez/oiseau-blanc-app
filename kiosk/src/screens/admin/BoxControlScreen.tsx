@@ -154,15 +154,15 @@ export function BoxControlScreen() {
                 busyBox === l.boxNumber
                   ? "border-[var(--blue)] bg-[var(--blue-soft)]"
                   : name
-                    ? "border-transparent bg-white shadow-sm active:bg-gray-50"
-                    : "border-dashed border-gray-300 bg-gray-50 active:bg-gray-100"
+                    ? "border-2 border-[var(--green)]/40 bg-white shadow-sm active:bg-gray-50"
+                    : "border-dashed border-amber-400 bg-amber-50 active:bg-amber-100"
               }`}
             >
-              <span className="text-xl font-extrabold">{l.boxNumber}</span>
+              <span className={`text-xl font-extrabold ${name ? "" : "text-amber-500"}`}>{l.boxNumber}</span>
               {name ? (
                 <span className="line-clamp-2 text-[10px] leading-tight text-[var(--ink-soft)]">{name}</span>
               ) : (
-                <span className="text-[10px] text-gray-400">{t("none")}</span>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-amber-600">{t("empty")}</span>
               )}
             </button>
           );

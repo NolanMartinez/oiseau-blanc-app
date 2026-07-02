@@ -343,15 +343,15 @@ export function MappingScreen() {
                   selectedIds.includes(l.id)
                     ? "border-[var(--green)] bg-[var(--green-tint)]"
                     : name
-                      ? "border-transparent bg-white shadow-sm"
-                      : "border-dashed border-gray-300 bg-gray-50"
+                      ? "border-2 border-[var(--green)]/40 bg-white shadow-sm"
+                      : "border-dashed border-amber-400 bg-amber-50"
                 }`}
               >
-                <span className="text-lg font-extrabold">{l.boxNumber}</span>
+                <span className={`text-lg font-extrabold ${name || selectedIds.includes(l.id) ? "" : "text-amber-500"}`}>{l.boxNumber}</span>
                 {name ? (
                   <span className="line-clamp-2 text-[10px] leading-tight text-[var(--ink-soft)]">{name}</span>
                 ) : (
-                  <span className="text-[10px] text-gray-400">{t("none")}</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-amber-600">{t("empty")}</span>
                 )}
               </button>
             );

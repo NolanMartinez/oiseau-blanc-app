@@ -31,18 +31,24 @@ interface EnrichedPurchase {
   dishPrice: number;
 }
 
+// Regroupe DEUX sources : les ventes remontées par la borne (table `ventes` /
+// modèle Sale, montant réellement payé en centimes) ET les achats via l'app
+// abonnés (table `purchases`). Sans ça, les paiements de la borne n'apparaissaient
+// pas dans l'état des ventes.
 async function fetchPurchases(fromDate: Date, toDate: Date): Promise<EnrichedPurchase[]> {
-  const [purchases, dishes] = await Promise.all([
+  const [purchases, sales, dishes] = await Promise.all([
     prisma.purchase.findMany({
       where: { purchasedAt: { gte: fromDate, lte: toDate } },
-      orderBy: { purchasedAt: 'asc' },
+    }),
+    prisma.sale.findMany({
+      where: { soldAt: { gte: fromDate, lte: toDate } },
     }),
     prisma.dish.findMany({ select: { id: true, name: true, category: true, price: true } }),
   ]);
 
   const dishMap = new Map(dishes.map((d) => [d.id, d]));
 
-  return purchases.map((p) => {
+  const fromPurchases: EnrichedPurchase[] = purchases.map((p) => {
     const dish = dishMap.get(p.dishId);
     return {
       id: p.id,
@@ -54,6 +60,23 @@ async function fetchPurchases(fromDate: Date, toDate: Date): Promise<EnrichedPur
       dishPrice: dish?.price ?? 0,
     };
   });
+
+  const fromSales: EnrichedPurchase[] = sales.map((s) => {
+    const dish = dishMap.get(s.dishId);
+    return {
+      id: s.id,
+      dishId: s.dishId,
+      frigoId: s.frigoId,
+      purchasedAt: s.soldAt,
+      dishName: dish?.name ?? s.dishId,
+      dishCategory: dish?.category ?? '',
+      dishPrice: s.amount / 100, // montant réellement payé (centimes → euros)
+    };
+  });
+
+  return [...fromPurchases, ...fromSales].sort(
+    (a, b) => a.purchasedAt.getTime() - b.purchasedAt.getTime(),
+  );
 }
 
 // GET /api/v1/admin/accounting/stats?from=&to=
