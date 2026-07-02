@@ -98,15 +98,19 @@ interface FridgeRow {
   name: string;
   serialNumber: string | null;
   location: string | null;
+  teamviewerId: string | null;
+  teamviewerPassword: string | null;
 }
 
-function buildFridge(f: FridgeRow, dishes: ReturnType<typeof toDishEntry>[]) {
+// includePrivate = true uniquement pour l'admin (identifiants TeamViewer sensibles).
+function buildFridge(f: FridgeRow, dishes: ReturnType<typeof toDishEntry>[], includePrivate = false) {
   const st = getStatus(f.id);
   return {
     id: f.id,
     name: f.name,
     serialNumber: f.serialNumber,
     location: f.location,
+    ...(includePrivate ? { teamviewerId: f.teamviewerId, teamviewerPassword: f.teamviewerPassword } : {}),
     online: st.online,
     temperature: st.temperature,
     lastSync: st.lastSync,
@@ -116,10 +120,11 @@ function buildFridge(f: FridgeRow, dishes: ReturnType<typeof toDishEntry>[]) {
 
 // GET /api/v1/admin/frigos  &  GET /api/v1/public/frigos
 export async function listFridges(req: Request, res: Response): Promise<void> {
+  const isAdmin = req.baseUrl.includes('/admin');
   const lang = parseLang(req.query['lang']);
   const byFridge = await stockByFridge(lang);
   const fridges = await prisma.fridge.findMany({ orderBy: { name: 'asc' } });
-  res.json({ fridges: fridges.map((f) => buildFridge(f, byFridge.get(f.id) ?? [])) });
+  res.json({ fridges: fridges.map((f) => buildFridge(f, byFridge.get(f.id) ?? [], isAdmin)) });
 }
 
 // GET /api/v1/admin/frigos/:id  &  GET /api/v1/public/frigos/:id
@@ -130,9 +135,10 @@ export async function getFridge(req: Request, res: Response): Promise<void> {
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
+  const isAdmin = req.baseUrl.includes('/admin');
   const lang = parseLang(req.query['lang']);
   const byFridge = await stockByFridge(lang);
-  res.json({ fridge: buildFridge(meta, byFridge.get(meta.id) ?? []) });
+  res.json({ fridge: buildFridge(meta, byFridge.get(meta.id) ?? [], isAdmin) });
 }
 
 // ── CRUD frigo (admin) ──────────────────────────────────────────────────────
@@ -140,6 +146,8 @@ const fridgeSchema = z.object({
   name: z.string().min(1).max(120),
   serialNumber: z.string().max(80).nullable().optional(),
   location: z.string().max(200).nullable().optional(),
+  teamviewerId: z.string().max(120).nullable().optional(),
+  teamviewerPassword: z.string().max(120).nullable().optional(),
 });
 
 // POST /api/v1/admin/frigos
@@ -300,14 +308,12 @@ export async function syncFridgeMenu(req: Request, res: Response): Promise<void>
       allergens: d.allergens ?? [],
       dlcDays: d.dlcDays ?? null,
     };
-    // On ne met à jour l'image que si la borne en fournit une (sinon on garde l'existante).
-    const withImage = d.image
-      ? { ...base, imageData: Buffer.from(d.image.base64, 'base64'), imageMimeType: d.image.mime }
-      : base;
+    // Les photos sont gérées côté admin (source de vérité) : on n'écrit JAMAIS
+    // l'image depuis la borne → les photos uploadées dans l'admin sont préservées.
     await prisma.dish.upsert({
       where: { id: d.id },
-      create: { id: d.id, ...withImage, isActive: true },
-      update: withImage,
+      create: { id: d.id, ...base, isActive: true },
+      update: base,
     });
     await prisma.fridgeStock.upsert({
       where: { frigoId_dishId: { frigoId: fid, dishId: d.id } },
@@ -421,5 +427,8 @@ export async function pullFridgeCommands(req: Request, res: Response): Promise<v
     res.status(401).json({ error: 'Clé borne invalide' });
     return;
   }
+  // La borne interroge cet endpoint toutes les 3 s : c'est notre « heartbeat ».
+  // → le frigo reste « en ligne » tant qu'il est joignable, même sans vente.
+  markSeen(meta.id);
   res.json({ commands: drainCommands(meta.id) });
 }

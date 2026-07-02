@@ -19,6 +19,8 @@ export interface Fridge {
   name: string;
   serialNumber: string | null;
   location: string | null;
+  teamviewerId?: string | null;
+  teamviewerPassword?: string | null;
   online: boolean;
   temperature: number | null;
   lastSync: string;

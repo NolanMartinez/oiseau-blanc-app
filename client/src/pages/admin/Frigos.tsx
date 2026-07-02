@@ -132,13 +132,15 @@ function FridgeFormModal({
   onClose,
   onSaved,
 }: {
-  initial: { id?: string; name: string; serialNumber: string; location: string };
+  initial: { id?: string; name: string; serialNumber: string; location: string; teamviewerId: string; teamviewerPassword: string };
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(initial.name);
   const [serialNumber, setSerialNumber] = useState(initial.serialNumber);
   const [location, setLocation] = useState(initial.location);
+  const [teamviewerId, setTeamviewerId] = useState(initial.teamviewerId);
+  const [teamviewerPassword, setTeamviewerPassword] = useState(initial.teamviewerPassword);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -154,6 +156,8 @@ function FridgeFormModal({
         name: name.trim(),
         serialNumber: serialNumber.trim() || null,
         location: location.trim() || null,
+        teamviewerId: teamviewerId.trim() || null,
+        teamviewerPassword: teamviewerPassword.trim() || null,
       };
       if (initial.id) await api.patch(`/admin/frigos/${initial.id}`, payload);
       else await api.post('/admin/frigos', payload);
@@ -192,6 +196,26 @@ function FridgeFormModal({
           placeholder="Adresse / lieu"
           className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
         />
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">ID TeamViewer</label>
+            <input
+              value={teamviewerId}
+              onChange={(e) => setTeamviewerId(e.target.value)}
+              placeholder="123 456 789"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Mot de passe TeamViewer</label>
+            <input
+              value={teamviewerPassword}
+              onChange={(e) => setTeamviewerPassword(e.target.value)}
+              placeholder="••••••"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
         {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2">
           <button
@@ -306,6 +330,17 @@ function FridgeCard({
 
       {expanded && (
         <div className="border-t border-gray-100">
+          {(fridge.teamviewerId || fridge.teamviewerPassword) && (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-gray-100 bg-gray-50 px-5 py-2.5 text-sm">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">TeamViewer</span>
+              {fridge.teamviewerId && (
+                <span className="text-gray-600">ID : <span className="font-mono font-medium text-gray-800">{fridge.teamviewerId}</span></span>
+              )}
+              {fridge.teamviewerPassword && (
+                <span className="text-gray-600">Mot de passe : <span className="font-mono font-medium text-gray-800">{fridge.teamviewerPassword}</span></span>
+              )}
+            </div>
+          )}
           {fridge.dishes.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">Aucun plat dans ce frigo.</p>
           ) : (
@@ -387,7 +422,7 @@ export function Frigos() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [fridgeForm, setFridgeForm] = useState<
-    { id?: string; name: string; serialNumber: string; location: string } | null
+    { id?: string; name: string; serialNumber: string; location: string; teamviewerId: string; teamviewerPassword: string } | null
   >(null);
 
   async function fetchData() {
@@ -470,7 +505,7 @@ export function Frigos() {
             </>
           )}
           <button
-            onClick={() => setFridgeForm({ name: '', serialNumber: '', location: '' })}
+            onClick={() => setFridgeForm({ name: '', serialNumber: '', location: '', teamviewerId: '', teamviewerPassword: '' })}
             className="ml-auto flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             <Plus size={15} />
@@ -490,7 +525,7 @@ export function Frigos() {
               onAddDish={handleAddDish}
               onEditDish={handleEditDish}
               onRemoveDish={handleRemoveDish}
-              onEditFridge={(f) => setFridgeForm({ id: f.id, name: f.name, serialNumber: f.serialNumber ?? '', location: f.location ?? '' })}
+              onEditFridge={(f) => setFridgeForm({ id: f.id, name: f.name, serialNumber: f.serialNumber ?? '', location: f.location ?? '', teamviewerId: f.teamviewerId ?? '', teamviewerPassword: f.teamviewerPassword ?? '' })}
               onDeleteFridge={handleDeleteFridge}
             />
           ))}

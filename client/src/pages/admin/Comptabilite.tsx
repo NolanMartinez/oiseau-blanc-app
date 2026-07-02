@@ -91,7 +91,7 @@ function formatPeriod(period: string): string {
 }
 
 export function Comptabilite() {
-  const [preset, setPreset] = useState<Preset>('month');
+  const [preset, setPreset] = useState<Preset>('today');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [granularity, setGranularity] = useState<Granularity>('daily');
@@ -121,6 +121,18 @@ export function Comptabilite() {
   useEffect(() => {
     if (preset === 'custom' && customFrom && customTo && customFrom <= customTo) loadStats();
   }, [preset, customFrom, customTo, loadStats]);
+
+  // Auto-rafraîchissement : les ventes remontées par la borne apparaissent sans
+  // recharger la page (toutes les 30 s + au retour sur l'onglet).
+  useEffect(() => {
+    const iv = window.setInterval(() => loadStats(), 30_000);
+    const onFocus = () => loadStats();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(iv);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [loadStats]);
 
   async function handleExport() {
     if (!from || !to) return;

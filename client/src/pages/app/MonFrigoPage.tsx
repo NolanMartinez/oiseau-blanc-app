@@ -147,6 +147,11 @@ export function MonFrigoPage() {
   for (const dish of fridge.dishes) {
     (byCategory[dish.category] ??= []).push(dish);
   }
+  // Un plat est « disponible » s'il est en stock et non périmé.
+  const today = new Date().toISOString().slice(0, 10);
+  const isAvailable = (d: FridgeDish) =>
+    d.stock > 0 && (!d.expiryDate || d.expiryDate.slice(0, 10) >= today);
+  const hasAvailable = fridge.dishes.some(isAvailable);
 
   return (
     <AppLayout>
@@ -193,10 +198,12 @@ export function MonFrigoPage() {
 
       {/* Plats */}
       <div className="pb-10">
-        {fridge.dishes.length === 0 ? (
+        {!hasAvailable ? (
           <p className="text-[13px] text-center py-16" style={{ color: 'var(--ink-faint)' }}>{t('no_dishes')}</p>
         ) : (
-          Object.entries(byCategory).map(([category, dishes]) => (
+          Object.entries(byCategory)
+            .filter(([, dishes]) => dishes.some(isAvailable))
+            .map(([category, dishes]) => (
             <div key={category} className="mt-6">
               <p className="px-6 mb-3 text-[11px] uppercase tracking-[0.05em]" style={{ color: 'var(--green)', fontWeight: 700 }}>
                 {category}

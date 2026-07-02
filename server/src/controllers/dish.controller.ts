@@ -208,6 +208,8 @@ export async function getDishImage(req: Request, res: Response): Promise<void> {
     return;
   }
   res.setHeader('Content-Type', dish.imageMimeType);
-  res.setHeader('Cache-Control', 'public, max-age=86400');
+  // Cache court : une photo modifiée dans l'admin apparaît vite partout
+  // (l'admin ajoute déjà ?v=updatedAt pour un rafraîchissement immédiat).
+  res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
   res.send(Buffer.from(dish.imageData));
 }

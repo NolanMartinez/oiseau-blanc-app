@@ -86,9 +86,19 @@ export function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    api.get('/admin/dashboard/stats')
-      .then((res) => setStats(res.data))
-      .catch(() => {});
+    const load = () =>
+      api.get('/admin/dashboard/stats')
+        .then((res) => setStats(res.data))
+        .catch(() => {});
+    load();
+    // Auto-rafraîchissement : les ventes/abonnés remontés apparaissent sans
+    // recharger la page (toutes les 30 s + au retour sur l'onglet).
+    const iv = window.setInterval(load, 30_000);
+    window.addEventListener('focus', load);
+    return () => {
+      window.clearInterval(iv);
+      window.removeEventListener('focus', load);
+    };
   }, []);
 
   const kpis = [
