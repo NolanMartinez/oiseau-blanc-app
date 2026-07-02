@@ -42,15 +42,17 @@ export function DishDetailScreen({
           </span>
         </div>
 
-        {/* Détails (moitié droite) */}
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-8">
-          <h1 className="text-4xl font-extrabold leading-tight">{group.dish.name}</h1>
-          {/* Prix juste sous le titre → toujours visible, sans scroller. */}
-          <p className="text-5xl font-extrabold text-[var(--green)]">
+        {/* Détails (moitié droite) — compact : titre, prix, description et allergènes
+            tiennent sans défiler (mauvais pour le client). Contenu centré verticalement. */}
+        <div className="flex flex-1 flex-col justify-center gap-3 overflow-y-auto p-6">
+          <h1 className="text-3xl font-extrabold leading-tight line-clamp-3">{group.dish.name}</h1>
+          <p className="text-4xl font-extrabold text-[var(--green)]">
             {formatPrice(group.priceCents, currency)}
           </p>
           {group.dish.description && (
-            <p className="text-xl leading-relaxed text-[var(--ink-soft)]">{group.dish.description}</p>
+            <p className="line-clamp-4 text-lg leading-relaxed text-[var(--ink-soft)]">
+              {group.dish.description}
+            </p>
           )}
 
           {group.dish.allergens.length > 0 && (

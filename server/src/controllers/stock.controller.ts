@@ -2,6 +2,22 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma';
 import { getFridgeMeta } from '../services/fridges';
+import { notifyFridgeSubscribers } from '../services/push.service';
+
+// Notif « promo » : prévient les abonnés dont c'est le frigo favori.
+async function notifyPromo(frigoId: string, dishId: string, percent: number): Promise<void> {
+  const [dish, fridge] = await Promise.all([
+    prisma.dish.findUnique({ where: { id: dishId }, select: { name: true } }),
+    prisma.fridge.findUnique({ where: { id: frigoId }, select: { name: true } }),
+  ]);
+  if (!dish) return;
+  await notifyFridgeSubscribers(frigoId, {
+    title: `Promo -${percent}% 🎉`,
+    body: `${dish.name} est en promotion${fridge ? ` au ${fridge.name}` : ''} — profitez-en !`,
+    url: '/app/mon-frigo',
+    tag: `promo-${frigoId}-${dishId}`,
+  });
+}
 
 const dateSchema = z
   .string()
@@ -61,7 +77,10 @@ export async function updateStock(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const existing = await prisma.fridgeStock.findUnique({ where: { id }, select: { id: true } });
+  const existing = await prisma.fridgeStock.findUnique({
+    where: { id },
+    select: { id: true, promoPercent: true, frigoId: true, dishId: true },
+  });
   if (!existing) {
     res.status(404).json({ error: 'Entrée de stock introuvable' });
     return;
@@ -76,6 +95,14 @@ export async function updateStock(req: Request, res: Response): Promise<void> {
 
   const stock = await prisma.fridgeStock.update({ where: { id }, data });
   res.json({ stock });
+
+  // Notif promo : uniquement quand une promo passe d'inactive (null/0) à active.
+  // Envoyée après la réponse (fire-and-forget) pour ne pas ralentir l'admin.
+  const newPromo = promoPercent ?? 0;
+  const wasPromo = existing.promoPercent ?? 0;
+  if (newPromo > 0 && wasPromo <= 0) {
+    void notifyPromo(existing.frigoId, existing.dishId, newPromo).catch(() => {});
+  }
 }
 
 // DELETE /api/v1/admin/stock/:id — retire un plat d'un frigo

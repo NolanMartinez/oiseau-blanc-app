@@ -87,14 +87,14 @@ export function MenuScreen({
         </div>
       ) : (
         <div className="flex flex-1 items-stretch gap-2 overflow-hidden p-4">
-          {/* Flèche précédent */}
+          {/* Flèche précédent — bien visible (vert plein, grande, ombre). */}
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             aria-label={t("prev")}
-            className="flex w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-[var(--green)] shadow-md active:scale-95 disabled:opacity-30"
+            className="flex w-20 shrink-0 items-center justify-center rounded-2xl bg-[var(--green)] text-white shadow-lg ring-2 ring-[var(--green)]/20 active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:ring-0"
           >
-            <ChevronLeft size={40} />
+            <ChevronLeft size={52} strokeWidth={2.5} />
           </button>
 
           {/* Page courante : 2 colonnes × 2 lignes (grandes images) */}
@@ -149,9 +149,9 @@ export function MenuScreen({
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
             aria-label={t("next")}
-            className="flex w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-[var(--green)] shadow-md active:scale-95 disabled:opacity-30"
+            className="flex w-20 shrink-0 items-center justify-center rounded-2xl bg-[var(--green)] text-white shadow-lg ring-2 ring-[var(--green)]/20 active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:ring-0"
           >
-            <ChevronRight size={40} />
+            <ChevronRight size={52} strokeWidth={2.5} />
           </button>
         </div>
       )}
