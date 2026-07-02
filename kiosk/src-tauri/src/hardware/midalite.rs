@@ -17,6 +17,7 @@
 //! codée sur 2 octets (MSB+LSB) ; un canal analogique reflète l'état des portes.
 
 use std::io::Write;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
@@ -118,12 +119,24 @@ fn read_pending(port: &mut dyn serialport::SerialPort) -> Option<[u32; 8]> {
 /// soit détectée ouverte (capteur, canal idx6), ou pendant `hold_secs` au maximum
 /// (repli si le capteur ne répond pas). Évite que l'électroaimant se referme avant
 /// que le client n'ait ouvert la porte.
-pub fn open_box(port_name: &str, baud: u32, box_number: u32, hold_secs: u32) -> Result<(), String> {
+pub fn open_box(
+    port_name: &str,
+    baud: u32,
+    box_number: u32,
+    hold_secs: u32,
+    interrupt: &AtomicBool,
+) -> Result<(), String> {
     let mut port = open_port(port_name, baud)?;
     let frame = open_frame(box_number);
     let deadline = Instant::now() + Duration::from_secs(hold_secs.max(1) as u64);
 
     while Instant::now() < deadline {
+        // Interruption (« Tout fermer » ou ouverture d'un autre casier) : on relâche
+        // le port immédiatement pour laisser passer la nouvelle commande — évite le
+        // blocage de ~30 s pendant lequel plus rien ne répondait.
+        if interrupt.load(Ordering::SeqCst) {
+            break;
+        }
         // On ré-émet la trame d'ouverture (~toutes les 120 ms) pour soutenir le
         // verrou ; la réponse à cette même commande 0xC0 porte l'état de la porte.
         let _ = port.clear(serialport::ClearBuffer::Input);

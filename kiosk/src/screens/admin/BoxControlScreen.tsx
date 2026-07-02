@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { DoorOpen, Lock, Trash2, CheckSquare } from "lucide-react";
+import { DoorOpen, Lock, Trash2, CheckSquare, RefreshCw } from "lucide-react";
 import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
 import { hardware } from "../../hardware";
@@ -7,12 +7,20 @@ import type { Locker } from "../../db";
 
 export function BoxControlScreen() {
   const { t } = useLang();
-  const { dispensers, lockers, dishes, repo, reload } = useKiosk();
+  const { dispensers, lockers, dishes, repo, reload, runSync } = useKiosk();
   const [board, setBoard] = useState("A");
   const [busyBox, setBusyBox] = useState<number | null>(null);
   const [msg, setMsg] = useState("");
   const [targetBox, setTargetBox] = useState("");
   const [confirm, setConfirm] = useState<Locker | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  async function updateProducts() {
+    setSyncing(true);
+    const res = await runSync();
+    flash(res.ok ? `${t("synced", { n: res.dishCount })}` : t("sync_failed"));
+    setSyncing(false);
+  }
 
   const boardLockers = useMemo(
     () => lockers.filter((l) => l.board === board).sort((a, b) => a.boxNumber - b.boxNumber),
@@ -90,6 +98,14 @@ export function BoxControlScreen() {
           >
             <CheckSquare size={18} />
             {t("clear_error")}
+          </button>
+          <button
+            onClick={updateProducts}
+            disabled={syncing}
+            className="flex items-center gap-2 rounded-xl bg-[var(--blue)] px-4 py-2.5 font-bold text-white active:opacity-80 disabled:opacity-50"
+          >
+            <RefreshCw size={18} className={syncing ? "animate-spin" : ""} />
+            {t("update_products")}
           </button>
         </div>
       </div>

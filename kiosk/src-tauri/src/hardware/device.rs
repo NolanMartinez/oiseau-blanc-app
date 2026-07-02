@@ -1,6 +1,7 @@
 //! Façade matérielle : aiguille chaque opération vers le simulateur (mode Sim)
 //! ou le port série réel (mode Real), selon la configuration des Liaisons.
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -17,10 +18,20 @@ struct DeviceConfig {
     serial: SerialConfig,
 }
 
+/// Contrôle d'accès série par carte (A..E) : un verrou pour sérialiser l'accès au
+/// port + un drapeau d'interruption pour couper un maintien en cours (« Tout
+/// fermer » ou ouverture d'un autre casier) sans attendre la fin du hold.
+#[derive(Default)]
+struct BoardCtl {
+    lock: Mutex<()>,
+    interrupt: AtomicBool,
+}
+
 pub struct Device {
     mock: MockHardware,
     cfg: Mutex<DeviceConfig>,
     payment_cancel: Arc<AtomicBool>,
+    boards: Mutex<HashMap<String, Arc<BoardCtl>>>,
 }
 
 impl Device {
@@ -29,7 +40,17 @@ impl Device {
             mock: MockHardware::new(),
             cfg: Mutex::new(DeviceConfig::default()),
             payment_cancel: Arc::new(AtomicBool::new(false)),
+            boards: Mutex::new(HashMap::new()),
         }
+    }
+
+    fn board_ctl(&self, board: &str) -> Arc<BoardCtl> {
+        self.boards
+            .lock()
+            .unwrap()
+            .entry(board.to_string())
+            .or_insert_with(|| Arc::new(BoardCtl::default()))
+            .clone()
     }
 
     /// Met à jour le mode + la config série (appelé par le frontend au démarrage
@@ -93,9 +114,15 @@ impl Device {
         }
         let link = Self::link_for(&cfg, &board)?;
         let hold = cfg.open_hold_secs;
+        let ctl = self.board_ctl(&board);
         Self::emit(app, &board, box_number, "opening", None);
         let res = tauri::async_runtime::spawn_blocking(move || {
-            midalite::open_box(&link.com_port, link.baud, box_number, hold)
+            // Coupe un éventuel maintien en cours sur cette carte, prend le port,
+            // puis lance l'ouverture (interruptible).
+            ctl.interrupt.store(true, Ordering::SeqCst);
+            let _guard = ctl.lock.lock().unwrap();
+            ctl.interrupt.store(false, Ordering::SeqCst);
+            midalite::open_box(&link.com_port, link.baud, box_number, hold, &ctl.interrupt)
         })
         .await
         .map_err(|e| e.to_string())
@@ -114,10 +141,17 @@ impl Device {
             return self.mock.close_all(app, board).await;
         }
         let link = Self::link_for(&cfg, &board)?;
-        tauri::async_runtime::spawn_blocking(move || midalite::close_all(&link.com_port, link.baud))
-            .await
-            .map_err(|e| e.to_string())
-            .and_then(|r| r)?;
+        let ctl = self.board_ctl(&board);
+        tauri::async_runtime::spawn_blocking(move || {
+            // Interrompt tout maintien en cours, prend le port, relâche tout.
+            ctl.interrupt.store(true, Ordering::SeqCst);
+            let _guard = ctl.lock.lock().unwrap();
+            ctl.interrupt.store(false, Ordering::SeqCst);
+            midalite::close_all(&link.com_port, link.baud)
+        })
+        .await
+        .map_err(|e| e.to_string())
+        .and_then(|r| r)?;
         Self::emit(app, &board, 0, "closed", Some("Tous les casiers relâchés"));
         Ok(())
     }

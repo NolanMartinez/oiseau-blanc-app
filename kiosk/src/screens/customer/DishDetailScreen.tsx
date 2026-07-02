@@ -29,24 +29,21 @@ export function DishDetailScreen({
       </header>
 
       <div className="flex flex-1 flex-row overflow-hidden">
-        {/* Image (moitié gauche) */}
-        <div className="w-1/2 shrink-0 bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)]">
+        {/* Image (moitié gauche) — badge « dispo » superposé en haut à droite. */}
+        <div className="relative w-1/2 shrink-0 bg-gradient-to-br from-[var(--green-tint)] to-[var(--blue-soft)]">
           <DishImage
             dishId={group.dish.id}
             category={group.dish.category}
             localUrl={group.imageUrl}
             emojiSize="text-9xl"
           />
+          <span className="absolute right-4 top-4 rounded-full bg-white/90 px-4 py-1.5 text-base font-bold text-[var(--green)] shadow">
+            {t("qty_available", { n: remaining })}
+          </span>
         </div>
 
         {/* Détails (moitié droite) */}
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-8">
-          <div className="flex items-center gap-3">
-            <span className="rounded-full bg-[var(--blue-soft)] px-4 py-1.5 text-base font-semibold text-[var(--ink-soft)]">
-              {t("qty_available", { n: remaining })}
-            </span>
-          </div>
-
           <h1 className="text-4xl font-extrabold leading-tight">{group.dish.name}</h1>
           {/* Prix juste sous le titre → toujours visible, sans scroller. */}
           <p className="text-5xl font-extrabold text-[var(--green)]">

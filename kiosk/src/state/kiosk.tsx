@@ -14,7 +14,7 @@ import {
 import { getRepo, SETTING_KEYS, type DishCache, type Dispenser, type Locker, type Repo, type Settings } from "../db";
 import { syncMenu, pushMenu, pullCommands, type MenuSnapshotDish } from "../sync";
 import { hardware, type HwMode } from "../hardware";
-import { sortCategories, byCategoryThenName, CATEGORY_ORDER } from "../utils/categories";
+import { sortCategories, byCategoryThenName } from "../utils/categories";
 
 export interface MenuItem {
   locker: Locker;
@@ -100,10 +100,10 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       paymentTest: s[SETTING_KEYS.paymentTest] === "1",
     });
 
-    // Pousse la CARTE COMPLÈTE (plats + catégories + prix + DLC + stock + images)
-    // vers le serveur : il la prend comme source de vérité → l'app web affiche
-    // exactement la même carte que la borne. La sélection correspond à ce que voit
-    // le client : casier rempli, pas en erreur, DLC non dépassée. Best-effort.
+    // Pousse la carte (plats + catégories + prix + DLC + stock) vers le serveur.
+    // Les PHOTOS sont gérées côté admin (source de vérité) : la borne ne pousse
+    // plus les images. La sélection correspond à ce que voit le client :
+    // casier rempli, pas en erreur, DLC non dépassée. Best-effort.
     const today = new Date().toISOString().slice(0, 10);
     const byId = new Map(ds.map((d) => [d.id, d]));
     const grouped = new Map<string, MenuSnapshotDish>();
@@ -133,15 +133,7 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       }
     }
     const menuSnapshot = [...grouped.values()];
-    void (async () => {
-      // Joint les images (base64) pour les plats qui en ont une.
-      await Promise.all(
-        menuSnapshot.map(async (d) => {
-          if (byId.get(d.id)?.hasImage) d.image = await r.getDishImageBase64(d.id);
-        }),
-      );
-      await pushMenu(s[SETTING_KEYS.backendUrl] ?? "", s[SETTING_KEYS.frigoId] ?? "", menuSnapshot);
-    })();
+    void pushMenu(s[SETTING_KEYS.backendUrl] ?? "", s[SETTING_KEYS.frigoId] ?? "", menuSnapshot);
   }, []);
 
   useEffect(() => {
@@ -197,6 +189,31 @@ export function KioskProvider({ children }: { children: ReactNode }) {
     const iv = window.setInterval(() => void tick(), 3000);
     return () => window.clearInterval(iv);
   }, [ready]);
+
+  // Rafraîchissement périodique des PRODUITS : récupère les changements faits dans
+  // l'admin (nom, prix, DLC, photo, disponibilité) toutes les 45 s, sans redémarrer
+  // la borne → on ne vend plus un produit modifié depuis le dernier démarrage.
+  useEffect(() => {
+    if (!ready || !repo) return;
+    let running = false;
+    const tick = async () => {
+      if (running) return;
+      running = true;
+      try {
+        const s = settingsRef.current;
+        const backend = s[SETTING_KEYS.backendUrl] ?? "";
+        const frigo = s[SETTING_KEYS.frigoId] ?? "";
+        if (backend && frigo) {
+          const res = await syncMenu(repo, backend, frigo);
+          if (res.ok) await loadAll(repo);
+        }
+      } finally {
+        running = false;
+      }
+    };
+    const iv = window.setInterval(() => void tick(), 45000);
+    return () => window.clearInterval(iv);
+  }, [ready, repo, loadAll]);
 
   const reload = useCallback(async () => {
     if (repo) await loadAll(repo);
@@ -268,11 +285,10 @@ export function KioskProvider({ children }: { children: ReactNode }) {
     );
   }, [menuItems]);
 
-  // Catégories affichées : on montre toujours les 4 catégories canoniques
-  // (Entrées, Salades, Plats à chauffer, Desserts), plus toute autre catégorie
-  // réellement présente dans le menu, dans l'ordre voulu par le client.
+  // Catégories affichées : uniquement celles qui ont au moins un plat disponible
+  // (groupedMenu exclut déjà les casiers vides/périmés), dans l'ordre voulu.
   const categories = useMemo<string[]>(() => {
-    const set = new Set<string>(CATEGORY_ORDER);
+    const set = new Set<string>();
     for (const g of groupedMenu) if (g.dish.category) set.add(g.dish.category);
     return sortCategories([...set]);
   }, [groupedMenu]);

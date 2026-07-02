@@ -6,6 +6,9 @@ import { SETTING_KEYS, type DishCache, type Locker } from "../../db";
 import { formatPrice } from "../../utils/format";
 import { byCategoryThenName } from "../../utils/categories";
 import { useBarcodeScanner } from "../../hooks/useBarcodeScanner";
+import { hardware } from "../../hardware";
+
+interface RestockBox { board: string; boxNumber: number; address: number }
 
 const MAX_DLC_DAYS = 10;
 const DEFAULT_DLC_DAYS = 3;
@@ -35,6 +38,8 @@ export function MappingScreen() {
   const [linkCode, setLinkCode] = useState<string | null>(null);
   const [linkDishId, setLinkDishId] = useState("");
   const [scanMsg, setScanMsg] = useState("");
+  // Réassort : casiers à ouvrir un par un pour que l'opérateur y place les plats.
+  const [restock, setRestock] = useState<{ boxes: RestockBox[]; idx: number } | null>(null);
   const currency = setting(SETTING_KEYS.currency, "EUR");
 
   const boardLockers = useMemo(
@@ -107,6 +112,15 @@ export function MappingScreen() {
       }
     }
     const price = priceEuros.trim() ? Math.round(parseFloat(priceEuros) * 100) : null;
+    // Casiers concernés (pour l'ouverture réassort) — capturés avant le reload.
+    // Uniquement quand on AFFECTE un plat (pas au vidage).
+    const restockBoxes: RestockBox[] = dishId
+      ? selectedIds
+          .map((id) => boardLockers.find((l) => l.id === id))
+          .filter((l): l is Locker => !!l)
+          .map((l) => ({ board: l.board, boxNumber: l.boxNumber, address: l.address ?? l.boxNumber }))
+          .sort((a, b) => a.boxNumber - b.boxNumber)
+      : [];
     // Affectation (groupée) à tous les casiers sélectionnés.
     for (const id of selectedIds) {
       await repo.setLockerMapping(id, {
@@ -117,6 +131,24 @@ export function MappingScreen() {
     }
     await reload();
     setSelectedIds([]);
+    // Ouvre le 1er casier pour que l'opérateur y place le plat ; il confirmera
+    // chaque casier (qui se referme) pour passer au suivant.
+    if (restockBoxes.length > 0) {
+      setRestock({ boxes: restockBoxes, idx: 0 });
+      void hardware.openLocker(restockBoxes[0].board, restockBoxes[0].address).catch(() => {});
+    }
+  }
+
+  // Confirme le casier courant (le referme) et passe au suivant, ou clôt le réassort.
+  function confirmRestock() {
+    setRestock((r) => {
+      if (!r) return null;
+      void hardware.closeAll(r.boxes[r.idx].board).catch(() => {});
+      const next = r.idx + 1;
+      if (next >= r.boxes.length) return null;
+      void hardware.openLocker(r.boxes[next].board, r.boxes[next].address).catch(() => {});
+      return { ...r, idx: next };
+    });
   }
 
   async function clear() {
@@ -421,6 +453,44 @@ export function MappingScreen() {
           </div>
         )}
       </div>
+
+      {/* Réassort : ouverture des casiers un par un + confirmation/fermeture. */}
+      {restock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-extrabold">{t("restock_title")}</h3>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {restock.boxes.map((b, i) => (
+                <span
+                  key={b.boxNumber}
+                  className={`rounded-lg px-3 py-1.5 text-base font-bold ${
+                    i === restock.idx
+                      ? "bg-[var(--green)] text-white"
+                      : i < restock.idx
+                        ? "bg-gray-100 text-gray-400 line-through"
+                        : "bg-gray-100 text-[var(--ink-soft)]"
+                  }`}
+                >
+                  {b.boxNumber}
+                </span>
+              ))}
+            </div>
+            <div className="mt-5 rounded-2xl bg-[var(--green-tint)] py-6 text-center">
+              <p className="text-sm font-bold uppercase tracking-wide text-[var(--green)]">{t("box")}</p>
+              <p className="text-7xl font-extrabold leading-none text-[var(--green)]">
+                {restock.boxes[restock.idx].boxNumber}
+              </p>
+              <p className="mt-2 text-sm text-[var(--ink-soft)]">{t("restock_place")}</p>
+            </div>
+            <button
+              onClick={confirmRestock}
+              className="mt-5 w-full rounded-2xl bg-[var(--green)] py-4 text-xl font-extrabold text-white active:scale-[0.98]"
+            >
+              {restock.idx + 1 < restock.boxes.length ? t("restock_next") : t("finish")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

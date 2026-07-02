@@ -122,12 +122,10 @@ export function CustomerApp() {
   const openAt = useCallback(
     async (lines: CartLine[], idx: number) => {
       const line = lines[idx];
-      setLockerPhase("opening");
-      try {
-        await hardware.openLocker(line.board, line.address ?? line.boxNumber);
-      } catch {
-        /* matériel indisponible : on indique quand même le casier à récupérer */
-      }
+      // Ouverture en arrière-plan (fire-and-forget) : le n° de casier et le bouton
+      // SUIVANT/Terminé s'affichent immédiatement, sans attendre le maintien du
+      // verrou. Ouvrir le casier suivant interrompt proprement le maintien précédent.
+      void hardware.openLocker(line.board, line.address ?? line.boxNumber).catch(() => {});
       setLockerPhase("open");
       await finalizeLine(line);
     },
