@@ -76,5 +76,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0011_baud57600_livreur_pin.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 12,
+            description: "repare categorie corrompue dans le cache local",
+            sql: include_str!("../migrations/0012_fix_corrupt_category.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
