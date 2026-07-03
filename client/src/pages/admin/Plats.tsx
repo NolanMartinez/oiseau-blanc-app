@@ -28,6 +28,7 @@ function DishModal({
   const [name, setName] = useState(initial?.name ?? '');
   const [category, setCategory] = useState(initial?.category ?? '');
   const [price, setPrice] = useState(initial ? String(initial.price) : '');
+  const [costPrice, setCostPrice] = useState(initial?.costPrice != null ? String(initial.costPrice) : '');
   const [dlcDays, setDlcDays] = useState(initial?.dlcDays != null ? String(initial.dlcDays) : '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [allergens, setAllergens] = useState<string[]>(initial?.allergens ?? []);
@@ -92,10 +93,15 @@ function DishModal({
 
     setLoading(true);
     try {
+      const costNum = costPrice.trim() ? Number(costPrice.replace(',', '.')) : null;
+      if (costNum !== null && (Number.isNaN(costNum) || costNum < 0)) {
+        setError('Le coût de revient doit être un nombre positif.'); setLoading(false); return;
+      }
       const payload: Record<string, unknown> = {
         name: name.trim(),
         category: category.trim(),
         price: priceNum,
+        costPrice: costNum,
         dlcDays: dlcDays.trim() ? Math.round(Number(dlcDays.replace(',', '.'))) : null,
         description: description.trim() || null,
         allergens,
@@ -210,6 +216,19 @@ function DishModal({
                 placeholder="8.50"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Coût de revient (€)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.10"
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                placeholder="Ex : 3.20"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">Sert au calcul de la marge. Non visible par les clients.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">DLC (jours)</label>
@@ -455,6 +474,18 @@ export function Plats() {
     fetchDishes();
   }
 
+  // Bascule actif/inactif directement depuis la liste (item Frédéric).
+  async function toggleActive(dish: CatalogDish) {
+    // Optimiste : on met à jour l'UI tout de suite, puis on persiste.
+    setDishes((prev) => prev.map((d) => (d.id === dish.id ? { ...d, isActive: !d.isActive } : d)));
+    try {
+      await api.patch(`/admin/dishes/${dish.id}`, { isActive: !dish.isActive });
+    } catch {
+      // rollback en cas d'échec
+      setDishes((prev) => prev.map((d) => (d.id === dish.id ? { ...d, isActive: dish.isActive } : d)));
+    }
+  }
+
   function openCreate() {
     setEditingDish(null);
     setShowModal(true);
@@ -611,11 +642,22 @@ export function Plats() {
                     <td className="px-4 py-3 text-gray-700 font-medium">{dish.price.toFixed(2)} €</td>
                     <td className="px-4 py-3 text-gray-500">{dish._count.fridgeStocks}</td>
                     <td className="px-4 py-3">
-                      {dish.isActive ? (
-                        <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">Actif</span>
-                      ) : (
-                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Inactif</span>
-                      )}
+                      <button
+                        onClick={() => toggleActive(dish)}
+                        title={dish.isActive ? 'Rendre inactif' : 'Rendre actif'}
+                        className="inline-flex items-center gap-2"
+                      >
+                        <span
+                          className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 ${dish.isActive ? 'bg-green-500' : 'bg-gray-300'}`}
+                        >
+                          <span
+                            className={`block w-4 h-4 bg-white rounded-full shadow mt-0.5 transition-transform ${dish.isActive ? 'translate-x-4' : 'translate-x-0.5'}`}
+                          />
+                        </span>
+                        <span className={`text-xs font-medium ${dish.isActive ? 'text-green-700' : 'text-gray-500'}`}>
+                          {dish.isActive ? 'Actif' : 'Inactif'}
+                        </span>
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">

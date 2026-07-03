@@ -39,6 +39,8 @@ export async function register(req: Request, res: Response): Promise<void> {
     data: { email, passwordHash },
     select: SUBSCRIBER_SELECT,
   });
+  // Attribue immédiatement un code fidélité unique (à chaque inscription).
+  await ensureLoyaltyCode(subscriber.id).catch(() => {});
   logger.info({ email }, 'Nouveau compte créé');
   res.status(201).json({ token: makeToken(subscriber.id), subscriber });
 }

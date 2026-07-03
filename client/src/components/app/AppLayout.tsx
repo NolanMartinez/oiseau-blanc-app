@@ -1,6 +1,6 @@
 import { type ReactNode, useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Refrigerator, Star, ClipboardList, User, ArrowLeft, Bell } from 'lucide-react';
+import { Refrigerator, Star, Gift, User, ArrowLeft, Bell } from 'lucide-react';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { userApi } from '../../services/api';
 import { useLang, SUPPORTED_LANGS, type LangCode } from '../../context/LanguageContext';
@@ -8,7 +8,7 @@ import { useLang, SUPPORTED_LANGS, type LangCode } from '../../context/LanguageC
 const NAV_ROUTES = [
   { to: '/app/mon-frigo', key: 'nav_fridge', Icon: Refrigerator },
   { to: '/app/avis', key: 'nav_review', Icon: Star },
-  { to: '/app/sondages', key: 'nav_surveys', Icon: ClipboardList },
+  { to: '/app/fidelite', key: 'nav_loyalty', Icon: Gift },
   { to: '/app/profil', key: 'nav_profile', Icon: User },
 ];
 

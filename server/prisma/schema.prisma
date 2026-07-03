@@ -178,6 +178,7 @@ model Dish {
   category      String
   description   String?  @db.Text
   price         Float
+  costPrice     Float?   @map("cost_price") // coût de revient (pour la marge)
   allergens     Json
   dlcDays       Int?     @map("dlc_days")
   imageData     Bytes?   @map("image_data") @db.LongBlob

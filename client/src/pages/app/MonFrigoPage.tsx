@@ -29,6 +29,7 @@ export function MonFrigoPage() {
   const [fridges, setFridges] = useState<Fridge[]>([]);
   const [loading, setLoading] = useState(true);
   const [choosing, setChoosing] = useState(false);
+  const [selectedCat, setSelectedCat] = useState<string>(''); // '' = toutes
 
   useEffect(() => {
     if (!favoriId) { setLoading(false); return; }
@@ -153,6 +154,18 @@ export function MonFrigoPage() {
     d.stock > 0 && (!d.expiryDate || d.expiryDate.slice(0, 10) >= today);
   const hasAvailable = fridge.dishes.some(isAvailable);
 
+  // Barre de navigation par catégorie (comme sur la borne). Ordre logique du repas.
+  const CATEGORY_ORDER = ['Entrées', 'Entrée', 'Salades', 'Plats à chauffer', 'Plats', 'Desserts', 'Boissons'];
+  const availableCategories = Object.keys(byCategory)
+    .filter((c) => byCategory[c].some(isAvailable))
+    .sort((a, b) => {
+      const ia = CATEGORY_ORDER.indexOf(a);
+      const ib = CATEGORY_ORDER.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+  const shownCategories =
+    selectedCat && availableCategories.includes(selectedCat) ? [selectedCat] : availableCategories;
+
   return (
     <AppLayout>
       {/* Hero */}
@@ -196,14 +209,50 @@ export function MonFrigoPage() {
         <div className="flex-1 h-px" style={{ background: 'var(--line)' }} />
       </div>
 
+      {/* Barre de navigation par catégorie (sticky, comme la borne) */}
+      {hasAvailable && availableCategories.length > 1 && (
+        <div
+          className="sticky top-0 z-10 px-4 py-2 flex gap-2 overflow-x-auto"
+          style={{ background: 'var(--cream)' }}
+        >
+          <button
+            onClick={() => setSelectedCat('')}
+            className="shrink-0 rounded-full px-4 py-1.5 text-[13px] transition-all"
+            style={{
+              background: selectedCat === '' ? 'var(--green)' : '#ffffff',
+              color: selectedCat === '' ? '#ffffff' : 'var(--ink-soft)',
+              border: `1px solid ${selectedCat === '' ? 'var(--green)' : 'var(--line)'}`,
+              fontWeight: selectedCat === '' ? 700 : 500,
+            }}
+          >
+            {t('all_categories')}
+          </button>
+          {availableCategories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCat(cat)}
+              className="shrink-0 rounded-full px-4 py-1.5 text-[13px] transition-all"
+              style={{
+                background: selectedCat === cat ? 'var(--green)' : '#ffffff',
+                color: selectedCat === cat ? '#ffffff' : 'var(--ink-soft)',
+                border: `1px solid ${selectedCat === cat ? 'var(--green)' : 'var(--line)'}`,
+                fontWeight: selectedCat === cat ? 700 : 500,
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Plats */}
       <div className="pb-10">
         {!hasAvailable ? (
           <p className="text-[13px] text-center py-16" style={{ color: 'var(--ink-faint)' }}>{t('no_dishes')}</p>
         ) : (
-          Object.entries(byCategory)
-            .filter(([, dishes]) => dishes.some(isAvailable))
-            .map(([category, dishes]) => (
+          shownCategories.map((category) => {
+            const dishes = byCategory[category];
+            return (
             <div key={category} className="mt-6">
               <p className="px-6 mb-3 text-[11px] uppercase tracking-[0.05em]" style={{ color: 'var(--green)', fontWeight: 700 }}>
                 {category}
@@ -274,7 +323,8 @@ export function MonFrigoPage() {
                 ))}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </AppLayout>

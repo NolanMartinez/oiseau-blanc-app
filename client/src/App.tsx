@@ -31,6 +31,7 @@ import { MonFrigoPage } from './pages/app/MonFrigoPage';
 import { NotificationsPage } from './pages/app/NotificationsPage';
 import { AvisPage } from './pages/app/AvisPage';
 import { SondagesPage } from './pages/app/SondagesPage';
+import { FidelitePage } from './pages/app/FidelitePage';
 import { ProfilPage } from './pages/app/ProfilPage';
 
 function LivreurPrivateRoute({ children }: { children: React.ReactNode }) {
@@ -54,6 +55,7 @@ function App() {
           <Route path="/app/mon-frigo" element={<UserPrivateRoute><MonFrigoPage /></UserPrivateRoute>} />
           <Route path="/app/avis" element={<UserPrivateRoute><AvisPage /></UserPrivateRoute>} />
           <Route path="/app/sondages" element={<UserPrivateRoute><SondagesPage /></UserPrivateRoute>} />
+          <Route path="/app/fidelite" element={<UserPrivateRoute><FidelitePage /></UserPrivateRoute>} />
           <Route path="/app/profil" element={<UserPrivateRoute><ProfilPage /></UserPrivateRoute>} />
           <Route path="/app/notifications" element={<UserPrivateRoute><NotificationsPage /></UserPrivateRoute>} />
 

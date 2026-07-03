@@ -368,7 +368,7 @@ const saleSchema = z.object({
   amount: z.number().int().min(0),
   mode: z.enum(['paid', 'free']).default('paid'),
   soldAt: z.string().optional(),
-  loyaltyCode: z.string().trim().regex(/^\d{6}$/).optional(), // code fidélité saisi à la borne
+  loyaltyCode: z.string().trim().regex(/^\d{5}$/).optional(), // code fidélité saisi à la borne
 });
 
 // POST /api/v1/public/frigos/:id/sales — la borne remonte une vente.

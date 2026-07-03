@@ -3,7 +3,7 @@ import { Refrigerator, Wifi, WifiOff, ChevronDown, ChevronUp, Plus, Pencil, Tras
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { StockModal } from '../../components/admin/StockModal';
 import api from '../../services/api';
-import type { Fridge, FridgeDish, CatalogDish } from '../../types/dish';
+import type { Fridge, FridgeDish } from '../../types/dish';
 
 function formatSync(iso: string) {
   const diff = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -239,14 +239,12 @@ function FridgeFormModal({
 
 function FridgeCard({
   fridge,
-  onAddDish,
   onEditDish,
   onRemoveDish,
   onEditFridge,
   onDeleteFridge,
 }: {
   fridge: Fridge;
-  onAddDish: (fridge: Fridge) => void;
   onEditDish: (fridge: Fridge, dish: FridgeDish) => void;
   onRemoveDish: (dish: FridgeDish) => void;
   onEditFridge: (fridge: Fridge) => void;
@@ -389,15 +387,6 @@ function FridgeCard({
               </table>
             </div>
           )}
-          <div className="p-4 border-t border-gray-100">
-            <button
-              onClick={() => onAddDish(fridge)}
-              className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-            >
-              <Plus size={15} />
-              Ajouter un plat à ce frigo
-            </button>
-          </div>
           <RemoteLockerControl fridgeId={fridge.id} />
         </div>
       )}
@@ -418,7 +407,6 @@ interface ModalState {
 
 export function Frigos() {
   const [fridges, setFridges] = useState<Fridge[]>([]);
-  const [catalog, setCatalog] = useState<CatalogDish[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [fridgeForm, setFridgeForm] = useState<
@@ -428,31 +416,14 @@ export function Frigos() {
   async function fetchData() {
     setLoading(true);
     try {
-      const [frigosRes, dishesRes] = await Promise.all([
-        api.get('/admin/frigos'),
-        api.get('/admin/dishes'),
-      ]);
+      const frigosRes = await api.get('/admin/frigos');
       setFridges(frigosRes.data.fridges);
-      setCatalog(dishesRes.data.dishes);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => { fetchData(); }, []);
-
-  function handleAddDish(fridge: Fridge) {
-    const assigned = new Set(fridge.dishes.map((d) => d.id));
-    const available = catalog
-      .filter((d) => d.isActive && !assigned.has(d.id))
-      .map((d) => ({ id: d.id, name: d.name }));
-    setModal({
-      frigoId: fridge.id,
-      frigoName: fridge.name,
-      fixedDish: null,
-      availableDishes: available,
-    });
-  }
 
   function handleEditDish(fridge: Fridge, dish: FridgeDish) {
     setModal({
@@ -522,7 +493,6 @@ export function Frigos() {
             <FridgeCard
               key={fridge.id}
               fridge={fridge}
-              onAddDish={handleAddDish}
               onEditDish={handleEditDish}
               onRemoveDish={handleRemoveDish}
               onEditFridge={(f) => setFridgeForm({ id: f.id, name: f.name, serialNumber: f.serialNumber ?? '', location: f.location ?? '', teamviewerId: f.teamviewerId ?? '', teamviewerPassword: f.teamviewerPassword ?? '' })}

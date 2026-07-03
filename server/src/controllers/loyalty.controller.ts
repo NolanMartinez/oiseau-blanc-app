@@ -4,7 +4,7 @@ import { getFridgeMeta } from '../services/fridges';
 import { lookupByCode, redeemRewardByCode } from '../services/loyalty.service';
 import { getLoyaltyConfig, setLoyaltyConfig } from '../services/settings.service';
 
-const codeSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/) });
+const codeSchema = z.object({ code: z.string().trim().regex(/^\d{5}$/) });
 
 // ── Public / borne ──────────────────────────────────────────────────────────
 
@@ -27,7 +27,7 @@ export async function loyaltyLookup(req: Request, res: Response): Promise<void> 
   res.json(status);
 }
 
-const redeemSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/), dishId: z.string().min(1) });
+const redeemSchema = z.object({ code: z.string().trim().regex(/^\d{5}$/), dishId: z.string().min(1) });
 
 // POST /api/v1/public/frigos/:id/loyalty/redeem — échange les points contre un repas offert.
 export async function loyaltyRedeem(req: Request, res: Response): Promise<void> {

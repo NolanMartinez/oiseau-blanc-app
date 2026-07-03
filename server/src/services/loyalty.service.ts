@@ -10,7 +10,8 @@ export interface LoyaltyStatus {
   enabled: boolean;
 }
 
-// Génère un code fidélité à 6 chiffres unique (retry en cas de collision).
+// Génère un code fidélité à 5 chiffres unique (retry en cas de collision).
+// 5 chiffres = 90 000 combinaisons, bien moins « devinable » qu'un email/téléphone.
 export async function ensureLoyaltyCode(subscriberId: string): Promise<string> {
   const existing = await prisma.subscriber.findUnique({
     where: { id: subscriberId },
@@ -18,8 +19,8 @@ export async function ensureLoyaltyCode(subscriberId: string): Promise<string> {
   });
   if (existing?.loyaltyCode) return existing.loyaltyCode;
 
-  for (let i = 0; i < 20; i++) {
-    const code = String(Math.floor(100000 + Math.random() * 900000)); // 100000..999999
+  for (let i = 0; i < 30; i++) {
+    const code = String(Math.floor(10000 + Math.random() * 90000)); // 10000..99999
     const clash = await prisma.subscriber.findUnique({ where: { loyaltyCode: code } });
     if (!clash) {
       await prisma.subscriber.update({ where: { id: subscriberId }, data: { loyaltyCode: code } });

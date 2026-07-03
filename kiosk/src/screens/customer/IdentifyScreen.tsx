@@ -28,11 +28,11 @@ export function IdentifyScreen({
   function press(d: string) {
     setError(false);
     setStatus(null);
-    setCode((c) => (c + d).slice(0, 6));
+    setCode((c) => (c + d).slice(0, 5));
   }
 
   async function lookup() {
-    if (code.length !== 6) return;
+    if (code.length !== 5) return;
     setLoading(true);
     const res = await loyaltyLookup(backendUrl, frigoId, code);
     setLoading(false);
@@ -63,9 +63,9 @@ export function IdentifyScreen({
 
         {!status ? (
           <>
-            {/* Affichage du code : 6 cases */}
+            {/* Affichage du code : 5 cases */}
             <div className="flex gap-3">
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
                   className={`flex h-16 w-12 items-center justify-center rounded-2xl border-2 text-3xl font-extrabold ${
@@ -104,7 +104,7 @@ export function IdentifyScreen({
               </button>
               <button
                 onClick={lookup}
-                disabled={loading || code.length !== 6}
+                disabled={loading || code.length !== 5}
                 className="flex h-16 w-20 items-center justify-center rounded-2xl bg-[var(--green)] text-lg font-extrabold text-white shadow-md active:scale-95 disabled:opacity-40"
               >
                 {loading ? "…" : "OK"}

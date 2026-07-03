@@ -34,6 +34,7 @@ export interface CatalogDish {
   category: string;
   description: string | null;
   price: number;
+  costPrice: number | null;
   allergens: string[];
   dlcDays: number | null;
   hasImage: boolean;
