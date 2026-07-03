@@ -7,6 +7,7 @@ import { BoxControlScreen } from "./BoxControlScreen";
 import { SystemStatusScreen } from "./SystemStatusScreen";
 import { SettingsScreen } from "./SettingsScreen";
 import { LiaisonsScreen } from "./LiaisonsScreen";
+import { ExpiredAlert } from "./ExpiredAlert";
 import type { AdminRole } from "./PinLock";
 
 type Tab = "mapping" | "liaisons" | "box" | "status" | "settings";
@@ -31,6 +32,8 @@ export function AdminApp({ role, onExit }: { role: AdminRole; onExit: () => void
 
   return (
     <div className="flex h-full">
+      {/* Alerte DLC dépassée à l'ouverture de l'admin (livreur : retirer les périmés) */}
+      <ExpiredAlert />
       {/* Sidebar */}
       <aside className="flex w-56 flex-col bg-gray-900 text-white">
         <div className="border-b border-gray-700 px-5 py-5">

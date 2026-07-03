@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { getRepo, SETTING_KEYS, type DishCache, type Dispenser, type Locker, type Repo, type Settings } from "../db";
-import { syncMenu, pushMenu, pullCommands, resyncSales, type MenuSnapshotDish } from "../sync";
+import { syncMenu, syncCatalog, pushMenu, pullCommands, resyncSales, type MenuSnapshotDish } from "../sync";
 import { hardware, type HwMode } from "../hardware";
 import { sortCategories, byCategoryThenName } from "../utils/categories";
 
@@ -149,6 +149,8 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       const frigo = s[SETTING_KEYS.frigoId] ?? "";
       if (backend && frigo) {
         const res = await syncMenu(r, backend, frigo);
+        // Catalogue complet (pour la liste « ajouter un plat au casier »).
+        await syncCatalog(r, backend);
         if (res.ok) await loadAll(r);
       }
     })();
@@ -176,8 +178,14 @@ export function KioskProvider({ children }: { children: ReactNode }) {
         const cmds = await pullCommands(backendUrl, frigoId);
         for (const c of cmds) {
           try {
-            if (c.action === "close_all") await hardware.closeAll(c.board || "A");
-            else await hardware.openLocker(c.board || "A", c.boxNumber);
+            if (c.action === "close_all") {
+              await hardware.closeAll(c.board || "A");
+            } else {
+              // Ouverture NON bloquante : le maintien du verrou tourne en tâche de
+              // fond → le tick continue d'interroger le serveur et peut recevoir un
+              // « Tout fermer » qui interrompt proprement le maintien en cours.
+              void hardware.openLocker(c.board || "A", c.boxNumber).catch(() => {});
+            }
           } catch {
             /* échec matériel : ignoré, l'opérateur relancera */
           }
@@ -232,13 +240,14 @@ export function KioskProvider({ children }: { children: ReactNode }) {
 
   const runSync = useCallback(async () => {
     if (!repo) return { ok: false, dishCount: 0, error: "Repo non prêt" };
-    const res = await syncMenu(
-      repo,
-      settings[SETTING_KEYS.backendUrl] ?? "",
-      settings[SETTING_KEYS.frigoId] ?? "",
-    );
-    if (res.ok) await loadAll(repo);
-    return res;
+    const backend = settings[SETTING_KEYS.backendUrl] ?? "";
+    const frigo = settings[SETTING_KEYS.frigoId] ?? "";
+    const res = await syncMenu(repo, backend, frigo);
+    // Catalogue complet → la liste d'affectation des casiers = la BDD serveur.
+    const cat = await syncCatalog(repo, backend);
+    if (res.ok || cat.ok) await loadAll(repo);
+    // On renvoie le nombre de plats du catalogue (plus parlant pour « MAJ produits »).
+    return cat.ok ? cat : res;
   }, [repo, settings, loadAll]);
 
   const setting = useCallback(

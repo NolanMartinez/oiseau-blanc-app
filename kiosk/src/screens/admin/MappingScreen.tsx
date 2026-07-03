@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Trash2, Check, ScanLine, Link2, CheckSquare } from "lucide-react";
+import { RefreshCw, Trash2, Check, CheckSquare } from "lucide-react";
 import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
 import { SETTING_KEYS, type DishCache, type Locker } from "../../db";
 import { formatPrice } from "../../utils/format";
 import { byCategoryThenName } from "../../utils/categories";
-import { useBarcodeScanner } from "../../hooks/useBarcodeScanner";
 import { hardware } from "../../hardware";
 
 interface RestockBox { board: string; boxNumber: number; address: number }
 
 const MAX_DLC_DAYS = 10;
-const DEFAULT_DLC_DAYS = 3;
 
 /** Date ISO (YYYY-MM-DD) à aujourd'hui + n jours. */
 function isoDatePlus(days: number): string {
@@ -32,12 +30,6 @@ export function MappingScreen() {
   const [dlcError, setDlcError] = useState("");
   const [syncMsg, setSyncMsg] = useState("");
   const [syncing, setSyncing] = useState(false);
-  // Mode scan (douchette)
-  const [scanMode, setScanMode] = useState(false);
-  const [pendingDish, setPendingDish] = useState<DishCache | null>(null);
-  const [linkCode, setLinkCode] = useState<string | null>(null);
-  const [linkDishId, setLinkDishId] = useState("");
-  const [scanMsg, setScanMsg] = useState("");
   // Réassort : casiers à ouvrir un par un pour que l'opérateur y place les plats.
   const [restock, setRestock] = useState<{ boxes: RestockBox[]; idx: number } | null>(null);
   const currency = setting(SETTING_KEYS.currency, "EUR");
@@ -68,9 +60,6 @@ export function MappingScreen() {
   // Casier unique sélectionné (édition « simple »). En multi, single = null.
   const single = selectedIds.length === 1 ? boardLockers.find((l) => l.id === selectedIds[0]) ?? null : null;
 
-  function selectOnly(id: number) {
-    setSelectedIds([id]);
-  }
   function toggleSelect(id: number) {
     setSelectedIds((prev) => {
       if (multiMode) return prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
@@ -170,64 +159,6 @@ export function MappingScreen() {
     return l.dishId ? dishById.get(l.dishId)?.name ?? "?" : null;
   }
 
-  // ── Mode scan : produit -> tiroir ─────────────────────────────────────────
-  async function handleScan(code: string) {
-    if (!repo) return;
-    const asNum = parseInt(code, 10);
-    const isDrawer = /^\d+$/.test(code) && asNum >= 1 && asNum <= boardLockers.length;
-
-    if (isDrawer) {
-      const locker = boardLockers.find((l) => l.boxNumber === asNum);
-      if (!locker) return;
-      if (pendingDish) {
-        await repo.setLockerMapping(locker.id, {
-          dishId: pendingDish.id,
-          price: pendingDish.price,
-          // DLC obligatoire : on met une valeur par défaut (ajustable dans l'éditeur).
-          expiryDate: isoDatePlus(DEFAULT_DLC_DAYS),
-        });
-        await reload();
-        setScanMsg(`${t("box")} ${asNum} ← ${pendingDish.name}`);
-      } else {
-        selectOnly(locker.id);
-        setScanMsg(`${t("box")} ${asNum}`);
-      }
-      return;
-    }
-
-    // Code produit : on cherche le plat associé.
-    const dish = await repo.getDishByBarcode(code);
-    if (dish) {
-      setPendingDish(dish);
-      setLinkCode(null);
-      setScanMsg(`▶ ${dish.name}`);
-    } else {
-      // Code inconnu : proposer de le lier à un plat.
-      setLinkCode(code);
-      setLinkDishId("");
-      setScanMsg("");
-    }
-  }
-
-  useBarcodeScanner(scanMode, handleScan);
-
-  async function linkBarcode() {
-    if (!repo || !linkCode || !linkDishId) return;
-    await repo.setDishBarcode(linkDishId, linkCode);
-    await reload();
-    const dish = dishes.find((d) => d.id === linkDishId) ?? null;
-    setPendingDish(dish ? { ...dish, barcode: linkCode } : null);
-    setScanMsg(dish ? `▶ ${dish.name}` : "");
-    setLinkCode(null);
-  }
-
-  function toggleScan() {
-    setScanMode((v) => !v);
-    setPendingDish(null);
-    setLinkCode(null);
-    setScanMsg("");
-  }
-
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] bg-white px-6 py-4">
@@ -266,69 +197,17 @@ export function MappingScreen() {
             {t("multi_select")}
           </button>
           <button
-            onClick={toggleScan}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 font-bold active:opacity-80 ${
-              scanMode ? "bg-[var(--green)] text-white" : "border-2 border-gray-200 text-[var(--ink-soft)]"
-            }`}
-          >
-            <ScanLine size={18} />
-            {t("scan_mode")}
-          </button>
-          <button
             onClick={doSync}
             disabled={syncing}
             className="flex items-center gap-2 rounded-xl bg-[var(--blue)] px-4 py-2.5 font-bold text-white active:opacity-80 disabled:opacity-50"
           >
             <RefreshCw size={18} className={syncing ? "animate-spin" : ""} />
-            {t("sync")}
+            {t("update_products")}
           </button>
         </div>
       </div>
 
       {syncMsg && <div className="bg-[var(--green-tint)] px-6 py-2 text-sm font-medium text-[var(--green)]">{syncMsg}</div>}
-
-      {/* Bandeau mode scan */}
-      {scanMode && (
-        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--line)] bg-[var(--blue-soft)] px-6 py-3">
-          <ScanLine size={18} className="text-[var(--green)]" />
-          <span className="text-sm font-semibold text-[var(--ink-soft)]">{t("scan_help")}</span>
-          {pendingDish && (
-            <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-[var(--green)]">
-              {t("pending_dish")} : {pendingDish.name}
-            </span>
-          )}
-          {scanMsg && <span className="text-sm font-medium text-[var(--ink-faint)]">{scanMsg}</span>}
-
-          {/* Code inconnu : liaison à un plat */}
-          {linkCode && (
-            <div className="ml-auto flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm">
-              <Link2 size={16} className="text-[var(--blue)]" />
-              <span className="font-mono text-sm">{linkCode}</span>
-              <select
-                value={linkDishId}
-                onChange={(e) => setLinkDishId(e.target.value)}
-                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-              >
-                <option value="">{t("link_barcode")}…</option>
-                {dishGroups.map((g) => (
-                  <optgroup key={g.category} label={g.category}>
-                    {g.items.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <button
-                onClick={linkBarcode}
-                disabled={!linkDishId}
-                className="rounded-lg bg-[var(--green)] px-3 py-1.5 text-sm font-bold text-white disabled:opacity-50"
-              >
-                {t("save")}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Grille des casiers */}

@@ -77,6 +77,66 @@ export async function syncMenu(
   }
 }
 
+interface CatalogDish {
+  id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  price: number; // euros
+  allergens: string[];
+  dlcDays?: number | null;
+  hasImage: boolean;
+}
+
+/**
+ * Synchronise le CATALOGUE COMPLET des plats actifs (pas seulement ceux déjà dans
+ * ce frigo) → la liste « ajouter un plat au casier » de la borne correspond
+ * exactement à l'app web / la BDD. Best-effort (silencieux hors ligne).
+ */
+export async function syncCatalog(repo: Repo, backendUrl: string): Promise<SyncResult> {
+  if (!backendUrl) return { ok: false, dishCount: 0, error: "Backend non configuré" };
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/dishes`);
+    if (!res.ok) return { ok: false, dishCount: 0, error: `HTTP ${res.status}` };
+    const data = await res.json();
+    const dishes: CatalogDish[] = data?.dishes ?? [];
+
+    for (const d of dishes) {
+      let image: { bytes: Uint8Array; mime: string } | null = null;
+      if (d.hasImage) {
+        try {
+          const imgRes = await kioskFetch(`${base}/api/v1/public/dishes/${d.id}/image`);
+          if (imgRes.ok) {
+            const buf = await imgRes.arrayBuffer();
+            const mime = imgRes.headers.get("content-type") ?? "image/jpeg";
+            image = { bytes: new Uint8Array(buf), mime };
+          }
+        } catch {
+          /* image facultative */
+        }
+      }
+      await repo.upsertDish(
+        {
+          id: d.id,
+          name: d.name,
+          category: d.category,
+          description: d.description,
+          price: eurosToCents(d.price),
+          allergens: d.allergens ?? [],
+          imageMime: image?.mime ?? null,
+          updatedAt: new Date().toISOString(),
+          dlcDays: d.dlcDays ?? null,
+        },
+        image,
+      );
+    }
+    return { ok: true, dishCount: dishes.length };
+  } catch (e) {
+    return { ok: false, dishCount: 0, error: e instanceof Error ? e.message : "Échec réseau" };
+  }
+}
+
 /**
  * Pousse l'inventaire réel de la borne vers le serveur (1 entrée par plat encore
  * présent dans un casier). Le serveur met à jour les stocks du frigo → affichage

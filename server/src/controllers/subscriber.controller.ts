@@ -66,6 +66,8 @@ export async function listSubscribers(req: Request, res: Response): Promise<void
         phone: true,
         consentEmail: true,
         consentPush: true,
+        loyaltyPoints: true,
+        loyaltyCode: true,
         createdAt: true,
         _count: { select: { reviews: true } },
       },
@@ -87,17 +89,19 @@ export async function deleteSubscriber(req: Request, res: Response): Promise<voi
 export async function exportSubscribers(_req: Request, res: Response): Promise<void> {
   const subscribers = await prisma.subscriber.findMany({
     orderBy: { createdAt: 'desc' },
-    select: { email: true, phone: true, consentEmail: true, consentPush: true, createdAt: true },
+    select: { email: true, phone: true, consentEmail: true, consentPush: true, loyaltyCode: true, loyaltyPoints: true, createdAt: true },
   });
 
   const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  const header = ['Email', 'Téléphone', 'Consent Email', 'Consent Push', 'Inscrit le'].map(escape).join(',');
+  const header = ['Email', 'Téléphone', 'Consent Email', 'Consent Push', 'Code fidélité', 'Points', 'Inscrit le'].map(escape).join(',');
   const rows = subscribers.map((s) =>
     [
       s.email ?? '',
       s.phone ?? '',
       s.consentEmail ? 'Oui' : 'Non',
       s.consentPush ? 'Oui' : 'Non',
+      s.loyaltyCode ?? '',
+      String(s.loyaltyPoints),
       new Date(s.createdAt).toLocaleDateString('fr-FR'),
     ].map(escape).join(','),
   );

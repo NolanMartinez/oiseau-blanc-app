@@ -12,11 +12,25 @@ interface BreakdownRow {
   revenue: number;
 }
 
+interface ProductRow {
+  dishId: string;
+  name: string;
+  category: string;
+  count: number;
+  revenue: number;
+}
+
 interface Stats {
   totalTransactions: number;
   totalRevenue: number;
   breakdown: BreakdownRow[];
+  byProduct: ProductRow[];
   granularity: 'daily' | 'monthly';
+}
+
+interface FridgeOption {
+  id: string;
+  name: string;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -95,6 +109,8 @@ export function Comptabilite() {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [granularity, setGranularity] = useState<Granularity>('daily');
+  const [frigoId, setFrigoId] = useState('');
+  const [fridges, setFridges] = useState<FridgeOption[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState('');
@@ -104,15 +120,22 @@ export function Comptabilite() {
     ? { from: customFrom, to: customTo }
     : getPresetRange(preset);
 
+  // Liste des machines (frigos) pour le filtre.
+  useEffect(() => {
+    api.get('/admin/frigos').then((res) => setFridges(res.data.fridges ?? [])).catch(() => {});
+  }, []);
+
+  const frigoParam = frigoId ? `&frigoId=${frigoId}` : '';
+
   const loadStats = useCallback(() => {
     if (!from || !to || from > to) return;
     setStatsLoading(true);
     setStatsError('');
-    api.get(`/admin/accounting/stats?from=${from}&to=${to}`)
+    api.get(`/admin/accounting/stats?from=${from}&to=${to}${frigoId ? `&frigoId=${frigoId}` : ''}`)
       .then((res) => setStats(res.data))
       .catch(() => setStatsError('Impossible de charger les statistiques.'))
       .finally(() => setStatsLoading(false));
-  }, [from, to]);
+  }, [from, to, frigoId]);
 
   useEffect(() => {
     if (preset !== 'custom') loadStats();
@@ -139,7 +162,7 @@ export function Comptabilite() {
     setExporting(true);
     try {
       const res = await api.get(
-        `/admin/accounting/export?from=${from}&to=${to}&granularity=${granularity}`,
+        `/admin/accounting/export?from=${from}&to=${to}&granularity=${granularity}${frigoParam}`,
         { responseType: 'blob' },
       );
       const fileDate = `${from.replace(/-/g, '')}_${to.replace(/-/g, '')}`;
@@ -157,6 +180,21 @@ export function Comptabilite() {
   return (
     <AdminLayout title="Comptabilité">
       <div className="space-y-6 max-w-3xl">
+
+        {/* Filtre machine */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Machine</p>
+          <select
+            value={frigoId}
+            onChange={(e) => setFrigoId(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Toutes les machines</option>
+            {fridges.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Sélecteur de période */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -272,6 +310,39 @@ export function Comptabilite() {
                 +{stats.breakdown.length - 10} lignes supplémentaires dans l'export
               </div>
             )}
+          </div>
+        )}
+
+        {/* Détail par produit (combien de fois chaque plat a été vendu) */}
+        {stats && stats.byProduct.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Détail par produit</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Plat</th>
+                    <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Catégorie</th>
+                    <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Vendus</th>
+                    <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">CA (€)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {stats.byProduct.map((row) => (
+                    <tr key={row.dishId} className="hover:bg-gray-50">
+                      <td className="px-5 py-2.5 text-gray-800 font-medium">{row.name}</td>
+                      <td className="px-5 py-2.5 text-gray-500">{row.category || '—'}</td>
+                      <td className="px-5 py-2.5 text-right text-gray-700 font-semibold tabular-nums">{row.count}</td>
+                      <td className="px-5 py-2.5 text-right text-gray-800 font-semibold tabular-nums">
+                        {row.revenue.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

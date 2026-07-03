@@ -193,7 +193,10 @@ export async function translateAllDishesHandler(_req: Request, res: Response): P
 export async function listPublicDishes(_req: Request, res: Response): Promise<void> {
   const dishes = await prisma.dish.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, category: true, allergens: true, imageMimeType: true },
+    select: {
+      id: true, name: true, category: true, description: true,
+      price: true, allergens: true, dlcDays: true, imageMimeType: true,
+    },
     orderBy: { name: 'asc' },
   });
   res.json({ dishes: dishes.map(toDishDTO) });

@@ -35,13 +35,17 @@ interface EnrichedPurchase {
 // modèle Sale, montant réellement payé en centimes) ET les achats via l'app
 // abonnés (table `purchases`). Sans ça, les paiements de la borne n'apparaissaient
 // pas dans l'état des ventes.
-async function fetchPurchases(fromDate: Date, toDate: Date): Promise<EnrichedPurchase[]> {
+async function fetchPurchases(
+  fromDate: Date,
+  toDate: Date,
+  frigoId?: string,
+): Promise<EnrichedPurchase[]> {
   const [purchases, sales, dishes] = await Promise.all([
     prisma.purchase.findMany({
-      where: { purchasedAt: { gte: fromDate, lte: toDate } },
+      where: { purchasedAt: { gte: fromDate, lte: toDate }, ...(frigoId ? { frigoId } : {}) },
     }),
     prisma.sale.findMany({
-      where: { soldAt: { gte: fromDate, lte: toDate } },
+      where: { soldAt: { gte: fromDate, lte: toDate }, ...(frigoId ? { frigoId } : {}) },
     }),
     prisma.dish.findMany({ select: { id: true, name: true, category: true, price: true } }),
   ]);
@@ -87,11 +91,26 @@ export async function getAccountingStats(req: Request, res: Response): Promise<v
     return;
   }
   const { fromDate, toDate } = range;
+  const frigoId = typeof req.query['frigoId'] === 'string' && req.query['frigoId']
+    ? (req.query['frigoId'] as string)
+    : undefined;
 
-  const purchases = await fetchPurchases(fromDate, toDate);
+  const purchases = await fetchPurchases(fromDate, toDate, frigoId);
 
   const totalTransactions = purchases.length;
   const totalRevenue = purchases.reduce((sum, p) => sum + p.dishPrice, 0);
+
+  // Détail par produit : combien de fois chaque plat a été vendu + CA.
+  const productMap = new Map<string, { name: string; category: string; count: number; revenue: number }>();
+  for (const p of purchases) {
+    const e = productMap.get(p.dishId) ?? { name: p.dishName, category: p.dishCategory, count: 0, revenue: 0 };
+    e.count += 1;
+    e.revenue += p.dishPrice;
+    productMap.set(p.dishId, e);
+  }
+  const byProduct = Array.from(productMap.entries())
+    .map(([dishId, e]) => ({ dishId, name: e.name, category: e.category, count: e.count, revenue: Math.round(e.revenue * 100) / 100 }))
+    .sort((a, b) => b.count - a.count);
 
   // Breakdown : par jour si période ≤ 31j, par mois sinon
   const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / DAY_MS);
@@ -118,6 +137,7 @@ export async function getAccountingStats(req: Request, res: Response): Promise<v
     totalTransactions,
     totalRevenue: Math.round(totalRevenue * 100) / 100,
     breakdown,
+    byProduct,
     granularity: useMonthly ? 'monthly' : 'daily',
   });
 }
@@ -131,8 +151,11 @@ export async function exportAccounting(req: Request, res: Response): Promise<voi
   }
   const { fromDate, toDate } = range;
   const granularity = (req.query['granularity'] as string) ?? 'detail';
+  const frigoId = typeof req.query['frigoId'] === 'string' && req.query['frigoId']
+    ? (req.query['frigoId'] as string)
+    : undefined;
 
-  const purchases = await fetchPurchases(fromDate, toDate);
+  const purchases = await fetchPurchases(fromDate, toDate, frigoId);
 
   const escape = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
   const fmt = (from: Date) => from.toISOString().slice(0, 10).replace(/-/g, '');

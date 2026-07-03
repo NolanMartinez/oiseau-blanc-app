@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Mail, Phone, Trash2, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Mail, Phone, Trash2, ChevronLeft, ChevronRight, Download, Gift } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
 
@@ -9,6 +9,8 @@ interface Subscriber {
   phone: string | null;
   consentEmail: boolean;
   consentPush: boolean;
+  loyaltyPoints: number;
+  loyaltyCode: string | null;
   createdAt: string;
   _count: { reviews: number };
 }
@@ -95,6 +97,7 @@ export function Subscribers() {
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Consentements</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Fidélité</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Avis</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Inscrit le</th>
                 <th className="px-4 py-3"></th>
@@ -127,6 +130,16 @@ export function Subscribers() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.consentPush ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
                         Push
                       </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <Gift size={13} className="text-green-500" />
+                      <span className="font-semibold text-gray-800">{s.loyaltyPoints}</span>
+                      <span className="text-xs text-gray-400">pts</span>
+                      {s.loyaltyCode && (
+                        <span className="ml-1 text-xs text-gray-400 font-mono">#{s.loyaltyCode}</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{s._count.reviews}</td>
