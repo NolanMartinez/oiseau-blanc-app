@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Lock, LogOut, Mail, Phone, Bell, Check, Refrigerator, X, ChevronRight, Download, Trash2, Activity, Globe } from 'lucide-react';
+import { Lock, LogOut, Mail, Phone, Bell, Check, Refrigerator, X, ChevronRight, Download, Trash2, Activity, Globe, Gift } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../../components/app/AppLayout';
 import { userApi } from '../../services/api';
@@ -178,6 +178,49 @@ export function ProfilPage() {
             </p>
           )}
         </div>
+
+        {/* ── Carte de fidélité ── */}
+        {subscriber.loyaltyCode && subscriber.loyalty?.enabled && (
+          <>
+            <SectionDivider label={t('loyalty_section')} />
+            <div className="px-6">
+              <Card style={{ background: 'linear-gradient(135deg, var(--green) 0%, #2a7d54 100%)', border: 'none' }}>
+                <div className="p-5 text-white">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Gift size={18} />
+                    <p style={{ fontSize: 14, fontWeight: 700 }}>{t('loyalty_card')}</p>
+                  </div>
+                  {/* Code fidélité à donner à la borne */}
+                  <p style={{ fontSize: 12, opacity: 0.85 }}>{t('loyalty_your_code')}</p>
+                  <p style={{ fontSize: 40, fontWeight: 800, letterSpacing: '0.15em', lineHeight: 1.15 }}>
+                    {subscriber.loyaltyCode}
+                  </p>
+                  {/* Points + progression */}
+                  {(() => {
+                    const pts = subscriber.loyalty?.points ?? 0;
+                    const reward = subscriber.loyalty?.pointsReward ?? 100;
+                    const pct = Math.min(100, Math.round((pts / reward) * 100));
+                    const ready = pts >= reward;
+                    return (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between" style={{ fontSize: 13, fontWeight: 600 }}>
+                          <span>{pts} {t('loyalty_points_word')}</span>
+                          <span style={{ opacity: 0.85 }}>{ready ? '🎁' : `${pts} / ${reward}`}</span>
+                        </div>
+                        <div style={{ marginTop: 6, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.25)' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', borderRadius: 999, background: '#ffffff', transition: 'width .3s' }} />
+                        </div>
+                        <p style={{ fontSize: 11, opacity: 0.9, marginTop: 8 }}>
+                          {ready ? t('loyalty_reward_ready') : t('loyalty_hint_borne')}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </Card>
+            </div>
+          </>
+        )}
 
         {/* ── Mon compte ── */}
         <SectionDivider label={t('account_section')} />

@@ -5,7 +5,7 @@ import { getFridgeMeta } from '../services/fridges';
 import { markSeen, getStatus } from '../services/fridgeStatus';
 import { enqueueCommand, drainCommands } from '../services/remoteCommands';
 import { notifyFridgeSubscribers } from '../services/push.service';
-import { creditPurchase } from '../services/loyalty.service';
+import { creditPurchaseByCode } from '../services/loyalty.service';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -368,7 +368,7 @@ const saleSchema = z.object({
   amount: z.number().int().min(0),
   mode: z.enum(['paid', 'free']).default('paid'),
   soldAt: z.string().optional(),
-  contact: z.string().trim().min(3).optional(), // email/tél saisi à la borne → fidélité
+  loyaltyCode: z.string().trim().regex(/^\d{6}$/).optional(), // code fidélité saisi à la borne
 });
 
 // POST /api/v1/public/frigos/:id/sales — la borne remonte une vente.
@@ -388,17 +388,17 @@ export async function recordSale(req: Request, res: Response): Promise<void> {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { dishId, amount, mode, soldAt, contact } = parsed.data;
+  const { dishId, amount, mode, soldAt, loyaltyCode } = parsed.data;
   const sale = await prisma.sale.create({
     data: { frigoId: meta.id, dishId, amount, mode, soldAt: soldAt ? new Date(soldAt) : new Date() },
   });
   markSeen(meta.id);
 
-  // Fidélité : si le client s'est identifié et que c'est un achat payant, on crédite ses points.
+  // Fidélité : si le client a saisi son code et que c'est un achat payant, on crédite ses points.
   let loyalty = null;
-  if (contact && mode === 'paid' && amount > 0) {
+  if (loyaltyCode && mode === 'paid' && amount > 0) {
     try {
-      loyalty = await creditPurchase(contact, amount, meta.id, dishId);
+      loyalty = await creditPurchaseByCode(loyaltyCode, amount, meta.id, dishId);
     } catch {
       // La fidélité ne doit jamais faire échouer l'enregistrement de la vente.
     }

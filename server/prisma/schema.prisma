@@ -35,6 +35,7 @@ model Subscriber {
   consentPush  Boolean  @default(false) @map("consent_push")
   pushToken    String?  @map("push_token") @db.Text
   loyaltyPoints Int     @default(0) @map("loyalty_points")
+  loyaltyCode  String?  @unique @map("loyalty_code") // code fidélité à 6 chiffres
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

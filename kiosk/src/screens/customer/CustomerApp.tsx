@@ -42,7 +42,7 @@ export function CustomerApp() {
   const [openStep, setOpenStep] = useState(0);
 
   // ── Fidélité ────────────────────────────────────────────────────────────────
-  const [contact, setContact] = useState(""); // email/tél saisi (vide = anonyme)
+  const [code, setCode] = useState(""); // code fidélité saisi (vide = anonyme)
   const [loyalty, setLoyalty] = useState<LoyaltyStatus | null>(null);
   const [useReward, setUseReward] = useState(false); // le client échange un repas offert
 
@@ -70,7 +70,7 @@ export function CustomerApp() {
   const discountCents = freeLine?.priceCents ?? 0;
   const payableCents = Math.max(0, cartTotalCents - discountCents);
 
-  const loyaltyBadge = contact
+  const loyaltyBadge = code
     ? useReward
       ? t("loyalty_reward_used")
       : t("loyalty_active", { n: loyalty?.points ?? 0 })
@@ -96,7 +96,7 @@ export function CustomerApp() {
     setCart([]);
     setDetailGroup(null);
     setCategory("");
-    setContact("");
+    setCode("");
     setLoyalty(null);
     setUseReward(false);
     setScreen("idle");
@@ -153,13 +153,13 @@ export function CustomerApp() {
           amount,
           mode,
           soldAt,
-          contact: contact || undefined,
+          loyaltyCode: code || undefined,
         });
         if (ok) await repo.markSaleSynced(saleId);
       })();
       await repo.clearLocker(line.lockerId);
     },
-    [repo, requiresPayment, setting, freeLockerId, contact],
+    [repo, requiresPayment, setting, freeLockerId, code],
   );
 
   // ── Ouverture des casiers : un casier à la fois, avec bouton SUIVANT ───────
@@ -183,11 +183,11 @@ export function CustomerApp() {
     async (lines: CartLine[]) => {
       // Repas offert : on débite les points côté serveur (une seule fois) au moment
       // où la vente est confirmée. Best-effort — n'empêche jamais l'ouverture.
-      if (useReward && contact && freeLine) {
+      if (useReward && code && freeLine) {
         void loyaltyRedeem(
           setting(SETTING_KEYS.backendUrl),
           setting(SETTING_KEYS.frigoId),
-          contact,
+          code,
           freeLine.dishId,
         );
       }
@@ -196,7 +196,7 @@ export function CustomerApp() {
       setScreen("opening");
       await openAt(lines, 0);
     },
-    [openAt, useReward, contact, freeLine, setting],
+    [openAt, useReward, code, freeLine, setting],
   );
 
   // Bouton SUIVANT / Terminé : passe au casier suivant ou clôt la vente.
@@ -307,13 +307,13 @@ export function CustomerApp() {
       {screen === "identify" && (
         <IdentifyScreen
           onValidated={(c, l, r) => {
-            setContact(c);
+            setCode(c);
             setLoyalty(l);
             setUseReward(r);
             setScreen("cart");
           }}
           onSkip={() => {
-            setContact("");
+            setCode("");
             setLoyalty(null);
             setUseReward(false);
             setScreen("cart");

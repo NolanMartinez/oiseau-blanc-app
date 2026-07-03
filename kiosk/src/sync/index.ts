@@ -108,7 +108,7 @@ export async function pushStock(
 export async function pushSale(
   backendUrl: string,
   frigoId: string,
-  sale: { dishId: string; amount: number; mode: string; soldAt: string; contact?: string },
+  sale: { dishId: string; amount: number; mode: string; soldAt: string; loyaltyCode?: string },
 ): Promise<boolean> {
   if (!backendUrl || !frigoId) return false;
   const base = backendUrl.replace(/\/$/, "");
@@ -160,11 +160,11 @@ export interface LoyaltyStatus {
   enabled: boolean;
 }
 
-/** Consulte le solde fidélité d'un client par email/téléphone (avant paiement). */
+/** Consulte le solde fidélité par code à 6 chiffres (avant paiement). null si code inconnu. */
 export async function loyaltyLookup(
   backendUrl: string,
   frigoId: string,
-  contact: string,
+  code: string,
 ): Promise<LoyaltyStatus | null> {
   if (!backendUrl || !frigoId) return null;
   const base = backendUrl.replace(/\/$/, "");
@@ -172,7 +172,7 @@ export async function loyaltyLookup(
     const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/loyalty/lookup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contact }),
+      body: JSON.stringify({ code }),
     });
     if (!res.ok) return null;
     return (await res.json()) as LoyaltyStatus;
@@ -185,7 +185,7 @@ export async function loyaltyLookup(
 export async function loyaltyRedeem(
   backendUrl: string,
   frigoId: string,
-  contact: string,
+  code: string,
   dishId: string,
 ): Promise<LoyaltyStatus | null> {
   if (!backendUrl || !frigoId) return null;
@@ -194,7 +194,7 @@ export async function loyaltyRedeem(
     const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/loyalty/redeem`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contact, dishId }),
+      body: JSON.stringify({ code, dishId }),
     });
     if (!res.ok) return null;
     return (await res.json()) as LoyaltyStatus;

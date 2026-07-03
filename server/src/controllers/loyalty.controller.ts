@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { getFridgeMeta } from '../services/fridges';
-import { lookupByContact, redeemReward } from '../services/loyalty.service';
+import { lookupByCode, redeemRewardByCode } from '../services/loyalty.service';
 import { getLoyaltyConfig, setLoyaltyConfig } from '../services/settings.service';
 
-const contactSchema = z.object({ contact: z.string().trim().min(3) });
+const codeSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/) });
 
 // ── Public / borne ──────────────────────────────────────────────────────────
 
@@ -14,16 +14,20 @@ export async function loyaltyLookup(req: Request, res: Response): Promise<void> 
     res.status(404).json({ error: 'Frigo introuvable' });
     return;
   }
-  const parsed = contactSchema.safeParse(req.body);
+  const parsed = codeSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Contact invalide' });
+    res.status(400).json({ error: 'Code invalide' });
     return;
   }
-  const status = await lookupByContact(parsed.data.contact);
+  const status = await lookupByCode(parsed.data.code);
+  if (!status) {
+    res.status(404).json({ error: 'Code fidélité inconnu' });
+    return;
+  }
   res.json(status);
 }
 
-const redeemSchema = z.object({ contact: z.string().trim().min(3), dishId: z.string().min(1) });
+const redeemSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/), dishId: z.string().min(1) });
 
 // POST /api/v1/public/frigos/:id/loyalty/redeem — échange les points contre un repas offert.
 export async function loyaltyRedeem(req: Request, res: Response): Promise<void> {
@@ -37,7 +41,11 @@ export async function loyaltyRedeem(req: Request, res: Response): Promise<void> 
     res.status(400).json({ error: 'Requête invalide' });
     return;
   }
-  const result = await redeemReward(parsed.data.contact, meta.id, parsed.data.dishId);
+  const result = await redeemRewardByCode(parsed.data.code, meta.id, parsed.data.dishId);
+  if (!result) {
+    res.status(404).json({ error: 'Code fidélité inconnu' });
+    return;
+  }
   if (!result.ok) {
     res.status(400).json({ error: 'Points insuffisants', ...result.status });
     return;

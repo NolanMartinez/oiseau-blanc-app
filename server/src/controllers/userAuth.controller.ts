@@ -5,6 +5,8 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import type { SubscriberRequest } from '../middleware/userAuth';
+import { ensureLoyaltyCode } from '../services/loyalty.service';
+import { getLoyaltyConfig } from '../services/settings.service';
 
 const SUBSCRIBER_SELECT = {
   id: true, email: true, phone: true, favoriId: true, consentEmail: true, consentPush: true, createdAt: true,
@@ -201,7 +203,12 @@ export async function getMe(req: Request, res: Response): Promise<void> {
 
   const row = await prisma.subscriber.findUnique({
     where: { id: subscriberId },
-    select: { ...SUBSCRIBER_SELECT, _count: { select: { reviews: true, preferenceResponses: true } } },
+    select: {
+      ...SUBSCRIBER_SELECT,
+      loyaltyPoints: true,
+      loyaltyCode: true,
+      _count: { select: { reviews: true, preferenceResponses: true } },
+    },
   });
 
   if (!row) {
@@ -209,8 +216,24 @@ export async function getMe(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const { _count, ...sub } = row;
-  res.json({ subscriber: { ...sub, reviewsCount: _count.reviews, surveysCount: _count.preferenceResponses } });
+  // Attribue un code fidélité à 6 chiffres au premier affichage du profil.
+  const loyaltyCode = row.loyaltyCode ?? (await ensureLoyaltyCode(subscriberId));
+  const config = await getLoyaltyConfig();
+
+  const { _count, loyaltyCode: _lc, ...sub } = row;
+  res.json({
+    subscriber: {
+      ...sub,
+      loyaltyCode,
+      reviewsCount: _count.reviews,
+      surveysCount: _count.preferenceResponses,
+      loyalty: {
+        points: row.loyaltyPoints,
+        pointsReward: config.pointsReward,
+        enabled: config.enabled,
+      },
+    },
+  });
 }
 
 // DELETE /public/user/auth/me — suppression RGPD (irréversible)

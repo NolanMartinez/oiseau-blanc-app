@@ -11,6 +11,8 @@ export interface Subscriber {
   createdAt?: string;
   reviewsCount?: number;
   surveysCount?: number;
+  loyaltyCode?: string;
+  loyalty?: { points: number; pointsReward: number; enabled: boolean };
 }
 
 interface UserAuthContextType {

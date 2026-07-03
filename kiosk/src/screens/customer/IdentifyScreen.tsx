@@ -1,37 +1,48 @@
 import { useState } from "react";
-import { Gift, ChevronRight } from "lucide-react";
+import { Gift, ChevronRight, Delete } from "lucide-react";
 import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
 import { loyaltyLookup, type LoyaltyStatus } from "../../sync";
 
-// Écran d'identification fidélité (facultatif) : le client saisit son email ou
-// téléphone pour cumuler des points, et peut utiliser un repas offert s'il y a droit.
+// Écran d'identification fidélité (facultatif) : le client saisit son code à 6
+// chiffres (obtenu dans son profil sur l'app friggo) sur un pavé numérique.
 export function IdentifyScreen({
   onValidated,
   onSkip,
 }: {
-  onValidated: (contact: string, loyalty: LoyaltyStatus | null, useReward: boolean) => void;
+  onValidated: (code: string, loyalty: LoyaltyStatus | null, useReward: boolean) => void;
   onSkip: () => void;
 }) {
   const { t } = useLang();
   const { setting } = useKiosk();
-  const [contact, setContact] = useState("");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [status, setStatus] = useState<LoyaltyStatus | null>(null);
   const [useReward, setUseReward] = useState(false);
 
   const frigoId = setting(SETTING_KEYS.frigoId);
   const backendUrl = setting(SETTING_KEYS.backendUrl);
 
+  function press(d: string) {
+    setError(false);
+    setStatus(null);
+    setCode((c) => (c + d).slice(0, 6));
+  }
+
   async function lookup() {
-    const c = contact.trim();
-    if (c.length < 3) return;
+    if (code.length !== 6) return;
     setLoading(true);
-    const res = await loyaltyLookup(backendUrl, frigoId, c);
-    setStatus(res);
-    setUseReward(res?.rewardAvailable ?? false);
+    const res = await loyaltyLookup(backendUrl, frigoId, code);
     setLoading(false);
+    if (!res) {
+      setError(true); // code inconnu
+      setCode("");
+      return;
+    }
+    setStatus(res);
+    setUseReward(res.rewardAvailable);
   }
 
   return (
@@ -47,24 +58,59 @@ export function IdentifyScreen({
         <span className="w-24" />
       </header>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8">
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
         <p className="max-w-lg text-center text-xl text-[var(--ink-soft)]">{t("loyalty_prompt")}</p>
 
-        <input
-          value={contact}
-          onChange={(e) => { setContact(e.target.value); setStatus(null); }}
-          placeholder={t("loyalty_placeholder")}
-          className="w-full max-w-md rounded-2xl border-2 border-gray-200 px-5 py-4 text-center text-2xl font-semibold focus:border-[var(--green)] focus:outline-none"
-        />
-
         {!status ? (
-          <button
-            onClick={lookup}
-            disabled={loading || contact.trim().length < 3}
-            className="rounded-2xl bg-[var(--green)] px-10 py-4 text-2xl font-extrabold text-white shadow-lg active:scale-[0.98] disabled:opacity-40"
-          >
-            {loading ? "…" : t("validate")}
-          </button>
+          <>
+            {/* Affichage du code : 6 cases */}
+            <div className="flex gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`flex h-16 w-12 items-center justify-center rounded-2xl border-2 text-3xl font-extrabold ${
+                    i < code.length ? "border-[var(--green)] bg-[var(--green-tint)]" : "border-gray-200 bg-white"
+                  }`}
+                >
+                  {code[i] ?? ""}
+                </div>
+              ))}
+            </div>
+
+            {error && <p className="text-lg font-semibold text-red-500">{t("loyalty_unknown_code")}</p>}
+
+            {/* Pavé numérique */}
+            <div className="grid grid-cols-3 gap-3">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => press(d)}
+                  className="h-16 w-20 rounded-2xl bg-white text-3xl font-bold text-[var(--ink)] shadow-sm active:scale-95 active:bg-gray-100"
+                >
+                  {d}
+                </button>
+              ))}
+              <button
+                onClick={() => setCode((c) => c.slice(0, -1))}
+                className="flex h-16 w-20 items-center justify-center rounded-2xl bg-white text-[var(--ink)] shadow-sm active:scale-95"
+              >
+                <Delete size={26} />
+              </button>
+              <button
+                onClick={() => press("0")}
+                className="h-16 w-20 rounded-2xl bg-white text-3xl font-bold text-[var(--ink)] shadow-sm active:scale-95 active:bg-gray-100"
+              >
+                0
+              </button>
+              <button
+                onClick={lookup}
+                disabled={loading || code.length !== 6}
+                className="flex h-16 w-20 items-center justify-center rounded-2xl bg-[var(--green)] text-lg font-extrabold text-white shadow-md active:scale-95 disabled:opacity-40"
+              >
+                {loading ? "…" : "OK"}
+              </button>
+            </div>
+          </>
         ) : (
           <div className="flex w-full max-w-md flex-col items-center gap-4">
             {/* Solde */}
@@ -95,7 +141,7 @@ export function IdentifyScreen({
             )}
 
             <button
-              onClick={() => onValidated(contact.trim(), status, useReward)}
+              onClick={() => onValidated(code, status, useReward)}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--green)] px-10 py-4 text-2xl font-extrabold text-white shadow-lg active:scale-[0.98]"
             >
               {t("validate")}
