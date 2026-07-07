@@ -131,6 +131,10 @@ export async function syncCatalog(repo: Repo, backendUrl: string): Promise<SyncR
         image,
       );
     }
+    // Aligne le cache local sur le catalogue serveur : supprime les plats locaux
+    // absents du catalogue (démos, plats désactivés) → la liste d'affectation des
+    // casiers correspond EXACTEMENT à la carte de l'admin.
+    await repo.pruneDishes(dishes.map((d) => d.id));
     return { ok: true, dishCount: dishes.length };
   } catch (e) {
     return { ok: false, dishCount: 0, error: e instanceof Error ? e.message : "Échec réseau" };

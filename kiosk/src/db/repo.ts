@@ -52,6 +52,9 @@ export interface Repo {
   upsertDish(dish: Omit<DishCache, "hasImage" | "barcode">, image: DishImage | null): Promise<void>;
   getDishByBarcode(barcode: string): Promise<DishCache | null>;
   setDishBarcode(dishId: string, barcode: string | null): Promise<void>;
+  // Supprime du cache local les plats dont l'id n'est pas dans `keepIds` (aligne le
+  // cache sur le catalogue serveur). No-op si la liste est vide (garde-fou).
+  pruneDishes(keepIds: string[]): Promise<void>;
 
   // Ventes
   logSale(sale: SaleLog): Promise<number>; // renvoie l'id local de la vente

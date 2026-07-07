@@ -265,6 +265,13 @@ export class MemoryRepo implements Repo {
     }
   }
 
+  async pruneDishes(keepIds: string[]): Promise<void> {
+    if (keepIds.length === 0) return;
+    const keep = new Set(keepIds);
+    this.store.dishes = this.store.dishes.filter((d) => keep.has(d.id));
+    this.persist();
+  }
+
   async logSale(sale: SaleLog): Promise<number> {
     const id = this.store.sales.length + 1;
     this.store.sales.push({ ...sale, id });

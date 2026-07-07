@@ -160,6 +160,12 @@ export class SqlRepo implements Repo {
     }
   }
 
+  async pruneDishes(keepIds: string[]): Promise<void> {
+    if (keepIds.length === 0) return; // garde-fou : ne jamais tout vider
+    const placeholders = keepIds.map((_, i) => `$${i + 1}`).join(",");
+    await this.db.execute(`DELETE FROM dishes_cache WHERE id NOT IN (${placeholders})`, keepIds);
+  }
+
   async logSale(sale: SaleLog): Promise<number> {
     const res = await this.db.execute(
       "INSERT INTO sales_log (locker_id, dish_id, amount, mode, paid_at, synced) VALUES ($1,$2,$3,$4,$5,$6)",
