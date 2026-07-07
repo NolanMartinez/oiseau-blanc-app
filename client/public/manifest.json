@@ -1,14 +1,19 @@
 {
+  "id": "/app/mon-frigo",
   "name": "Friggo",
   "short_name": "Friggo",
   "description": "Friggo — c'est bien fait, pour vous. Consultez les frigos connectés et donnez votre avis.",
   "start_url": "/app/mon-frigo",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone"],
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#319966",
   "lang": "fr",
+  "dir": "ltr",
+  "categories": ["food", "shopping", "business"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-512.png",
