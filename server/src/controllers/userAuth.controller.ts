@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import type { SubscriberRequest } from '../middleware/userAuth';
 import { ensureLoyaltyCode } from '../services/loyalty.service';
 import { getLoyaltyConfig } from '../services/settings.service';
+import { sendOtpEmail, sendWelcomeEmail } from '../services/email.service';
 
 const SUBSCRIBER_SELECT = {
   id: true, email: true, phone: true, favoriId: true, consentEmail: true, consentPush: true, createdAt: true,
@@ -40,7 +41,9 @@ export async function register(req: Request, res: Response): Promise<void> {
     select: SUBSCRIBER_SELECT,
   });
   // Attribue immédiatement un code fidélité unique (à chaque inscription).
-  await ensureLoyaltyCode(subscriber.id).catch(() => {});
+  const loyaltyCode = await ensureLoyaltyCode(subscriber.id).catch(() => null);
+  // Email de bienvenue réel (best-effort, ne bloque pas l'inscription).
+  void sendWelcomeEmail(email, loyaltyCode);
   logger.info({ email }, 'Nouveau compte créé');
   res.status(201).json({ token: makeToken(subscriber.id), subscriber });
 }
@@ -116,11 +119,16 @@ export async function requestOtp(req: Request, res: Response): Promise<void> {
 
   await prisma.otpCode.create({ data: { contact, code, expiresAt } });
 
-  logger.info({ contact }, `OTP généré : ${code}`);
+  // Envoi réel du code par email (si le contact est une adresse email).
+  let emailSent = false;
+  if (isEmail) {
+    emailSent = await sendOtpEmail(contact, code);
+  }
+  logger.info({ contact, emailSent }, 'OTP généré');
 
-  // TODO (production) : envoyer le code par email via Mailchimp ou par SMS
   const response: Record<string, unknown> = { message: 'Code envoyé' };
-  if (process.env.NODE_ENV !== 'production') {
+  // En dev (ou si l'email n'a pas pu partir), on renvoie le code pour ne pas bloquer les tests.
+  if (process.env.NODE_ENV !== 'production' || !emailSent) {
     response._devCode = code;
   }
 
