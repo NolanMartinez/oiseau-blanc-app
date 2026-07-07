@@ -4,6 +4,7 @@ import { Refrigerator, Star, Gift, User, ArrowLeft, Bell } from 'lucide-react';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { userApi } from '../../services/api';
 import { useLang, SUPPORTED_LANGS, type LangCode } from '../../context/LanguageContext';
+import { InstallBanner } from './InstallBanner';
 
 const NAV_ROUTES = [
   { to: '/app/mon-frigo', key: 'nav_fridge', Icon: Refrigerator },
@@ -162,6 +163,9 @@ export function AppLayout({ children, title, mapMode = false, back = false }: Ap
         <BellButton />
       </div>
       </header>
+
+      {/* Bannière « Installer l'application » (PWA) */}
+      <InstallBanner />
 
       {/* Content */}
       <main
