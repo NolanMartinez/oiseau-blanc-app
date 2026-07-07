@@ -40,16 +40,21 @@ export async function sendEmail(opts: { to: string; subject: string; html: strin
     return false;
   }
   try {
-    await tx.sendMail({
+    const info = await tx.sendMail({
       from: fromAddress(),
       to: opts.to,
       subject: opts.subject,
       text: opts.text ?? opts.html.replace(/<[^>]+>/g, ' '),
       html: opts.html,
     });
-    return true;
+    // On loggue la réponse exacte du serveur (accepté / refusé) pour diagnostiquer.
+    logger.info(
+      { to: opts.to, accepted: info.accepted, rejected: info.rejected, response: info.response },
+      'Email envoyé',
+    );
+    return (info.accepted?.length ?? 0) > 0;
   } catch (e) {
-    logger.error({ err: e, to: opts.to }, "Échec de l'envoi d'email");
+    logger.error({ err: e instanceof Error ? e.message : e, to: opts.to }, "Échec de l'envoi d'email");
     return false;
   }
 }
