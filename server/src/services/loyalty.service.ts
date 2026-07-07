@@ -17,7 +17,9 @@ export async function ensureLoyaltyCode(subscriberId: string): Promise<string> {
     where: { id: subscriberId },
     select: { loyaltyCode: true },
   });
-  if (existing?.loyaltyCode) return existing.loyaltyCode;
+  // On garde le code existant seulement s'il fait bien 5 chiffres. Un ancien code
+  // à 6 chiffres (généré avant le passage à 5) est régénéré → cohérent avec la borne.
+  if (existing?.loyaltyCode && /^\d{5}$/.test(existing.loyaltyCode)) return existing.loyaltyCode;
 
   for (let i = 0; i < 30; i++) {
     const code = String(Math.floor(10000 + Math.random() * 90000)); // 10000..99999

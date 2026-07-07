@@ -226,8 +226,8 @@ export async function getMe(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Attribue un code fidélité à 6 chiffres au premier affichage du profil.
-  const loyaltyCode = row.loyaltyCode ?? (await ensureLoyaltyCode(subscriberId));
+  // Attribue (ou régénère si ancien format) un code fidélité à 5 chiffres.
+  const loyaltyCode = await ensureLoyaltyCode(subscriberId);
   const config = await getLoyaltyConfig();
 
   const { _count, loyaltyCode: _lc, ...sub } = row;
