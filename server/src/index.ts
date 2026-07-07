@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import { logger } from './utils/logger';
 import { initVapid } from './services/push.service';
+import { initEmail } from './services/email.service';
 import { ensureCategories } from './services/categories';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
@@ -34,6 +35,7 @@ import accountingRoutes from './routes/accounting.routes';
 import loyaltyAdminRoutes from './routes/loyalty.admin.routes';
 
 initVapid();
+initEmail();
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;

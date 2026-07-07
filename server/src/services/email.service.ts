@@ -59,6 +59,18 @@ export function isEmailConfigured(): boolean {
   return configured;
 }
 
+// Vérifie la connexion SMTP au démarrage → log clair « Email prêt » ou l'erreur exacte.
+export function initEmail(): void {
+  const tx = getTransporter();
+  if (!tx) {
+    logger.warn('Email SMTP non configuré (SMTP_HOST/USER/PASS absents) — emails désactivés');
+    return;
+  }
+  tx.verify()
+    .then(() => logger.info(`Email SMTP prêt (expéditeur : ${fromAddress()})`))
+    .catch((e) => logger.error({ err: e }, 'Email SMTP : échec de connexion (vérifier host/port/identifiants)'));
+}
+
 const BRAND = '#319966';
 
 function layout(title: string, body: string): string {

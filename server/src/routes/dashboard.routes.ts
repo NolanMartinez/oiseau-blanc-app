@@ -61,7 +61,7 @@ router.get('/stats', async (_req, res) => {
       SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as date, COUNT(*) as count
       FROM avis
       WHERE created_at >= ${thirtyDaysAgo}
-      GROUP BY DATE(created_at)
+      GROUP BY date
       ORDER BY date ASC
     `,
 
@@ -70,7 +70,7 @@ router.get('/stats', async (_req, res) => {
       SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as date, COUNT(*) as count
       FROM abonnes
       WHERE created_at >= ${thirtyDaysAgo}
-      GROUP BY DATE(created_at)
+      GROUP BY date
       ORDER BY date ASC
     `,
 
@@ -91,7 +91,7 @@ router.get('/stats', async (_req, res) => {
       SELECT DATE_FORMAT(sold_at, '%Y-%m-%d') as date, COUNT(*) as count
       FROM ventes
       WHERE sold_at >= ${thirtyDaysAgo}
-      GROUP BY DATE(sold_at)
+      GROUP BY date
       ORDER BY date ASC
     `,
     prisma.sale.groupBy({ by: ['dishId'], _count: { _all: true }, _sum: { amount: true } }),
