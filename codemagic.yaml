@@ -1,0 +1,56 @@
+# Build iOS de l'app Friggo dans le cloud (Mac géré par Codemagic) → App Store.
+# Aucun Mac requis en local. À configurer une fois dans Codemagic :
+#   1. Connecter ce dépôt GitHub.
+#   2. Créer une intégration "App Store Connect" (clé API) et la nommer "Friggo ASC"
+#      (Codemagic → Teams → Integrations → App Store Connect).
+#   3. Enregistrer l'app dans App Store Connect avec le bundle id fr.oiseaublanc.friggo.
+# Ensuite : lancer le workflow → Codemagic build, signe et envoie sur TestFlight.
+
+workflows:
+  ios-app-store:
+    name: Friggo iOS — App Store
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Friggo ASC
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: fr.oiseaublanc.friggo
+      vars:
+        # URL de l'API (serveur VPS) intégrée au build web.
+        VITE_API_URL: "https://164.132.96.144.sslip.io"
+        XCODE_WORKSPACE: "client/ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+      xcode: latest
+      cocoapods: default
+      node: 20
+    scripts:
+      - name: Dépendances web
+        script: cd client && npm ci
+      - name: Build de l'app web
+        script: cd client && npm run build
+      - name: Capacitor sync iOS
+        script: cd client && npx cap sync ios
+      - name: Signature (profils gérés par Codemagic)
+        script: xcode-project use-profiles
+      - name: CocoaPods
+        script: cd client/ios/App && pod install
+      - name: Numéro de build (basé sur Codemagic)
+        script: |
+          cd client/ios/App
+          agvtool new-version -all "$(($BUILD_NUMBER + 1))" || true
+      - name: Construire l'IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Envoi automatique sur TestFlight (test interne). Mets true pour soumettre
+        # directement à la revue App Store une fois que tu es prêt.
+        submit_to_testflight: true
+        submit_to_app_store: false

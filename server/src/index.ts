@@ -50,7 +50,13 @@ app.use(cors({
     const isFriggo = /(^|\.)friggo\.fr$/.test((origin ?? '').replace(/^https?:\/\//, ''));
     // La borne (Tauri) envoie une origine type `tauri://localhost` / `*.tauri.localhost`.
     const isTauri = (origin ?? '').startsWith('tauri://') || /tauri\.localhost$/.test(origin ?? '');
-    if (!origin || origin === allowed || isLocalNetwork || isRailway || isNetlify || isFriggo || isTauri) {
+    // Les apps natives Capacitor (iOS/Android) envoient `capacitor://localhost`,
+    // `ionic://localhost` ou `http(s)://localhost`.
+    const o = origin ?? '';
+    const isCapacitor =
+      o.startsWith('capacitor://') || o.startsWith('ionic://') ||
+      o === 'http://localhost' || o === 'https://localhost';
+    if (!origin || origin === allowed || isLocalNetwork || isRailway || isNetlify || isFriggo || isTauri || isCapacitor) {
       cb(null, true);
     } else {
       // Ne JAMAIS throw ici (sinon erreur 500) : on refuse juste les en-têtes CORS.
