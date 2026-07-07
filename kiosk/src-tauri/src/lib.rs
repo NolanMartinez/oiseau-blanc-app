@@ -35,24 +35,15 @@ fn windows_startup_tasks() {
             .status();
     }
 
-    // 2) Arrête les services Windows dont le nom commence par « Brina » (best-effort).
-    if let Ok(out) = Command::new("sc").args(["query", "state=", "all"]).creation_flags(NO_WINDOW).output() {
-        let txt = String::from_utf8_lossy(&out.stdout);
-        for line in txt.lines() {
-            if let Some(rest) = line.trim().strip_prefix("SERVICE_NAME:") {
-                let name = rest.trim();
-                if name.to_lowercase().contains("brina") {
-                    let _ = Command::new("sc").args(["stop", name]).creation_flags(NO_WINDOW).status();
-                }
-            }
-        }
+    // 2) Coupe l'application constructeur pour libérer les ports COM du frigo.
+    //    IMPORTANT : « ProcessMonitoring.exe » est un watchdog qui relance Brina ;
+    //    on le tue EN PREMIER, sinon Brina repart aussitôt et re-bloque les ports.
+    for image in ["ProcessMonitoring.exe", "BrinaS941.exe", "Brina.exe"] {
+        let _ = Command::new("taskkill")
+            .args(["/F", "/T", "/IM", image])
+            .creation_flags(NO_WINDOW)
+            .status();
     }
-
-    // 3) Tue les processus « Brina* » restants (application non-service) → libère les COM.
-    let _ = Command::new("taskkill")
-        .args(["/F", "/T", "/FI", "IMAGENAME eq Brina*"])
-        .creation_flags(NO_WINDOW)
-        .status();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
