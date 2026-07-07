@@ -73,7 +73,7 @@ export async function syncMenu(
     }
     return { ok: true, dishCount: dishes.length };
   } catch (e) {
-    return { ok: false, dishCount: 0, error: e instanceof Error ? e.message : "Échec réseau" };
+    return { ok: false, dishCount: 0, error: `${base} — ${e instanceof Error ? e.message : "réseau"}` };
   }
 }
 
@@ -137,7 +137,7 @@ export async function syncCatalog(repo: Repo, backendUrl: string): Promise<SyncR
     await repo.pruneDishes(dishes.map((d) => d.id));
     return { ok: true, dishCount: dishes.length };
   } catch (e) {
-    return { ok: false, dishCount: 0, error: e instanceof Error ? e.message : "Échec réseau" };
+    return { ok: false, dishCount: 0, error: `${base}/dishes — ${e instanceof Error ? e.message : "réseau"}` };
   }
 }
 

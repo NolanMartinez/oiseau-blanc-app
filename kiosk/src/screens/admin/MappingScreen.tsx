@@ -163,7 +163,7 @@ export function MappingScreen() {
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] bg-white px-6 py-4">
         <h2 className="text-2xl font-extrabold">{t("mapping_title")}</h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {/* Sélecteur de distributeur */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-[var(--ink-faint)]">{t("dispenser")}</span>

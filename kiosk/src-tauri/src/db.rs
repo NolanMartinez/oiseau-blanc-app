@@ -82,5 +82,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0012_fix_corrupt_category.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 13,
+            description: "purge des donnees de demonstration (demo-%)",
+            sql: include_str!("../migrations/0013_purge_demo.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
