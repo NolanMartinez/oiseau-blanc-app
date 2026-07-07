@@ -89,6 +89,25 @@ export async function sendOtpEmail(to: string, code: string): Promise<boolean> {
   return sendEmail({ to, subject: `Votre code Friggo : ${code}`, html, text: `Votre code de connexion Friggo : ${code} (valable 10 minutes).` });
 }
 
+/** Email de notification (promo, nouveau plat, message de l'admin…). */
+export async function sendNotificationEmail(
+  to: string,
+  payload: { title: string; body: string; url?: string },
+): Promise<boolean> {
+  const appUrl = (process.env['APP_URL'] || 'https://app.friggo.fr').replace(/\/$/, '');
+  const link = payload.url
+    ? (payload.url.startsWith('http') ? payload.url : appUrl + payload.url)
+    : appUrl;
+  const html = layout(
+    payload.title,
+    `<p style="color:#374151;font-size:15px;line-height:1.6">${payload.body}</p>
+     <div style="margin:22px 0">
+       <a href="${link}" style="display:inline-block;background:${BRAND};color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 24px;border-radius:10px">Voir sur Friggo</a>
+     </div>`,
+  );
+  return sendEmail({ to, subject: payload.title, html, text: `${payload.body} — ${link}` });
+}
+
 /** Email de bienvenue à l'inscription (avec le code fidélité). */
 export async function sendWelcomeEmail(to: string, loyaltyCode?: string | null): Promise<boolean> {
   const loyalty = loyaltyCode

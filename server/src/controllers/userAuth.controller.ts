@@ -37,7 +37,8 @@ export async function register(req: Request, res: Response): Promise<void> {
   }
   const passwordHash = await bcrypt.hash(password, 10);
   const subscriber = await prisma.subscriber.create({
-    data: { email, passwordHash },
+    // Consentement email activé par défaut (l'utilisateur peut le couper dans son profil).
+    data: { email, passwordHash, consentEmail: true },
     select: SUBSCRIBER_SELECT,
   });
   // Attribue immédiatement un code fidélité unique (à chaque inscription).

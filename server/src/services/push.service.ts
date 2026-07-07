@@ -1,6 +1,21 @@
 import webpush from 'web-push';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { sendNotificationEmail } from './email.service';
+
+// Envoie la même notification par EMAIL aux abonnés ayant consenti (email non nul).
+// `where` restreint la cible (ex. frigo favori) ; best-effort, ne bloque jamais.
+async function emailSubscribers(
+  where: Prisma.SubscriberWhereInput,
+  payload: PushPayload,
+): Promise<number> {
+  const subs = await prisma.subscriber.findMany({ where, select: { email: true } });
+  const results = await Promise.allSettled(
+    subs.map((s) => sendNotificationEmail(s.email as string, payload)),
+  );
+  return results.filter((r) => r.status === 'fulfilled' && r.value).length;
+}
 
 export function initVapid() {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
@@ -72,6 +87,9 @@ export async function broadcastPush(payload: PushPayload): Promise<{ sent: numbe
     subscribers.map((s) => sendToSubscriber(s.id, payload))
   );
 
+  // + envoi par email aux abonnés ayant activé les emails.
+  await emailSubscribers({ consentEmail: true, email: { not: null } }, payload);
+
   const sent = results.filter((r) => r.status === 'fulfilled' && r.value).length;
   return { sent, total: subscribers.length };
 }
@@ -92,6 +110,9 @@ export async function notifyFridgeSubscribers(
   const results = await Promise.allSettled(
     subscribers.map((s) => sendToSubscriber(s.id, payload)),
   );
+
+  // + envoi par email aux abonnés de ce frigo ayant activé les emails (promo, nouveau plat).
+  await emailSubscribers({ favoriId: frigoId, consentEmail: true, email: { not: null } }, payload);
 
   const sent = results.filter((r) => r.status === 'fulfilled' && r.value).length;
   return { sent, total: subscribers.length };
