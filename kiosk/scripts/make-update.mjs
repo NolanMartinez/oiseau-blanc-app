@@ -11,10 +11,12 @@ const version = conf.version;
 
 const nsisDir = path.join(root, "target/release/bundle/nsis");
 const files = fs.readdirSync(nsisDir);
-const setup = files.find((f) => f.endsWith("-setup.exe"));
-const sig = files.find((f) => f.endsWith("-setup.exe.sig"));
+// IMPORTANT : filtrer sur la VERSION courante (le dossier peut contenir les .sig
+// de builds précédents → sinon on prend la mauvaise signature).
+const setup = files.find((f) => f.includes(version) && f.endsWith("-setup.exe"));
+const sig = files.find((f) => f.includes(version) && f.endsWith("-setup.exe.sig"));
 if (!setup || !sig) {
-  console.error("Installeur (-setup.exe) ou signature (.sig) introuvable. As-tu buildé AVEC la clé de signature ?");
+  console.error(`Installeur/signature v${version} introuvable dans ${nsisDir}. As-tu buildé AVEC la clé de signature ?`);
   process.exit(1);
 }
 
