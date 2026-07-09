@@ -52,7 +52,7 @@ export function LiaisonsScreen() {
         comPort: d?.comPort ?? "",
         baud: d?.baud ?? 57600,
         parity: d?.parity ?? "none",
-        enabled: d?.enabled ?? false,
+        enabled: d?.enabled ?? true,
       };
     }
     setLinks(next);

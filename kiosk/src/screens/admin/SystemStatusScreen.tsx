@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Wifi, WifiOff, CreditCard, RadioTower, RefreshCw, Thermometer, HardDrive, Cpu, Snowflake } from "lucide-react";
 import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
@@ -28,21 +28,43 @@ export function SystemStatusScreen() {
     window.setTimeout(() => setDefrostMsg(""), 2000);
   }
 
+  // Température : on échantillonne souvent (30 s) mais on N'AFFICHE qu'une MOYENNE,
+  // rafraîchie toutes les 5 min → valeur stable et représentative (pas de sauts).
+  const samplesRef = useRef<number[]>([]);
   useEffect(() => {
     let active = true;
-    async function refresh() {
+
+    async function sample() {
       const tp = await hardware.readTemperature("A");
+      if (typeof tp === "number") samplesRef.current.push(tp);
       const net = await pingBackend(setting(SETTING_KEYS.backendUrl));
-      if (active) {
-        setTemp(tp);
-        setOnline(net);
-      }
+      if (active) setOnline(net);
     }
-    refresh();
-    const id = window.setInterval(refresh, 5000);
+
+    function publishAverage() {
+      const s = samplesRef.current;
+      if (s.length === 0) return;
+      const avg = s.reduce((a, b) => a + b, 0) / s.length;
+      if (active) setTemp(Math.round(avg * 10) / 10);
+      samplesRef.current = [];
+    }
+
+    // Lecture initiale immédiate (sinon l'écran resterait vide jusqu'à la 1re moyenne).
+    (async () => {
+      const tp = await hardware.readTemperature("A");
+      if (typeof tp === "number") {
+        samplesRef.current.push(tp);
+        if (active) setTemp(tp);
+      }
+      if (active) setOnline(await pingBackend(setting(SETTING_KEYS.backendUrl)));
+    })();
+
+    const sampleId = window.setInterval(sample, 30_000); // échantillon toutes les 30 s
+    const avgId = window.setInterval(publishAverage, 5 * 60_000); // moyenne toutes les 5 min
     return () => {
       active = false;
-      clearInterval(id);
+      clearInterval(sampleId);
+      clearInterval(avgId);
     };
   }, [setting]);
 

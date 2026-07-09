@@ -30,3 +30,6 @@ fichier a analyser/
 
 # Export/import BDD OVH (généré localement, contient des données)
 server/prisma/ovh/
+
+# Fichiers de mise à jour générés (trop gros pour git, hébergés sur le VPS)
+kiosk/release-updates/

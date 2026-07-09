@@ -88,5 +88,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0013_purge_demo.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 14,
+            description: "active toutes les liaisons par defaut",
+            sql: include_str!("../migrations/0014_enable_all_boards.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
