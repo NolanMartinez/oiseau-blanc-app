@@ -4,7 +4,7 @@ import { prisma } from '../utils/prisma';
 import { getFridgeMeta } from '../services/fridges';
 import { markSeen, getStatus } from '../services/fridgeStatus';
 import { enqueueCommand, drainCommands } from '../services/remoteCommands';
-import { notifyFridgeSubscribers } from '../services/push.service';
+import { scheduleNewDishNotification } from '../services/newDishNotifier';
 import { creditPurchaseByCode } from '../services/loyalty.service';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -343,19 +343,14 @@ export async function syncFridgeMenu(req: Request, res: Response): Promise<void>
 
   markSeen(fid);
 
-  // Notification automatique : dès qu'un plat est physiquement ajouté à la borne
-  // (donc nouveau dans ce frigo), on prévient les abonnés de ce frigo. Le garde-fou
+  // Notification automatique « nouveau plat » : REGROUPÉE. Pendant que le livreur
+  // garnit le frigo, on n'envoie pas une notif par plat — on accumule et on envoie
+  // UNE seule notif 20 min après le dernier ajout (voir newDishNotifier). Le garde-fou
   // `beforeIds.size > 0` évite d'alerter lors du tout premier garnissage du frigo.
   if (beforeIds.size > 0) {
     const added = dishes.filter((d) => !beforeIds.has(d.id));
     if (added.length > 0) {
-      const noms = added.map((d) => d.name).join(', ');
-      void notifyFridgeSubscribers(fid, {
-        title: `Nouveau au ${meta.name}`,
-        body: added.length === 1 ? `${noms} vient d'arriver !` : `Nouveaux plats : ${noms}`,
-        url: '/app/mon-frigo',
-        tag: `newdish-${fid}`,
-      }).catch(() => {});
+      scheduleNewDishNotification(fid, meta.name, added.map((d) => d.name));
     }
   }
 
