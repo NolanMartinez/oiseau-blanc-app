@@ -98,6 +98,11 @@ app.use('/api/v1/livreur', livreurRoutes);
 app.use('/api/v1/admin/accounting', accountingRoutes);
 app.use('/api/v1/admin/loyalty', loyaltyAdminRoutes);
 
+// Mises à jour de l'app borne (auto-updater Tauri) : sert /opt/friggo/updates
+// (latest.json + l'installeur signé). La borne interroge /updates/latest.json.
+const updatesDir = path.join(process.cwd(), '..', 'updates');
+app.use('/updates', express.static(updatesDir));
+
 // Servir le build React si le dossier dist existe
 const clientDist = path.join(process.cwd(), 'client', 'dist');
 logger.info(`[static] clientDist = ${clientDist} | exists = ${fs.existsSync(clientDist)}`);

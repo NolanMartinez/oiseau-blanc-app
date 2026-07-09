@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { RefreshCw, Check } from "lucide-react";
+import { RefreshCw, Check, Download } from "lucide-react";
 import { useLang, SUPPORTED_LANGS, type LangCode } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
+import { checkAndInstallUpdate } from "../../platform/updater";
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -19,9 +20,10 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 export function SettingsScreen() {
   const { t, lang, setLang } = useLang();
-  const { settings, setSetting, runSync } = useKiosk();
+  const { settings, setSetting } = useKiosk();
   const [toast, setToast] = useState("");
-  const [syncing, setSyncing] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState("");
 
   function flash(msg: string) {
     setToast(msg);
@@ -33,11 +35,21 @@ export function SettingsScreen() {
     flash(t("saved"));
   }
 
-  async function doSync() {
-    setSyncing(true);
-    const res = await runSync();
-    setSyncing(false);
-    flash(res.ok ? t("synced", { n: res.dishCount }) : `${t("sync_failed")} : ${res.error ?? ""}`);
+  // Vérifie et installe une mise à jour de l'application (auto-updater Tauri).
+  async function doUpdate() {
+    setUpdating(true);
+    await checkAndInstallUpdate((s) => {
+      switch (s.kind) {
+        case "checking": setUpdateMsg(t("update_checking")); break;
+        case "uptodate": setUpdateMsg(t("update_uptodate")); break;
+        case "available": setUpdateMsg(t("update_available", { v: s.version })); break;
+        case "downloading": setUpdateMsg(t("update_downloading", { n: s.percent })); break;
+        case "installing": setUpdateMsg(t("update_installing")); break;
+        case "done": setUpdateMsg(t("update_done")); break;
+        case "error": setUpdateMsg(`${t("update_error")} : ${s.message}`); break;
+      }
+    });
+    setUpdating(false);
   }
 
   const get = (k: string, fb = "") => settings[k] ?? fb;
@@ -46,14 +58,17 @@ export function SettingsScreen() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-[var(--line)] bg-white px-6 py-4">
         <h2 className="text-2xl font-extrabold">{t("settings_title")}</h2>
-        <button
-          onClick={doSync}
-          disabled={syncing}
-          className="flex items-center gap-2 rounded-xl bg-[var(--blue)] px-4 py-2.5 font-bold text-white active:opacity-80 disabled:opacity-50"
-        >
-          <RefreshCw size={18} className={syncing ? "animate-spin" : ""} />
-          {t("check_updates")}
-        </button>
+        <div className="flex items-center gap-3">
+          {updateMsg && <span className="text-sm font-semibold text-[var(--ink-soft)]">{updateMsg}</span>}
+          <button
+            onClick={doUpdate}
+            disabled={updating}
+            className="flex items-center gap-2 rounded-xl bg-[var(--blue)] px-4 py-2.5 font-bold text-white active:opacity-80 disabled:opacity-50"
+          >
+            {updating ? <RefreshCw size={18} className="animate-spin" /> : <Download size={18} />}
+            {t("check_updates")}
+          </button>
+        </div>
       </div>
 
       {toast && (

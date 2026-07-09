@@ -53,6 +53,8 @@ pub fn run() {
     let device = Arc::new(Device::new());
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|_app| {
             // Démarrage auto + libération des ports COM (Brina), en tâche de fond
             // pour ne pas retarder l'affichage de la borne.
