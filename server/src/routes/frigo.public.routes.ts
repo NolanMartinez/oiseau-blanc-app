@@ -8,6 +8,7 @@ import {
   pullFridgeCommands,
 } from '../controllers/frigo.controller';
 import { loyaltyLookup, loyaltyRedeem } from '../controllers/loyalty.controller';
+import { sendReceipt } from '../controllers/receipt.controller';
 
 const router = Router();
 
@@ -24,5 +25,7 @@ router.get('/frigos/:id/commands', pullFridgeCommands);
 // Fidélité : consultation du solde (avant paiement) et échange d'un repas offert.
 router.post('/frigos/:id/loyalty/lookup', loyaltyLookup);
 router.post('/frigos/:id/loyalty/redeem', loyaltyRedeem);
+// Justificatif d'achat (reçu) envoyé par email.
+router.post('/frigos/:id/receipt', sendReceipt);
 
 export default router;

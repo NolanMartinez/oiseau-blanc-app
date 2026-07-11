@@ -214,6 +214,34 @@ export async function resyncSales(repo: Repo, backendUrl: string, frigoId: strin
   return sent;
 }
 
+/**
+ * Envoie un justificatif d'achat (reçu) par email. Destinataire = email du compte
+ * fidélité si `loyaltyCode` fourni, sinon l'email saisi. Renvoie true si envoyé.
+ */
+export async function sendReceipt(
+  backendUrl: string,
+  frigoId: string,
+  data: {
+    email?: string;
+    loyaltyCode?: string;
+    items: { name: string; amountCents: number }[];
+    soldAt?: string;
+  },
+): Promise<boolean> {
+  if (!backendUrl || !frigoId) return false;
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/receipt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /** Solde de fidélité renvoyé par le serveur. */
 export interface LoyaltyStatus {
   subscriberId: string;

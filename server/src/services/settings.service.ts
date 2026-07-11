@@ -29,3 +29,41 @@ export async function setLoyaltyConfig(config: LoyaltyConfig): Promise<LoyaltyCo
   });
   return config;
 }
+
+// Coordonnées de l'entreprise pour les reçus (justificatifs d'achat).
+export interface CompanyInfo {
+  name: string;
+  address: string;
+  siret: string;
+  tvaNumber: string; // n° TVA intracommunautaire (facultatif)
+  tvaRate: number; // taux de TVA en % appliqué aux plats (ex. 10)
+}
+
+const COMPANY_KEY = 'company';
+const DEFAULT_COMPANY: CompanyInfo = {
+  name: "L'Oiseau Blanc Traiteur",
+  address: '59 rue Roger Salengro, 59770 Marly',
+  siret: '',
+  tvaNumber: '',
+  tvaRate: 10,
+};
+
+export async function getCompanyInfo(): Promise<CompanyInfo> {
+  const row = await prisma.appSetting.findUnique({ where: { key: COMPANY_KEY } });
+  if (!row) return { ...DEFAULT_COMPANY };
+  try {
+    return { ...DEFAULT_COMPANY, ...(JSON.parse(row.value) as Partial<CompanyInfo>) };
+  } catch {
+    return { ...DEFAULT_COMPANY };
+  }
+}
+
+export async function setCompanyInfo(info: CompanyInfo): Promise<CompanyInfo> {
+  const value = JSON.stringify(info);
+  await prisma.appSetting.upsert({
+    where: { key: COMPANY_KEY },
+    create: { key: COMPANY_KEY, value },
+    update: { value },
+  });
+  return info;
+}

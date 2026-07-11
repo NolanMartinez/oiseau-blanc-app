@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { hardware, type LockerPhase, type PaymentPhase } from "../../hardware";
 import { useKiosk, type GroupedDish } from "../../state/kiosk";
 import { SETTING_KEYS } from "../../db";
-import { pushSale, loyaltyRedeem, type LoyaltyStatus } from "../../sync";
+import { pushSale, loyaltyRedeem, sendReceipt, type LoyaltyStatus } from "../../sync";
 import { useLang } from "../../i18n";
 import type { CartLine } from "../../state/cart";
 import { IdleScreen } from "./IdleScreen";
@@ -13,6 +13,7 @@ import { CartScreen } from "./CartScreen";
 import { IdentifyScreen } from "./IdentifyScreen";
 import { PaymentScreen } from "./PaymentScreen";
 import { OpeningScreen } from "./OpeningScreen";
+import { ReceiptScreen } from "./ReceiptScreen";
 import { ThanksScreen } from "./ThanksScreen";
 
 type Screen =
@@ -24,7 +25,10 @@ type Screen =
   | "identify"
   | "payment"
   | "opening"
+  | "receipt"
   | "thanks";
+
+interface ReceiptItem { name: string; amountCents: number }
 
 const IDLE_TIMEOUT_MS = 60_000;
 const SHOPPING_SCREENS: Screen[] = ["categories", "menu", "detail", "cart"];
@@ -45,6 +49,11 @@ export function CustomerApp() {
   const [code, setCode] = useState(""); // code fidélité saisi (vide = anonyme)
   const [loyalty, setLoyalty] = useState<LoyaltyStatus | null>(null);
   const [useReward, setUseReward] = useState(false); // le client échange un repas offert
+
+  // ── Reçu (justificatif) ──────────────────────────────────────────────────────
+  const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
+  const [receiptSending, setReceiptSending] = useState(false);
+  const [receiptMsg, setReceiptMsg] = useState("");
 
   const currency = setting(SETTING_KEYS.currency, "EUR");
   const requiresPayment =
@@ -99,6 +108,9 @@ export function CustomerApp() {
     setCode("");
     setLoyalty(null);
     setUseReward(false);
+    setReceiptItems([]);
+    setReceiptSending(false);
+    setReceiptMsg("");
     setScreen("idle");
   }
 
@@ -191,12 +203,19 @@ export function CustomerApp() {
           freeLine.dishId,
         );
       }
+      // Prépare les lignes du reçu (montant réellement facturé : 0 pour un repas offert).
+      setReceiptItems(
+        lines.map((l) => ({
+          name: l.name,
+          amountCents: l.lockerId === freeLockerId ? 0 : l.priceCents,
+        })),
+      );
       setOpenLines(lines);
       setOpenStep(0);
       setScreen("opening");
       await openAt(lines, 0);
     },
-    [openAt, useReward, code, freeLine, setting],
+    [openAt, useReward, code, freeLine, freeLockerId, setting],
   );
 
   // Bouton SUIVANT / Terminé : passe au casier suivant ou clôt la vente.
@@ -206,14 +225,34 @@ export function CustomerApp() {
       setOpenStep(next);
       await openAt(openLines, next);
     } else {
-      // Fin de vente : on affiche « merci » tout de suite (le rechargement se fait
-      // en arrière-plan) et on revient à l'accueil rapidement.
+      // Fin de vente : on propose le reçu par email (achats payants), sinon « merci ».
       setCart([]);
-      setScreen("thanks");
+      if (requiresPayment) {
+        setScreen("receipt");
+      } else {
+        setScreen("thanks");
+        void reload();
+        window.setTimeout(() => goIdle(), 2600);
+      }
+    }
+  }, [openStep, openLines, openAt, reload, requiresPayment]);
+
+  // ── Reçu : envoi du justificatif puis retour accueil ──────────────────────
+  const sendReceiptThen = useCallback(
+    async (payload: { email?: string; loyaltyCode?: string }) => {
+      setReceiptSending(true);
+      const ok = await sendReceipt(setting(SETTING_KEYS.backendUrl), setting(SETTING_KEYS.frigoId), {
+        ...payload,
+        items: receiptItems,
+        soldAt: new Date().toISOString(),
+      });
+      setReceiptSending(false);
+      setReceiptMsg(ok ? t("receipt_sent") : t("receipt_failed"));
       void reload();
       window.setTimeout(() => goIdle(), 2600);
-    }
-  }, [openStep, openLines, openAt, reload]);
+    },
+    [setting, receiptItems, reload, t],
+  );
 
   // ── Paiement (total du panier) ────────────────────────────────────────────
   const startPayment = useCallback(
@@ -337,6 +376,17 @@ export function CustomerApp() {
           index={openStep + 1}
           total={openLines.length}
           onNext={onNextLocker}
+        />
+      )}
+
+      {screen === "receipt" && (
+        <ReceiptScreen
+          hasLoyaltyCode={!!code}
+          sending={receiptSending}
+          sentMsg={receiptMsg}
+          onSendWithCode={() => void sendReceiptThen({ loyaltyCode: code })}
+          onSendWithEmail={(email) => void sendReceiptThen({ email })}
+          onSkip={goIdle}
         />
       )}
 

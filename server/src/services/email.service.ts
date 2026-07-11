@@ -125,6 +125,72 @@ export async function sendNotificationEmail(
   return sendEmail({ to, subject: payload.title, html, text: `${payload.body} — ${link}` });
 }
 
+export interface ReceiptItem {
+  name: string;
+  amountCents: number; // prix TTC payé, en centimes
+}
+export interface ReceiptCompany {
+  name: string;
+  address: string;
+  siret: string;
+  tvaNumber: string;
+  tvaRate: number; // %
+}
+
+const eur = (cents: number) => (cents / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+/** Envoie un justificatif d'achat (ticket) avec HT / TVA / TTC et les coordonnées de l'entreprise. */
+export async function sendReceiptEmail(
+  to: string,
+  data: { company: ReceiptCompany; items: ReceiptItem[]; soldAt: Date; fridgeName?: string },
+): Promise<boolean> {
+  const { company, items, soldAt } = data;
+  const rate = company.tvaRate || 0;
+  const totalTTC = items.reduce((s, i) => s + i.amountCents, 0);
+  const totalHT = Math.round(totalTTC / (1 + rate / 100));
+  const totalTVA = totalTTC - totalHT;
+
+  const dateStr = soldAt.toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+
+  const rows = items
+    .map((i) => {
+      const ht = Math.round(i.amountCents / (1 + rate / 100));
+      return `<tr>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee">${i.name}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${eur(ht)}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:600">${eur(i.amountCents)}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const body = `
+    <div style="color:#374151;font-size:13px;line-height:1.5;margin-bottom:14px">
+      <div style="font-weight:800;color:#111827;font-size:15px">${company.name}</div>
+      ${company.address ? `<div>${company.address}</div>` : ''}
+      ${company.siret ? `<div>SIRET : ${company.siret}</div>` : ''}
+      ${company.tvaNumber ? `<div>TVA : ${company.tvaNumber}</div>` : ''}
+    </div>
+    <p style="color:#6b7280;font-size:13px;margin:0 0 4px">${dateStr}${data.fridgeName ? ` — ${data.fridgeName}` : ''}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px">
+      <thead>
+        <tr style="color:#9ca3af;font-size:11px;text-transform:uppercase">
+          <th style="text-align:left;padding:6px">Article</th>
+          <th style="text-align:right;padding:6px">HT</th>
+          <th style="text-align:right;padding:6px">TTC</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <table style="width:100%;font-size:13px;margin-top:14px">
+      <tr><td style="padding:3px 6px;color:#6b7280">Total HT</td><td style="padding:3px 6px;text-align:right">${eur(totalHT)}</td></tr>
+      <tr><td style="padding:3px 6px;color:#6b7280">TVA (${rate}%)</td><td style="padding:3px 6px;text-align:right">${eur(totalTVA)}</td></tr>
+      <tr><td style="padding:8px 6px;font-weight:800;color:#111827;border-top:2px solid ${BRAND}">Total TTC</td><td style="padding:8px 6px;text-align:right;font-weight:800;color:${BRAND};border-top:2px solid ${BRAND}">${eur(totalTTC)}</td></tr>
+    </table>`;
+
+  const html = layout('Votre justificatif d\'achat', body);
+  return sendEmail({ to, subject: `Votre reçu ${company.name} — ${eur(totalTTC)}`, html });
+}
+
 /** Email de bienvenue à l'inscription (avec le code fidélité). */
 export async function sendWelcomeEmail(to: string, loyaltyCode?: string | null): Promise<boolean> {
   const loyalty = loyaltyCode

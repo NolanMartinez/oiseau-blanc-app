@@ -33,6 +33,7 @@ import recommendationRoutes from './routes/recommendation.routes';
 import livreurRoutes from './routes/livreur.routes';
 import accountingRoutes from './routes/accounting.routes';
 import loyaltyAdminRoutes from './routes/loyalty.admin.routes';
+import companyAdminRoutes from './routes/company.admin.routes';
 
 initVapid();
 initEmail();
@@ -97,6 +98,7 @@ app.use('/api/v1/admin/notifications', pushAdminRoutes);
 app.use('/api/v1/livreur', livreurRoutes);
 app.use('/api/v1/admin/accounting', accountingRoutes);
 app.use('/api/v1/admin/loyalty', loyaltyAdminRoutes);
+app.use('/api/v1/admin/company', companyAdminRoutes);
 
 // Mises à jour de l'app borne (auto-updater Tauri) : sert /opt/friggo/updates
 // (latest.json + l'installeur signé). La borne interroge /updates/latest.json.
