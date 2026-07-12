@@ -56,11 +56,13 @@ workflows:
         submit_to_app_store: false
 
   # ── ANDROID → Google Play ───────────────────────────────────────────────────
-  # À configurer une fois dans Codemagic :
-  #   1. Android code signing : créer/importer un keystore, nommé "friggo_keystore"
-  #      (Codemagic expose CM_KEYSTORE_PATH, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD).
-  #   2. Intégration Google Play : ajouter le JSON du compte de service dans un
-  #      groupe de variables "google_play" (variable GCLOUD_SERVICE_ACCOUNT_CREDENTIALS).
+  # Pré-requis dans Codemagic : Android code signing → créer un keystore nommé
+  # "friggo_keystore" (Codemagic expose CM_KEYSTORE_PATH, CM_KEYSTORE_PASSWORD,
+  # CM_KEY_ALIAS, CM_KEY_PASSWORD).
+  #
+  # 1er build : produit un .aab signé (artefact) → à télécharger et à uploader À LA
+  # MAIN dans la Play Console (Google impose un premier upload manuel).
+  # Auto-publication ensuite : voir le bloc `publishing` commenté en bas.
   android-play-store:
     name: Friggo Android — Play Store
     instance_type: linux_x2
@@ -68,8 +70,6 @@ workflows:
     environment:
       android_signing:
         - friggo_keystore
-      groups:
-        - google_play
       vars:
         VITE_API_URL: "https://164.132.96.144.sslip.io"
         PACKAGE_NAME: "fr.oiseaublanc.friggo"
@@ -100,8 +100,10 @@ workflows:
           ./gradlew bundleRelease
     artifacts:
       - client/android/app/build/outputs/**/*.aab
-    publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        # Canal de publication : 'internal' (test) → passe à 'production' quand tu es prêt.
-        track: internal
+    # Auto-publication (À ACTIVER après le 1er upload manuel) : décommente et ajoute
+    # un groupe de variables "google_play" avec GCLOUD_SERVICE_ACCOUNT_CREDENTIALS,
+    # et remets `groups: [google_play]` dans environment.
+    # publishing:
+    #   google_play:
+    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #     track: internal
