@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Friggo</string>
+    <string name="title_activity_main">Friggo</string>
+    <string name="package_name">fr.oiseaublanc.friggo</string>
+    <string name="custom_url_scheme">fr.oiseaublanc.friggo</string>
+</resources>

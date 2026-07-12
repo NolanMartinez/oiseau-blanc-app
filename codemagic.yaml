@@ -54,3 +54,54 @@ workflows:
         # directement à la revue App Store une fois que tu es prêt.
         submit_to_testflight: true
         submit_to_app_store: false
+
+  # ── ANDROID → Google Play ───────────────────────────────────────────────────
+  # À configurer une fois dans Codemagic :
+  #   1. Android code signing : créer/importer un keystore, nommé "friggo_keystore"
+  #      (Codemagic expose CM_KEYSTORE_PATH, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD).
+  #   2. Intégration Google Play : ajouter le JSON du compte de service dans un
+  #      groupe de variables "google_play" (variable GCLOUD_SERVICE_ACCOUNT_CREDENTIALS).
+  android-play-store:
+    name: Friggo Android — Play Store
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      android_signing:
+        - friggo_keystore
+      groups:
+        - google_play
+      vars:
+        VITE_API_URL: "https://164.132.96.144.sslip.io"
+        PACKAGE_NAME: "fr.oiseaublanc.friggo"
+      node: 20
+      java: 17
+    scripts:
+      - name: Dépendances web
+        script: cd client && npm ci
+      - name: Build de l'app web
+        script: cd client && npm run build
+      - name: Capacitor sync Android
+        script: cd client && npx cap sync android
+      - name: Fichier de signature (key.properties)
+        script: |
+          cat > client/android/key.properties <<EOF
+          storeFile=$CM_KEYSTORE_PATH
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          keyPassword=$CM_KEY_PASSWORD
+          EOF
+      - name: Numéro de build
+        script: |
+          cd client/android
+          sed -i "s/versionCode 1/versionCode $BUILD_NUMBER/" app/build.gradle || true
+      - name: Construire l'AAB signé
+        script: |
+          cd client/android
+          ./gradlew bundleRelease
+    artifacts:
+      - client/android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        # Canal de publication : 'internal' (test) → passe à 'production' quand tu es prêt.
+        track: internal

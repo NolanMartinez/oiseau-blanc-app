@@ -33,3 +33,9 @@ server/prisma/ovh/
 
 # Fichiers de mise à jour générés (trop gros pour git, hébergés sur le VPS)
 kiosk/release-updates/
+
+# Secrets de signature Android (créés par la CI)
+client/android/key.properties
+*.jks
+*.keystore
+client/android/app/google-services.json
