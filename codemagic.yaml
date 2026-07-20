@@ -95,10 +95,12 @@ workflows:
       - name: Numéro de build
         script: |
           cd client/android
-          sed -i "s/versionCode 1/versionCode $BUILD_NUMBER/" app/build.gradle || true
+          # -i.bak fonctionne sur macOS (BSD sed) comme sur Linux (GNU sed)
+          sed -i.bak "s/versionCode 1/versionCode $BUILD_NUMBER/" app/build.gradle && rm -f app/build.gradle.bak || true
       - name: Construire l'AAB signé
         script: |
           cd client/android
+          chmod +x ./gradlew
           ./gradlew bundleRelease
     artifacts:
       - client/android/app/build/outputs/**/*.aab
