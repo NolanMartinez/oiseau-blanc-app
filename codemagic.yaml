@@ -65,7 +65,9 @@ workflows:
   # Auto-publication ensuite : voir le bloc `publishing` commenté en bas.
   android-play-store:
     name: Friggo Android — Play Store
-    instance_type: linux_x2
+    # mac_mini_m2 : seule instance incluse dans le plan gratuit Codemagic
+    # (linux_x2 exige la facturation activée). Android compile très bien sur Mac.
+    instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
       android_signing:
