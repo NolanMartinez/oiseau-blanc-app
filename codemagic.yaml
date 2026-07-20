@@ -69,7 +69,7 @@ workflows:
     max_build_duration: 60
     environment:
       android_signing:
-        - friggo_keystore
+        - Friggo
       vars:
         VITE_API_URL: "https://164.132.96.144.sslip.io"
         PACKAGE_NAME: "fr.oiseaublanc.friggo"
