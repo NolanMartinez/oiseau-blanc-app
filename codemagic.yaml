@@ -24,7 +24,7 @@ workflows:
         XCODE_SCHEME: "App"
       xcode: latest
       cocoapods: default
-      node: 20
+      node: 22
     scripts:
       - name: Dépendances web
         script: cd client && npm ci
@@ -75,7 +75,7 @@ workflows:
       vars:
         VITE_API_URL: "https://164.132.96.144.sslip.io"
         PACKAGE_NAME: "fr.oiseaublanc.friggo"
-      node: 20
+      node: 22
       java: 17
     scripts:
       - name: Dépendances web
