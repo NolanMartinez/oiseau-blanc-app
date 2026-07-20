@@ -76,7 +76,7 @@ workflows:
         VITE_API_URL: "https://164.132.96.144.sslip.io"
         PACKAGE_NAME: "fr.oiseaublanc.friggo"
       node: 22
-      java: 17
+      java: 21
     scripts:
       - name: Dépendances web
         script: cd client && npm ci
