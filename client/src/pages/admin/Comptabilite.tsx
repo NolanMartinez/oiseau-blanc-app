@@ -20,11 +20,19 @@ interface ProductRow {
   revenue: number;
 }
 
+interface SiteRow {
+  site: string;
+  machines: string[];
+  count: number;
+  revenue: number;
+}
+
 interface Stats {
   totalTransactions: number;
   totalRevenue: number;
   breakdown: BreakdownRow[];
   byProduct: ProductRow[];
+  bySite: SiteRow[];
   granularity: 'daily' | 'monthly';
 }
 
@@ -310,6 +318,42 @@ export function Comptabilite() {
                 +{stats.breakdown.length - 10} lignes supplémentaires dans l'export
               </div>
             )}
+          </div>
+        )}
+
+        {/* Détail par site — uniquement en vue « toutes les machines ».
+            Regroupe le CA par site (location du frigo). */}
+        {!frigoId && stats && stats.bySite && stats.bySite.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Détail par site</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Site</th>
+                    <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Machines</th>
+                    <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ventes</th>
+                    <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">CA (€)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {stats.bySite.map((row) => (
+                    <tr key={row.site} className="hover:bg-gray-50">
+                      <td className="px-5 py-2.5 text-gray-800 font-medium">{row.site}</td>
+                      <td className="px-5 py-2.5 text-gray-500">
+                        {row.machines.length > 1 ? `${row.machines.length} machines` : (row.machines[0] ?? '—')}
+                      </td>
+                      <td className="px-5 py-2.5 text-right text-gray-700 font-semibold tabular-nums">{row.count}</td>
+                      <td className="px-5 py-2.5 text-right text-gray-800 font-semibold tabular-nums">
+                        {row.revenue.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

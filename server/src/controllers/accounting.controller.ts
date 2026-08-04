@@ -112,6 +112,31 @@ export async function getAccountingStats(req: Request, res: Response): Promise<v
     .map(([dishId, e]) => ({ dishId, name: e.name, category: e.category, count: e.count, revenue: Math.round(e.revenue * 100) / 100 }))
     .sort((a, b) => b.count - a.count);
 
+  // Détail par site : regroupe les ventes par site (champ `location` du frigo).
+  // Plusieurs machines peuvent partager un même site. Si le site n'est pas
+  // renseigné, on retombe sur le nom de la machine. Surtout utile en vue
+  // « toutes les machines ».
+  const fridges = await prisma.fridge.findMany({ select: { id: true, name: true, location: true } });
+  const fridgeMap = new Map(fridges.map((f) => [f.id, f]));
+  const siteMap = new Map<string, { site: string; count: number; revenue: number; machines: Set<string> }>();
+  for (const p of purchases) {
+    const f = fridgeMap.get(p.frigoId);
+    const site = (f?.location && f.location.trim()) || f?.name || p.frigoId;
+    const e = siteMap.get(site) ?? { site, count: 0, revenue: 0, machines: new Set<string>() };
+    e.count += 1;
+    e.revenue += p.dishPrice;
+    if (f?.name) e.machines.add(f.name);
+    siteMap.set(site, e);
+  }
+  const bySite = Array.from(siteMap.values())
+    .map((e) => ({
+      site: e.site,
+      machines: Array.from(e.machines),
+      count: e.count,
+      revenue: Math.round(e.revenue * 100) / 100,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
   // Breakdown : par jour si période ≤ 31j, par mois sinon
   const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / DAY_MS);
   const useMonthly = diffDays > 31;
@@ -138,6 +163,7 @@ export async function getAccountingStats(req: Request, res: Response): Promise<v
     totalRevenue: Math.round(totalRevenue * 100) / 100,
     breakdown,
     byProduct,
+    bySite,
     granularity: useMonthly ? 'monthly' : 'daily',
   });
 }
