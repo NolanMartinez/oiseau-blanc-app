@@ -350,7 +350,7 @@ export async function syncFridgeMenu(req: Request, res: Response): Promise<void>
   if (beforeIds.size > 0) {
     const added = dishes.filter((d) => !beforeIds.has(d.id));
     if (added.length > 0) {
-      scheduleNewDishNotification(fid, meta.name, added.map((d) => d.name));
+      scheduleNewDishNotification(fid, meta.name, added.map((d) => ({ id: d.id, name: d.name })));
     }
   }
 

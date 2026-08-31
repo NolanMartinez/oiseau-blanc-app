@@ -109,16 +109,37 @@ export async function sendOtpEmail(to: string, code: string): Promise<boolean> {
 /** Email de notification (promo, nouveau plat, message de l'admin…). */
 export async function sendNotificationEmail(
   to: string,
-  payload: { title: string; body: string; url?: string },
+  payload: { title: string; body: string; url?: string; imageUrls?: string[] },
 ): Promise<boolean> {
   const appUrl = (process.env['APP_URL'] || 'https://app.friggo.fr').replace(/\/$/, '');
   const link = payload.url
     ? (payload.url.startsWith('http') ? payload.url : appUrl + payload.url)
     : appUrl;
+
+  // Galerie de photos (plats concernés). 1 photo = bandeau ; plusieurs = vignettes.
+  const imgs = (payload.imageUrls ?? []).filter(Boolean);
+  let gallery = '';
+  if (imgs.length === 1) {
+    gallery = `<div style="margin:4px 0 18px">
+      <img src="${imgs[0]}" alt="" width="100%" style="width:100%;max-height:240px;object-fit:cover;border-radius:12px;display:block" />
+    </div>`;
+  } else if (imgs.length > 1) {
+    const cells = imgs.slice(0, 6).map((u) =>
+      `<td style="padding:4px" valign="top"><img src="${u}" alt="" width="150" style="width:100%;max-width:160px;height:110px;object-fit:cover;border-radius:10px;display:block" /></td>`,
+    );
+    // 2 vignettes par ligne pour rester lisible sur mobile.
+    const rows: string[] = [];
+    for (let i = 0; i < cells.length; i += 2) {
+      rows.push(`<tr>${cells[i]}${cells[i + 1] ?? '<td></td>'}</tr>`);
+    }
+    gallery = `<table style="width:100%;border-collapse:collapse;margin:4px 0 18px">${rows.join('')}</table>`;
+  }
+
   const html = layout(
     payload.title,
-    `<p style="color:#374151;font-size:15px;line-height:1.6">${payload.body}</p>
-     <div style="margin:22px 0">
+    `<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px">${payload.body}</p>
+     ${gallery}
+     <div style="margin:6px 0 4px">
        <a href="${link}" style="display:inline-block;background:${BRAND};color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 24px;border-radius:10px">Voir sur Friggo</a>
      </div>`,
   );

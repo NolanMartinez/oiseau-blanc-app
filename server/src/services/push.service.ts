@@ -34,6 +34,7 @@ export interface PushPayload {
   body: string;
   url?: string;
   tag?: string;
+  imageUrls?: string[]; // photos des plats concernés (affichées dans l'email)
 }
 
 /**
