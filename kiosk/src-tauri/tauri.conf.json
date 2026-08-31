@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Friggo Borne",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "identifier": "fr.oiseaublanc.kiosk",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -46,7 +46,7 @@
   "plugins": {
     "updater": {
       "endpoints": ["https://164.132.96.144.sslip.io/updates/latest.json"],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2QjEzNjRFMjU5OEY3NUMKUldSYzk1Z2xUamF4MWpXVXFTajdnRUluRzlaVnJXelJ6SktWdzBFVnZzaGU1R2s4dUtGRStHR04K"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZDQzIyQ0U5MEZCODY2NjYKUldSbVpyZ1A2U3pDL01tYkt6NWthNTZwaEVtckRkbWVVRUtjT0Y4NEFWcjNsNWlYcWtNbGJjMVEK"
     }
   }
 }
