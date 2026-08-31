@@ -191,6 +191,52 @@ export async function sendReceiptEmail(
   return sendEmail({ to, subject: `Votre reçu ${company.name} — ${eur(totalTTC)}`, html });
 }
 
+export interface DailyReportMachine {
+  name: string;
+  count: number;
+  revenueCents: number;
+}
+
+/** Rapport quotidien des ventes de la veille, ventilé par machine. */
+export async function sendDailyReportEmail(
+  to: string,
+  data: { dateLabel: string; machines: DailyReportMachine[]; totalCount: number; totalRevenueCents: number },
+): Promise<boolean> {
+  const rows = data.machines.length
+    ? data.machines
+        .map((m) => `<tr>
+          <td style="padding:8px 6px;border-bottom:1px solid #eee">${m.name}</td>
+          <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${m.count}</td>
+          <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:600">${eur(m.revenueCents)}</td>
+        </tr>`)
+        .join('')
+    : `<tr><td colspan="3" style="padding:16px 6px;color:#9ca3af;text-align:center">Aucune vente ce jour.</td></tr>`;
+
+  const body = `
+    <p style="color:#6b7280;font-size:13px;margin:0 0 12px">Ventes du ${data.dateLabel}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="color:#9ca3af;font-size:11px;text-transform:uppercase">
+        <th style="text-align:left;padding:6px">Machine</th>
+        <th style="text-align:right;padding:6px">Ventes</th>
+        <th style="text-align:right;padding:6px">CA</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <table style="width:100%;font-size:14px;margin-top:14px">
+      <tr>
+        <td style="padding:8px 6px;font-weight:800;color:#111827;border-top:2px solid ${BRAND}">Total — ${data.totalCount} vente${data.totalCount > 1 ? 's' : ''}</td>
+        <td style="padding:8px 6px;text-align:right;font-weight:800;color:${BRAND};border-top:2px solid ${BRAND}">${eur(data.totalRevenueCents)}</td>
+      </tr>
+    </table>`;
+
+  const html = layout(`Rapport des ventes — ${data.dateLabel}`, body);
+  return sendEmail({
+    to,
+    subject: `Friggo — ventes du ${data.dateLabel} : ${eur(data.totalRevenueCents)}`,
+    html,
+  });
+}
+
 /** Email de bienvenue à l'inscription (avec le code fidélité). */
 export async function sendWelcomeEmail(to: string, loyaltyCode?: string | null): Promise<boolean> {
   const loyalty = loyaltyCode

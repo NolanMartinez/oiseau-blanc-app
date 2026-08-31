@@ -34,9 +34,11 @@ import livreurRoutes from './routes/livreur.routes';
 import accountingRoutes from './routes/accounting.routes';
 import loyaltyAdminRoutes from './routes/loyalty.admin.routes';
 import companyAdminRoutes from './routes/company.admin.routes';
+import { scheduleDailyReport } from './services/dailyReport.service';
 
 initVapid();
 initEmail();
+scheduleDailyReport();
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
