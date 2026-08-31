@@ -99,11 +99,25 @@ fn poll_devstate(port: &mut dyn SerialPort) -> Option<u8> {
 
 /// Met (ou remet) le lecteur en veille active : il affiche « Votre choix » et
 /// reste prêt à encaisser. À appeler au démarrage et après chaque configuration.
-/// Best-effort (silencieux si le port est indisponible ou déjà pris).
+///
+/// ⚠️ Robustesse « après mise à jour » : lors d'un update, l'app se relance
+/// aussitôt et COM2 peut être encore occupé (ancien process pas totalement
+/// fermé, ou application constructeur « Brina » relancée qui reprend le port).
+/// On RÉESSAIE donc plusieurs fois (le temps que Brina soit coupé / le port
+/// libéré) au lieu d'abandonner silencieusement — c'était la cause du TPE qui
+/// restait en erreur après une mise à jour. On purge aussi toute session
+/// résiduelle (0x0D) laissée par un arrêt brutal en plein paiement.
 pub fn enable_reader(port_name: &str, baud: u32) {
-    if let Ok(mut port) = open_port(port_name, baud) {
-        let _ = send_recv(&mut *port, &[0x00, 0x01]); // firmware (ident.)
-        let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable -> « Votre choix »
+    for _ in 0..6 {
+        if let Ok(mut port) = open_port(port_name, baud) {
+            let _ = send_recv(&mut *port, &[0x00, 0x01]); // firmware (ident.)
+            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable
+            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]); // purge session résiduelle
+            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // remet « Votre choix »
+            return;
+        }
+        // Port pas encore disponible : on attend et on retente.
+        sleep(Duration::from_millis(1000));
     }
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Thermometer, Wifi, WifiOff } from 'lucide-react';
+import { ChevronRight, Thermometer, Wifi, WifiOff, Package } from 'lucide-react';
 import { LivreurLayout } from './LivreurLayout';
 import api from '../../services/api';
 
@@ -62,9 +62,28 @@ export function LivreurHomePage() {
         <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1a1a1a', marginBottom: 4, letterSpacing: '-0.02em' }}>
           Tournée du jour
         </h1>
-        <p style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 24 }}>
+        <p style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 16 }}>
           Sélectionne un frigo pour voir les suggestions
         </p>
+
+        {/* Accès à la gestion des produits (activer / désactiver) */}
+        <button
+          onClick={() => navigate('/livreur/produits')}
+          style={{
+            width: '100%', background: '#ffffff', border: '1px solid #e8e8e8', borderRadius: 16,
+            padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
+            cursor: 'pointer', marginBottom: 24,
+          }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Package size={18} color="#6366f1" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 800, color: '#1a1a1a' }}>Produits</p>
+            <p style={{ fontSize: 11, color: '#8c8c8c' }}>Activer ou désactiver un produit</p>
+          </div>
+          <ChevronRight size={18} color="#c0c0c0" style={{ flexShrink: 0 }} />
+        </button>
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
