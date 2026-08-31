@@ -60,6 +60,10 @@ export function KioskProvider({ children }: { children: ReactNode }) {
   const [dishes, setDishes] = useState<DishCache[]>([]);
   const [imageUrls, setImageUrls] = useState<Record<string, string | null>>({});
 
+  // Signature du dernier menu envoyé au serveur : on ne renvoie le menu que s'il a
+  // CHANGÉ (sinon on gaspille du débit en repoussant la même carte toutes les X s).
+  const lastMenuSigRef = useRef<string>("");
+
   const loadAll = useCallback(async (r: Repo) => {
     const [s, disp, lk, ds] = await Promise.all([
       r.getSettings(),
@@ -133,7 +137,13 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       }
     }
     const menuSnapshot = [...grouped.values()];
-    void pushMenu(s[SETTING_KEYS.backendUrl] ?? "", s[SETTING_KEYS.frigoId] ?? "", menuSnapshot);
+    // Économie de débit : on ne renvoie le menu au serveur que s'il a changé
+    // depuis le dernier envoi (nom, prix, dispo, DLC…). Sinon inutile de repousser.
+    const sig = JSON.stringify(menuSnapshot);
+    if (sig !== lastMenuSigRef.current) {
+      lastMenuSigRef.current = sig;
+      void pushMenu(s[SETTING_KEYS.backendUrl] ?? "", s[SETTING_KEYS.frigoId] ?? "", menuSnapshot);
+    }
   }, []);
 
   useEffect(() => {
@@ -161,9 +171,10 @@ export function KioskProvider({ children }: { children: ReactNode }) {
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
-  // Ouverture/fermeture à distance : interroge le serveur toutes les 3 s et
-  // exécute en local les commandes empilées par le site admin. La borne doit être
-  // en ligne. Best-effort (silencieux hors ligne).
+  // Ouverture/fermeture à distance : interroge le serveur toutes les 10 s et
+  // exécute en local les commandes empilées par le site admin. Sert aussi de
+  // « heartbeat » (garde le frigo en ligne). 10 s = bon compromis réactivité /
+  // débit (avant : 3 s, ~3× plus de requêtes). Best-effort (silencieux hors ligne).
   useEffect(() => {
     if (!ready) return;
     let running = false;
@@ -194,13 +205,15 @@ export function KioskProvider({ children }: { children: ReactNode }) {
         running = false;
       }
     };
-    const iv = window.setInterval(() => void tick(), 3000);
+    const iv = window.setInterval(() => void tick(), 10000);
     return () => window.clearInterval(iv);
   }, [ready]);
 
   // Rafraîchissement périodique des PRODUITS : récupère les changements faits dans
-  // l'admin (nom, prix, DLC, photo, disponibilité) toutes les 45 s, sans redémarrer
+  // l'admin (nom, prix, DLC, photo, disponibilité) toutes les 2 min, sans redémarrer
   // la borne → on ne vend plus un produit modifié depuis le dernier démarrage.
+  // 2 min (avant : 45 s) : les changements admin ne sont pas urgents, et le bouton
+  // « Mettre à jour les produits » force une synchro immédiate au besoin.
   useEffect(() => {
     if (!ready || !repo) return;
     let running = false;
@@ -221,7 +234,7 @@ export function KioskProvider({ children }: { children: ReactNode }) {
         running = false;
       }
     };
-    const iv = window.setInterval(() => void tick(), 45000);
+    const iv = window.setInterval(() => void tick(), 120000);
     return () => window.clearInterval(iv);
   }, [ready, repo, loadAll]);
 
