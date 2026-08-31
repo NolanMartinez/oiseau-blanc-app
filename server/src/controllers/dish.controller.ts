@@ -196,6 +196,7 @@ export async function listPublicDishes(_req: Request, res: Response): Promise<vo
     select: {
       id: true, name: true, category: true, description: true,
       price: true, allergens: true, dlcDays: true, imageMimeType: true,
+      updatedAt: true,
     },
     orderBy: { name: 'asc' },
   });

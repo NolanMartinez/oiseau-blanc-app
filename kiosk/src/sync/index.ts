@@ -16,6 +16,7 @@ export interface BackendDish {
   allergens: string[];
   hasImage: boolean;
   dlcDays?: number | null; // DLC en jours (fiche produit)
+  updatedAt?: string | null; // horodatage serveur (détecte les photos modifiées)
 }
 
 export interface SyncResult {
@@ -25,6 +26,41 @@ export interface SyncResult {
 }
 
 const eurosToCents = (v: number) => Math.round(v * 100);
+
+// Cache local des plats (id -> info image) pour éviter de retélécharger.
+type LocalInfo = Map<string, { updatedAt: string | null; hasImage: boolean; imageMime: string | null }>;
+
+async function loadLocalInfo(repo: Repo): Promise<LocalInfo> {
+  const list = await repo.listDishes();
+  return new Map(list.map((d) => [d.id, { updatedAt: d.updatedAt, hasImage: d.hasImage, imageMime: d.imageMime }]));
+}
+
+// Décide s'il faut (re)télécharger la photo d'un plat. ÉCONOMIE DE DATA : on ne
+// télécharge QUE si l'image manque en local OU si le plat a changé (updatedAt du
+// serveur différent de celui en cache). Sinon on garde la photo déjà stockée sur
+// la machine. Renvoie l'image à écrire (ou null = conserver l'existante) et le
+// type MIME à conserver.
+async function resolveImage(
+  base: string,
+  d: { id: string; hasImage: boolean; updatedAt?: string | null },
+  local: LocalInfo,
+): Promise<{ image: { bytes: Uint8Array; mime: string } | null; keepMime: string | null }> {
+  if (!d.hasImage) return { image: null, keepMime: null };
+  const cached = local.get(d.id);
+  const upToDate = !!cached?.hasImage && !!d.updatedAt && cached.updatedAt === d.updatedAt;
+  if (upToDate) return { image: null, keepMime: cached!.imageMime }; // déjà en cache, inchangé
+  try {
+    const imgRes = await kioskFetch(`${base}/api/v1/public/dishes/${d.id}/image`);
+    if (imgRes.ok) {
+      const buf = await imgRes.arrayBuffer();
+      const mime = imgRes.headers.get("content-type") ?? "image/jpeg";
+      return { image: { bytes: new Uint8Array(buf), mime }, keepMime: mime };
+    }
+  } catch {
+    /* image facultative : on garde l'existante */
+  }
+  return { image: null, keepMime: cached?.imageMime ?? null };
+}
 
 export async function syncMenu(
   repo: Repo,
@@ -41,20 +77,9 @@ export async function syncMenu(
     const data = await res.json();
     const dishes: BackendDish[] = data?.fridge?.dishes ?? [];
 
+    const local = await loadLocalInfo(repo);
     for (const d of dishes) {
-      let image: { bytes: Uint8Array; mime: string } | null = null;
-      if (d.hasImage) {
-        try {
-          const imgRes = await kioskFetch(`${base}/api/v1/public/dishes/${d.id}/image`);
-          if (imgRes.ok) {
-            const buf = await imgRes.arrayBuffer();
-            const mime = imgRes.headers.get("content-type") ?? "image/jpeg";
-            image = { bytes: new Uint8Array(buf), mime };
-          }
-        } catch {
-          /* image facultative : on continue */
-        }
-      }
+      const { image, keepMime } = await resolveImage(base, d, local);
       await repo.upsertDish(
         {
           id: d.id,
@@ -64,8 +89,9 @@ export async function syncMenu(
           // On stocke le prix promo (ce que paie le client à la borne).
           price: eurosToCents(d.finalPrice ?? d.price),
           allergens: d.allergens ?? [],
-          imageMime: image?.mime ?? null,
-          updatedAt: new Date().toISOString(),
+          imageMime: keepMime,
+          // Horodatage SERVEUR : sert de repère pour ne pas retélécharger la photo.
+          updatedAt: d.updatedAt ?? new Date().toISOString(),
           dlcDays: d.dlcDays ?? null,
         },
         image,
@@ -86,6 +112,7 @@ interface CatalogDish {
   allergens: string[];
   dlcDays?: number | null;
   hasImage: boolean;
+  updatedAt?: string | null;
 }
 
 /**
@@ -102,20 +129,9 @@ export async function syncCatalog(repo: Repo, backendUrl: string): Promise<SyncR
     const data = await res.json();
     const dishes: CatalogDish[] = data?.dishes ?? [];
 
+    const local = await loadLocalInfo(repo);
     for (const d of dishes) {
-      let image: { bytes: Uint8Array; mime: string } | null = null;
-      if (d.hasImage) {
-        try {
-          const imgRes = await kioskFetch(`${base}/api/v1/public/dishes/${d.id}/image`);
-          if (imgRes.ok) {
-            const buf = await imgRes.arrayBuffer();
-            const mime = imgRes.headers.get("content-type") ?? "image/jpeg";
-            image = { bytes: new Uint8Array(buf), mime };
-          }
-        } catch {
-          /* image facultative */
-        }
-      }
+      const { image, keepMime } = await resolveImage(base, d, local);
       await repo.upsertDish(
         {
           id: d.id,
@@ -124,8 +140,8 @@ export async function syncCatalog(repo: Repo, backendUrl: string): Promise<SyncR
           description: d.description,
           price: eurosToCents(d.price),
           allergens: d.allergens ?? [],
-          imageMime: image?.mime ?? null,
-          updatedAt: new Date().toISOString(),
+          imageMime: keepMime,
+          updatedAt: d.updatedAt ?? new Date().toISOString(),
           dlcDays: d.dlcDays ?? null,
         },
         image,

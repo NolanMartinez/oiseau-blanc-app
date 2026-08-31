@@ -32,6 +32,7 @@ async function stockByFridge(lang: string): Promise<Map<string, ReturnType<typeo
           dlcDays: true,
           isActive: true,
           imageMimeType: true,
+          updatedAt: true,
           translations: {
             where: { language: lang },
             select: { name: true, description: true },
@@ -65,6 +66,7 @@ function toDishEntry(stock: {
     allergens: unknown; // JSON (tableau de chaînes) en MySQL
     dlcDays: number | null;
     imageMimeType: string | null;
+    updatedAt: Date;
     translations: { name: string; description: string | null }[];
   };
 }) {
@@ -91,6 +93,7 @@ function toDishEntry(stock: {
     promoPercent: stock.promoPercent,
     finalPrice,
     hasImage: dish.imageMimeType != null,
+    updatedAt: dish.updatedAt.toISOString(),
   };
 }
 
