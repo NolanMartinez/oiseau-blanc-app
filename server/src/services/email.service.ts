@@ -212,48 +212,68 @@ export async function sendReceiptEmail(
   return sendEmail({ to, subject: `Votre reçu ${company.name} — ${eur(totalTTC)}`, html });
 }
 
-export interface DailyReportMachine {
-  name: string;
+export interface DailyReportSite {
+  site: string;
+  machines: string[];
   count: number;
   revenueCents: number;
+  toRemove: { dishName: string; quantity: number; machine: string; expiry: string }[];
 }
 
-/** Rapport quotidien des ventes de la veille, ventilé par machine. */
+/** Rapport quotidien par site : ventes + produits à retirer (tournée du jour). */
 export async function sendDailyReportEmail(
   to: string,
-  data: { dateLabel: string; machines: DailyReportMachine[]; totalCount: number; totalRevenueCents: number },
+  data: { dateLabel: string; sites: DailyReportSite[]; totalCount: number; totalRevenueCents: number },
 ): Promise<boolean> {
-  const rows = data.machines.length
-    ? data.machines
-        .map((m) => `<tr>
-          <td style="padding:8px 6px;border-bottom:1px solid #eee">${m.name}</td>
-          <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${m.count}</td>
-          <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:600">${eur(m.revenueCents)}</td>
-        </tr>`)
+  const siteBlocks = data.sites.length
+    ? data.sites
+        .map((s) => {
+          const machinesLbl = s.machines.length > 1 ? ` · ${s.machines.length} machines` : '';
+          const removeRows = s.toRemove.length
+            ? s.toRemove
+                .map((r) => `<tr>
+                  <td style="padding:5px 6px;border-bottom:1px solid #f3f4f6">${r.dishName}</td>
+                  <td style="padding:5px 6px;border-bottom:1px solid #f3f4f6;text-align:center">${r.quantity}</td>
+                  <td style="padding:5px 6px;border-bottom:1px solid #f3f4f6;color:#9ca3af">${r.expiry}${r.machine ? ' · ' + r.machine : ''}</td>
+                </tr>`)
+                .join('')
+            : '';
+          const removeTable = s.toRemove.length
+            ? `<p style="margin:10px 0 4px;font-size:12px;font-weight:700;color:#b91c1c">À retirer (${s.toRemove.length})</p>
+               <table style="width:100%;border-collapse:collapse;font-size:12px">
+                 <thead><tr style="color:#9ca3af;font-size:10px;text-transform:uppercase">
+                   <th style="text-align:left;padding:4px 6px">Produit</th>
+                   <th style="text-align:center;padding:4px 6px">Qté</th>
+                   <th style="text-align:left;padding:4px 6px">DLC / machine</th>
+                 </tr></thead><tbody>${removeRows}</tbody>
+               </table>`
+            : `<p style="margin:8px 0 0;font-size:12px;color:#9ca3af">Rien à retirer.</p>`;
+          return `
+            <div style="margin:0 0 18px;padding:14px;border:1px solid #e5e7eb;border-radius:12px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span style="font-size:15px;font-weight:800;color:#111827">${s.site}<span style="font-size:11px;color:#9ca3af;font-weight:500">${machinesLbl}</span></span>
+                <span style="font-size:13px;color:${BRAND};font-weight:700">${s.count} vente${s.count > 1 ? 's' : ''} · ${eur(s.revenueCents)}</span>
+              </div>
+              ${removeTable}
+            </div>`;
+        })
         .join('')
-    : `<tr><td colspan="3" style="padding:16px 6px;color:#9ca3af;text-align:center">Aucune vente ce jour.</td></tr>`;
+    : `<p style="color:#9ca3af;text-align:center;padding:16px">Aucune activité sur cette période.</p>`;
 
   const body = `
-    <p style="color:#6b7280;font-size:13px;margin:0 0 12px">Ventes du ${data.dateLabel}</p>
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead><tr style="color:#9ca3af;font-size:11px;text-transform:uppercase">
-        <th style="text-align:left;padding:6px">Machine</th>
-        <th style="text-align:right;padding:6px">Ventes</th>
-        <th style="text-align:right;padding:6px">CA</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <table style="width:100%;font-size:14px;margin-top:14px">
+    <p style="color:#6b7280;font-size:13px;margin:0 0 14px">Période : ${data.dateLabel}</p>
+    ${siteBlocks}
+    <table style="width:100%;font-size:14px;margin-top:6px">
       <tr>
         <td style="padding:8px 6px;font-weight:800;color:#111827;border-top:2px solid ${BRAND}">Total — ${data.totalCount} vente${data.totalCount > 1 ? 's' : ''}</td>
         <td style="padding:8px 6px;text-align:right;font-weight:800;color:${BRAND};border-top:2px solid ${BRAND}">${eur(data.totalRevenueCents)}</td>
       </tr>
     </table>`;
 
-  const html = layout(`Rapport des ventes — ${data.dateLabel}`, body);
+  const html = layout('Rapport quotidien — tournée du jour', body);
   return sendEmail({
     to,
-    subject: `Friggo — ventes du ${data.dateLabel} : ${eur(data.totalRevenueCents)}`,
+    subject: `Friggo — rapport du jour : ${eur(data.totalRevenueCents)} (${data.totalCount} ventes)`,
     html,
   });
 }
