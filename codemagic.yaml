@@ -74,7 +74,7 @@ workflows:
         - Friggo
       vars:
         VITE_API_URL: "https://164.132.96.144.sslip.io"
-        PACKAGE_NAME: "fr.oiseaublanc.friggo"
+        PACKAGE_NAME: "com.friggo.myapp"
       node: 22
       java: 21
     scripts:

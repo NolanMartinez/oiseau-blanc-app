@@ -21,7 +21,9 @@ android {
         }
     }
     defaultConfig {
-        applicationId "fr.oiseaublanc.friggo"
+        // Package Play Store (immuable) : on reprend l'app existante com.friggo.myapp.
+        // Le `namespace` interne reste fr.oiseaublanc.friggo (emplacement de MainActivity).
+        applicationId "com.friggo.myapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
