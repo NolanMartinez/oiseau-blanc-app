@@ -366,6 +366,8 @@ const saleSchema = z.object({
   amount: z.number().int().min(0),
   mode: z.enum(['paid', 'free']).default('paid'),
   soldAt: z.string().optional(),
+  board: z.string().min(1).max(1).optional(), // carte du casier vendu
+  boxNumber: z.number().int().min(0).max(64).optional(), // n° de casier
   loyaltyCode: z.string().trim().regex(/^\d{5}$/).optional(), // code fidélité saisi à la borne
 });
 
@@ -386,9 +388,13 @@ export async function recordSale(req: Request, res: Response): Promise<void> {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { dishId, amount, mode, soldAt, loyaltyCode } = parsed.data;
+  const { dishId, amount, mode, soldAt, board, boxNumber, loyaltyCode } = parsed.data;
   const sale = await prisma.sale.create({
-    data: { frigoId: meta.id, dishId, amount, mode, soldAt: soldAt ? new Date(soldAt) : new Date() },
+    data: {
+      frigoId: meta.id, dishId, amount, mode,
+      board: board ?? null, boxNumber: boxNumber ?? null,
+      soldAt: soldAt ? new Date(soldAt) : new Date(),
+    },
   });
   markSeen(meta.id);
 

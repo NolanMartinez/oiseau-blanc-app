@@ -240,12 +240,14 @@ model Fridge {
 }
 
 model Sale {
-  id      String   @id @default(uuid())
-  frigoId String   @map("frigo_id")
-  dishId  String   @map("dish_id")
-  amount  Int // centimes
-  mode    String   @default("paid") // paid | free
-  soldAt  DateTime @default(now()) @map("sold_at")
+  id        String   @id @default(uuid())
+  frigoId   String   @map("frigo_id")
+  dishId    String   @map("dish_id")
+  amount    Int // centimes
+  mode      String   @default("paid") // paid | free
+  board     String?  // carte (A..E) du casier vendu
+  boxNumber Int?     @map("box_number") // n° de casier (localisation)
+  soldAt    DateTime @default(now()) @map("sold_at")
 
   @@index([frigoId])
   @@index([soldAt])
