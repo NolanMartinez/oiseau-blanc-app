@@ -264,7 +264,6 @@ export function LivreurRestockPage() {
 
       setSuccess(true);
       setChanges({});
-      setExtraDishes([]);
       const res = await api.get(`/livreur/frigos/${id}/suggestions`);
       setSuggestions(res.data.suggestions);
       setTimeout(() => setSuccess(false), 3000);
