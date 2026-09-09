@@ -128,7 +128,12 @@ pub fn open_box(
 ) -> Result<(), String> {
     let mut port = open_port(port_name, baud)?;
     let frame = open_frame(box_number);
-    let deadline = Instant::now() + Duration::from_secs(hold_secs.max(1) as u64);
+    // #4 : on maintient le verrou disponible longtemps — la fermeture est
+    // déclenchée par le clic « Continuer » (qui envoie close_all -> interrupt),
+    // ou par l'ouverture de la porte. `hold_secs` sert de PLAFOND de sécurité
+    // (au moins 180 s) pour ne pas laisser l'aimant alimenté si le client s'en va.
+    let cap_secs = (hold_secs.max(1) as u64).max(180);
+    let deadline = Instant::now() + Duration::from_secs(cap_secs);
 
     while Instant::now() < deadline {
         // Interruption (« Tout fermer » ou ouverture d'un autre casier) : on relâche

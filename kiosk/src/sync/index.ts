@@ -188,7 +188,7 @@ export async function pushStock(
 export async function pushSale(
   backendUrl: string,
   frigoId: string,
-  sale: { dishId: string; amount: number; mode: string; soldAt: string; loyaltyCode?: string },
+  sale: { dishId: string; amount: number; mode: string; soldAt: string; board?: string; boxNumber?: number; loyaltyCode?: string },
 ): Promise<boolean> {
   if (!backendUrl || !frigoId) return false;
   const base = backendUrl.replace(/\/$/, "");

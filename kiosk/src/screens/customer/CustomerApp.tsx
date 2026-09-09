@@ -165,6 +165,8 @@ export function CustomerApp() {
           amount,
           mode,
           soldAt,
+          board: line.board,
+          boxNumber: line.boxNumber,
           loyaltyCode: code || undefined,
         });
         if (ok) await repo.markSaleSynced(saleId);
@@ -219,7 +221,11 @@ export function CustomerApp() {
   );
 
   // Bouton SUIVANT / Terminé : passe au casier suivant ou clôt la vente.
+  // #4 : le casier courant ne se referme QUE maintenant (au clic), pas avant —
+  // le client n'est pas pressé par un minuteur.
   const onNextLocker = useCallback(async () => {
+    const current = openLines[openStep];
+    if (current) void hardware.closeAll(current.board).catch(() => {});
     const next = openStep + 1;
     if (next < openLines.length) {
       setOpenStep(next);
