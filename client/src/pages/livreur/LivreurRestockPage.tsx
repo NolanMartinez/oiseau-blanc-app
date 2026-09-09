@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CheckCircle, ChevronDown, ChevronUp, Minus, Plus, Search, X, ListOrdered, LayoutList } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronUp, Minus, Plus, ListOrdered, LayoutList } from 'lucide-react';
 import { LivreurLayout } from './LivreurLayout';
 import api from '../../services/api';
 
@@ -21,14 +21,6 @@ interface Suggestion {
   priorityReason: string;
   recommendedQty: number;
   salesCount14d: number;
-}
-
-interface CatalogDish {
-  id: string;
-  name: string;
-  category: string;
-  allergens: string[];
-  hasImage: boolean;
 }
 
 interface Fridge {
@@ -153,91 +145,6 @@ function SuggestionCard({
   );
 }
 
-// ─── AddDishSheet ─────────────────────────────────────────────────────────────
-
-function AddDishSheet({
-  allDishes, excludeIds, onAdd, onClose,
-}: {
-  allDishes: CatalogDish[];
-  excludeIds: Set<string>;
-  onAdd: (dish: CatalogDish) => void;
-  onClose: () => void;
-}) {
-  const [search, setSearch] = useState('');
-  const filtered = allDishes
-    .filter((d) => !excludeIds.has(d.id))
-    .filter((d) => !search || d.name.toLowerCase().includes(search.toLowerCase()) || d.category.toLowerCase().includes(search.toLowerCase()));
-
-  const byCategory = filtered.reduce<Record<string, CatalogDish[]>>((acc, d) => {
-    (acc[d.category] ??= []).push(d);
-    return acc;
-  }, {});
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      <div style={{ background: '#f5f5f0', borderRadius: '24px 24px 0 0', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 12px' }}>
-          <p style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a' }}>Ajouter un plat</p>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 10, background: '#e8e8e8', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <X size={16} color="#3a3a3a" />
-          </button>
-        </div>
-
-        {/* Search */}
-        <div style={{ padding: '0 16px 12px', position: 'relative' }}>
-          <Search size={14} color="#8c8c8c" style={{ position: 'absolute', left: 28, top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            type="text"
-            placeholder="Rechercher un plat…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus
-            style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: 14, border: '1px solid #e0e0e0', fontSize: 14, background: '#ffffff', color: '#1a1a1a', boxSizing: 'border-box' }}
-          />
-        </div>
-
-        {/* List */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '0 16px 24px' }}>
-          {filtered.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#8c8c8c', fontSize: 13, paddingTop: 24 }}>Aucun plat trouvé</p>
-          ) : (
-            Object.entries(byCategory).map(([cat, items]) => (
-              <div key={cat} style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#8c8c8c', fontWeight: 700, marginBottom: 8 }}>{cat}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {items.map((d) => (
-                    <div key={d.id} style={{ background: '#ffffff', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #e8e8e8' }}>
-                      {d.hasImage && (
-                        <img src={`/api/v1/public/dishes/${d.id}/image`} alt=""
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                          style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</p>
-                        {d.allergens.length > 0 && (
-                          <p style={{ fontSize: 10, color: '#8c8c8c', marginTop: 1 }}>
-                            {d.allergens.map((a) => getAllergenIcon(a)).join(' ')} {d.allergens.join(', ')}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => { onAdd(d); onClose(); }}
-                        style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 999, background: '#319966', border: 'none', color: '#ffffff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                        Ajouter
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── QuickImportRow ───────────────────────────────────────────────────────────
 
 function QuickImportRow({
@@ -294,26 +201,21 @@ export function LivreurRestockPage() {
   const { id } = useParams<{ id: string }>();
   const [fridge, setFridge] = useState<Fridge | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [extraDishes, setExtraDishes] = useState<Suggestion[]>([]);
-  const [allDishes, setAllDishes] = useState<CatalogDish[]>([]);
   const [loading, setLoading] = useState(true);
   const [okExpanded, setOkExpanded] = useState(false);
   const [mode, setMode] = useState<Mode>('guided');
-  const [showAddSheet, setShowAddSheet] = useState(false);
   const [changes, setChanges] = useState<Record<string, { delta: number; newExpiry: string }>>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.all([
-      api.get(`/livreur/frigos/${id}/suggestions`),
-      api.get('/public/dishes'),
-    ]).then(([sugRes, dishRes]) => {
-      setFridge(sugRes.data.fridge);
-      setSuggestions(sugRes.data.suggestions);
-      setAllDishes(dishRes.data.dishes);
-    }).catch(() => setError('Impossible de charger les données.'))
+    api.get(`/livreur/frigos/${id}/suggestions`)
+      .then((sugRes) => {
+        setFridge(sugRes.data.fridge);
+        setSuggestions(sugRes.data.suggestions);
+      })
+      .catch(() => setError('Impossible de charger les données.'))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -325,30 +227,9 @@ export function LivreurRestockPage() {
     return changes[dishId] ?? { delta: 0, newExpiry: '' };
   }
 
-  function addManualDish(dish: CatalogDish) {
-    const s: Suggestion = {
-      stockId: null,
-      dishId: dish.id,
-      dishName: dish.name,
-      category: dish.category,
-      allergens: dish.allergens,
-      hasImage: dish.hasImage,
-      currentStock: 0,
-      expiryDate: null,
-      daysUntilExpiry: null,
-      priority: 'OK',
-      priorityReason: '',
-      recommendedQty: 0,
-      salesCount14d: 0,
-    };
-    setExtraDishes((prev) => [...prev, s]);
-    setChanges((prev) => ({ ...prev, [dish.id]: { delta: 1, newExpiry: '' } }));
-  }
-
   const dirtyCount = Object.values(changes).filter((c) => c.delta !== 0 || c.newExpiry).length;
 
-  const allSuggestions = [...suggestions, ...extraDishes];
-  const knownDishIds = new Set(allSuggestions.map((s) => s.dishId));
+  const allSuggestions = suggestions;
 
   async function handleSubmit() {
     setError('');
@@ -419,20 +300,11 @@ export function LivreurRestockPage() {
     );
   }
 
-  // Quick list: all known dishes + catalog extras, sorted by priority then name
-  const quickListBase = allSuggestions.slice().sort((a, b) => {
+  // Liste « saisie libre » : les produits en stock, triés par priorité puis nom.
+  const quickList = allSuggestions.slice().sort((a, b) => {
     const pd = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
     return pd !== 0 ? pd : a.dishName.localeCompare(b.dishName);
   });
-  const catalogExtras: Suggestion[] = allDishes
-    .filter((d) => !knownDishIds.has(d.id))
-    .map((d) => ({
-      stockId: null, dishId: d.id, dishName: d.name, category: d.category,
-      allergens: d.allergens, hasImage: d.hasImage,
-      currentStock: 0, expiryDate: null, daysUntilExpiry: null,
-      priority: 'OK' as Priority, priorityReason: '', recommendedQty: 0, salesCount14d: 0,
-    }));
-  const quickList = [...quickListBase, ...catalogExtras];
 
   const floatingVisible = dirtyCount > 0 || success || !!error;
 
@@ -483,10 +355,6 @@ export function LivreurRestockPage() {
             <GuidedSection title="À réapprovisionner" color="#f59e0b" items={reapro} />
             <GuidedSection title="Opportunités" color="#6366f1" items={opportunite} />
 
-            {extraDishes.length > 0 && (
-              <GuidedSection title="Ajoutés manuellement" color="#8c8c8c" items={extraDishes} isExtra />
-            )}
-
             {ok.length > 0 && (
               <div style={{ marginBottom: 24 }}>
                 <button
@@ -505,18 +373,6 @@ export function LivreurRestockPage() {
                 )}
               </div>
             )}
-
-            {/* Bouton ajouter un plat */}
-            <button
-              onClick={() => setShowAddSheet(true)}
-              style={{
-                width: '100%', padding: '14px 16px', borderRadius: 16, border: '2px dashed #c8c8c8',
-                background: 'transparent', fontSize: 14, fontWeight: 700, color: '#3a3a3a',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', marginBottom: 12,
-              }}
-            >
-              <Plus size={16} /> Ajouter un plat
-            </button>
           </>
         ) : (
           /* Mode liste rapide */
@@ -559,16 +415,6 @@ export function LivreurRestockPage() {
             </button>
           )}
         </div>
-      )}
-
-      {/* Sheet d'ajout */}
-      {showAddSheet && (
-        <AddDishSheet
-          allDishes={allDishes}
-          excludeIds={knownDishIds}
-          onAdd={addManualDish}
-          onClose={() => setShowAddSheet(false)}
-        />
       )}
     </LivreurLayout>
   );

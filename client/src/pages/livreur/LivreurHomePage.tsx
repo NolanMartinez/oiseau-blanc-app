@@ -1,184 +1,108 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Thermometer, Wifi, WifiOff, Package } from 'lucide-react';
+import { ChevronRight, MapPin, Package } from 'lucide-react';
 import { LivreurLayout } from './LivreurLayout';
 import api from '../../services/api';
 
-interface Fridge {
+interface SiteFridge {
   id: string;
   name: string;
-  location: string;
-  online: boolean;
-  temperature: number | null;
-  lastSync: string;
+  stockQty: number;
+  stockItems: number;
+}
+interface Site {
+  site: string;
+  fridges: SiteFridge[];
+  todayCount: number;
+  todayRevenueCents: number;
+  prevCount: number;
+  prevRevenueCents: number;
 }
 
-interface FridgeWithAlert extends Fridge {
-  hasUrgent: boolean;
-  urgentCount: number;
-}
+const eur = (c: number) => (c / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
 export function LivreurHomePage() {
   const navigate = useNavigate();
-  const [fridges, setFridges] = useState<FridgeWithAlert[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await api.get('/livreur/frigos');
-        const raw: Fridge[] = res.data.fridges;
-
-        // Fetch suggestion counts in parallel to show urgent badges
-        const withAlerts = await Promise.all(
-          raw.map(async (f) => {
-            try {
-              const r = await api.get(`/livreur/frigos/${f.id}/suggestions`);
-              const urgent = (r.data.suggestions as { priority: string }[]).filter(
-                (s) => s.priority === 'URGENT',
-              ).length;
-              return { ...f, hasUrgent: urgent > 0, urgentCount: urgent };
-            } catch {
-              return { ...f, hasUrgent: false, urgentCount: 0 };
-            }
-          }),
-        );
-
-        withAlerts.sort((a, b) => Number(b.hasUrgent) - Number(a.hasUrgent));
-        setFridges(withAlerts);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    api.get('/livreur/sites')
+      .then((res) => setSites(res.data.sites ?? []))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
     <LivreurLayout>
       <div style={{ padding: '20px 16px 32px' }}>
         <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#319966', fontWeight: 700, marginBottom: 6 }}>
-          Réapprovisionnement
+          Tournée du jour
         </p>
         <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1a1a1a', marginBottom: 4, letterSpacing: '-0.02em' }}>
-          Tournée du jour
+          Sites
         </h1>
-        <p style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 16 }}>
-          Sélectionne un frigo pour voir les suggestions
+        <p style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 24 }}>
+          Ventes du jour et de la veille · stock par machine
         </p>
-
-        {/* Accès à la gestion des produits (activer / désactiver) */}
-        <button
-          onClick={() => navigate('/livreur/produits')}
-          style={{
-            width: '100%', background: '#ffffff', border: '1px solid #e8e8e8', borderRadius: 16,
-            padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
-            cursor: 'pointer', marginBottom: 24,
-          }}
-        >
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Package size={18} color="#6366f1" />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 800, color: '#1a1a1a' }}>Produits</p>
-            <p style={{ fontSize: 11, color: '#8c8c8c' }}>Activer ou désactiver un produit</p>
-          </div>
-          <ChevronRight size={18} color="#c0c0c0" style={{ flexShrink: 0 }} />
-        </button>
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{ height: 88, borderRadius: 20, background: '#e8e8e8', opacity: 0.5 }} />
-            ))}
+            {[1, 2, 3].map((i) => <div key={i} style={{ height: 120, borderRadius: 20, background: '#e8e8e8', opacity: 0.5 }} />)}
           </div>
+        ) : sites.length === 0 ? (
+          <p style={{ textAlign: 'center', color: '#8c8c8c', fontSize: 13, paddingTop: 24 }}>Aucun site.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {fridges.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => navigate(`/livreur/frigo/${f.id}`)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: f.hasUrgent ? '2px solid #ef4444' : '1px solid #e8e8e8',
-                  borderRadius: 20,
-                  padding: '14px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'transform 0.1s',
-                }}
-              >
-                <div
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 14,
-                    background: f.online ? '#e8f7f0' : '#f0f0f0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    position: 'relative',
-                  }}
-                >
-                  {f.online
-                    ? <Wifi size={20} color="#319966" />
-                    : <WifiOff size={20} color="#b0b0b0" />
-                  }
-                  {f.hasUrgent && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: -4,
-                        right: -4,
-                        width: 18,
-                        height: 18,
-                        borderRadius: '50%',
-                        background: '#ef4444',
-                        color: '#ffffff',
-                        fontSize: 10,
-                        fontWeight: 800,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '2px solid #ffffff',
-                      }}
-                    >
-                      {f.urgentCount}
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 15, fontWeight: 800, color: '#1a1a1a', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {f.name}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <p style={{ fontSize: 11, color: '#8c8c8c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                      {f.location}
-                    </p>
-                    {f.temperature !== null && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 11, color: '#319966', fontWeight: 700, flexShrink: 0 }}>
-                        <Thermometer size={10} />
-                        {f.temperature}°C
-                      </span>
-                    )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {sites.map((s) => (
+              <div key={s.site} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 20, overflow: 'hidden' }}>
+                {/* En-tête site */}
+                <div style={{ padding: '14px 16px 10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <MapPin size={16} color="#319966" />
+                    <span style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.site}</span>
                   </div>
-                  {f.hasUrgent && (
-                    <p style={{ fontSize: 11, color: '#ef4444', fontWeight: 700, marginTop: 3 }}>
-                      {f.urgentCount} action{f.urgentCount > 1 ? 's' : ''} urgente{f.urgentCount > 1 ? 's' : ''}
-                    </p>
-                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ flex: 1, background: '#e8f7f0', borderRadius: 12, padding: '8px 10px' }}>
+                      <p style={{ fontSize: 10, color: '#319966', fontWeight: 700, textTransform: 'uppercase' }}>Aujourd'hui</p>
+                      <p style={{ fontSize: 14, fontWeight: 800, color: '#1a1a1a' }}>{s.todayCount} · {eur(s.todayRevenueCents)}</p>
+                    </div>
+                    <div style={{ flex: 1, background: '#f5f5f0', borderRadius: 12, padding: '8px 10px' }}>
+                      <p style={{ fontSize: 10, color: '#8c8c8c', fontWeight: 700, textTransform: 'uppercase' }}>Veille</p>
+                      <p style={{ fontSize: 14, fontWeight: 800, color: '#3a3a3a' }}>{s.prevCount} · {eur(s.prevRevenueCents)}</p>
+                    </div>
+                  </div>
                 </div>
-
-                <ChevronRight size={18} color="#c0c0c0" style={{ flexShrink: 0 }} />
-              </button>
+                {/* Machines du site */}
+                <div style={{ borderTop: '1px solid #f0f0f0' }}>
+                  {s.fridges.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => navigate(`/livreur/frigo/${f.id}`)}
+                      style={{ width: '100%', background: 'none', border: 'none', borderTop: '1px solid #f5f5f5', padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      <Package size={15} color="#8c8c8c" />
+                      <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                      <span style={{ fontSize: 12, color: '#8c8c8c' }}>{f.stockQty} en stock</span>
+                      <ChevronRight size={16} color="#c0c0c0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
+
+        {/* Accès gestion des produits (activer / désactiver) */}
+        <button
+          onClick={() => navigate('/livreur/produits')}
+          style={{ width: '100%', marginTop: 16, padding: '12px 16px', borderRadius: 16, border: '1px solid #e8e8e8', background: '#fff', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left' }}
+        >
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Package size={16} color="#6366f1" />
+          </div>
+          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>Activer / désactiver un produit</span>
+          <ChevronRight size={16} color="#c0c0c0" />
+        </button>
       </div>
     </LivreurLayout>
   );

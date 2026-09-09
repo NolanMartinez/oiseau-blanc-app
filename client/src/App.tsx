@@ -9,6 +9,7 @@ import { UserPrivateRoute } from './components/UserPrivateRoute';
 import { LivreurHomePage } from './pages/livreur/LivreurHomePage';
 import { LivreurRestockPage } from './pages/livreur/LivreurRestockPage';
 import { LivreurProductsPage } from './pages/livreur/LivreurProductsPage';
+import { LivreurFridgeDetailPage } from './pages/livreur/LivreurFridgeDetailPage';
 
 // Admin
 import { AdminLogin } from './pages/admin/Login';
@@ -75,7 +76,8 @@ function App() {
           {/* ── Interface livreur ─────────────────────────────────── */}
           <Route path="/livreur" element={<LivreurPrivateRoute><LivreurHomePage /></LivreurPrivateRoute>} />
           <Route path="/livreur/produits" element={<LivreurPrivateRoute><LivreurProductsPage /></LivreurPrivateRoute>} />
-          <Route path="/livreur/frigo/:id" element={<LivreurPrivateRoute><LivreurRestockPage /></LivreurPrivateRoute>} />
+          <Route path="/livreur/frigo/:id" element={<LivreurPrivateRoute><LivreurFridgeDetailPage /></LivreurPrivateRoute>} />
+          <Route path="/livreur/frigo/:id/reassort" element={<LivreurPrivateRoute><LivreurRestockPage /></LivreurPrivateRoute>} />
 
           {/* ── Panel admin ────────────────────────────────────────── */}
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
