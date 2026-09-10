@@ -151,22 +151,34 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
 
   const { contact, code } = result.data;
 
-  const otp = await prisma.otpCode.findFirst({
-    where: { contact, code, used: false, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: 'desc' },
-  });
+  // Compte de démonstration (pour la revue Play Store / App Store) : code FIXE,
+  // sans OTP réel — le relecteur ne peut pas recevoir de code par email.
+  // Configurable via DEMO_EMAIL / DEMO_CODE.
+  const demoEmail = (process.env['DEMO_EMAIL'] || 'demo@friggo.fr').toLowerCase();
+  const demoCode = process.env['DEMO_CODE'] || '123456';
+  const isDemo = contact.trim().toLowerCase() === demoEmail && code === demoCode;
 
-  if (!otp) {
-    res.status(401).json({ error: 'Code invalide ou expiré' });
-    return;
+  if (!isDemo) {
+    const otp = await prisma.otpCode.findFirst({
+      where: { contact, code, used: false, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!otp) {
+      res.status(401).json({ error: 'Code invalide ou expiré' });
+      return;
+    }
+    await prisma.otpCode.update({ where: { id: otp.id }, data: { used: true } });
   }
 
-  await prisma.otpCode.update({ where: { id: otp.id }, data: { used: true } });
-
   const isEmail = contact.includes('@');
-  const subscriber = isEmail
+  let subscriber = isEmail
     ? await prisma.subscriber.findUnique({ where: { email: contact } })
     : await prisma.subscriber.findFirst({ where: { phone: contact } });
+
+  // Le compte démo est créé à la volée s'il n'existe pas encore.
+  if (!subscriber && isDemo) {
+    subscriber = await prisma.subscriber.create({ data: { email: demoEmail, consentEmail: false } });
+  }
 
   if (!subscriber) {
     res.status(404).json({ error: 'Compte introuvable' });
