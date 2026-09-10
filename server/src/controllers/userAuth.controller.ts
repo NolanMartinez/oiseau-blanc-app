@@ -62,6 +62,21 @@ export async function loginWithPassword(req: Request, res: Response): Promise<vo
     return;
   }
   const { email, password } = result.data;
+
+  // Compte de démonstration (revue Play Store / App Store) : email + code FIXES,
+  // sans vrai mot de passe. Le relecteur peut se connecter directement.
+  const demoEmail = (process.env['DEMO_EMAIL'] || 'demo@friggo.fr').toLowerCase();
+  const demoCode = process.env['DEMO_CODE'] || '123456';
+  if (email.trim().toLowerCase() === demoEmail && password === demoCode) {
+    let sub = await prisma.subscriber.findUnique({ where: { email: demoEmail }, select: SUBSCRIBER_SELECT });
+    if (!sub) {
+      const created = await prisma.subscriber.create({ data: { email: demoEmail, consentEmail: false } });
+      sub = await prisma.subscriber.findUnique({ where: { id: created.id }, select: SUBSCRIBER_SELECT });
+    }
+    res.json({ token: makeToken(sub!.id), subscriber: sub });
+    return;
+  }
+
   const subscriber = await prisma.subscriber.findUnique({
     where: { email },
     select: { ...SUBSCRIBER_SELECT, passwordHash: true },
