@@ -96,7 +96,7 @@ workflows:
         script: |
           cd client/android
           # -i.bak fonctionne sur macOS (BSD sed) comme sur Linux (GNU sed)
-          sed -i.bak "s/versionCode 1/versionCode $BUILD_NUMBER/" app/build.gradle && rm -f app/build.gradle.bak || true
+          sed -i.bak "s/versionCode [0-9][0-9]*/versionCode $BUILD_NUMBER/" app/build.gradle && rm -f app/build.gradle.bak || true
       - name: Construire l'AAB signé
         script: |
           cd client/android
