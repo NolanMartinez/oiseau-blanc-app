@@ -37,6 +37,7 @@ import { SondagesPage } from './pages/app/SondagesPage';
 import { FidelitePage } from './pages/app/FidelitePage';
 import { ProfilPage } from './pages/app/ProfilPage';
 import { ConfidentialitePage } from './pages/ConfidentialitePage';
+import { SuppressionComptePage } from './pages/SuppressionComptePage';
 
 function LivreurPrivateRoute({ children }: { children: React.ReactNode }) {
   const { admin, loading } = useAuth();
@@ -56,6 +57,8 @@ function App() {
           <Route path="/app/login" element={<LoginPage />} />
           {/* Politique de confidentialité — publique (URL requise par les stores) */}
           <Route path="/confidentialite" element={<ConfidentialitePage />} />
+          <Route path="/suppression-compte" element={<SuppressionComptePage />} />
+          <Route path="/delete-account" element={<Navigate to="/suppression-compte" replace />} />
           <Route path="/privacy" element={<Navigate to="/confidentialite" replace />} />
           <Route path="/app/onboarding" element={<UserPrivateRoute><OnboardingPage /></UserPrivateRoute>} />
           <Route path="/app" element={<Navigate to="/app/mon-frigo" replace />} />
