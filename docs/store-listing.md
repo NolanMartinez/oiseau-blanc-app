@@ -61,6 +61,28 @@ Des plats frais cuisinés le jour même, en libre-service 24 h/24.
 
 ---
 
+## Google Play (Android) — English (US)
+
+**Short description (80 char. max)**
+> Fresh grab-and-go meals at the office: menu, loyalty rewards & email receipts.
+
+**Full description**
+```
+Friggo is the app for L'Oiseau Blanc Traiteur's connected fridges, installed directly in workplaces.
+
+Features:
+• Real-time menu of your fridge (daily dishes, prices, allergens, stock).
+• Pick your favourite fridge.
+• Loyalty programme: earn points and get free meals.
+• Purchase receipt sent by email, with net / VAT / gross breakdown.
+• Reviews and surveys to help shape the menu.
+• Notifications for new dishes and promotions (with your consent).
+
+Fresh meals cooked the same day, self-service around the clock.
+```
+
+---
+
 ## Confidentialité (déclaration de collecte de données — pour les consoles)
 
 Données collectées et liées à l'utilisateur :
