@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Wifi, WifiOff, CreditCard, RadioTower, RefreshCw, Thermometer, HardDrive, Cpu, Snowflake } from "lucide-react";
+import { Wifi, WifiOff, CreditCard, RadioTower, RefreshCw, Thermometer, HardDrive, Cpu, Snowflake, Play } from "lucide-react";
 import { useLang } from "../../i18n";
 import { useKiosk } from "../../state/kiosk";
 import { hardware } from "../../hardware";
-import { pingBackend } from "../../sync";
+import { pingBackend, pushStatus } from "../../sync";
 import { SETTING_KEYS } from "../../db";
 
 const RELEASE = "1.0.0";
@@ -18,6 +18,8 @@ export function SystemStatusScreen() {
   const [temp, setTemp] = useState<number | null>(null);
   const [online, setOnline] = useState(false);
   const [defrostMsg, setDefrostMsg] = useState("");
+  const [tpe, setTpe] = useState<{ ok: boolean; detail: string } | null>(null);
+  const [tpeTesting, setTpeTesting] = useState(false);
   const mdbEnabled = setting(SETTING_KEYS.mdbEnabled) === "1";
   const machineName = setting(SETTING_KEYS.machineName, "Frigo 1");
 
@@ -27,6 +29,30 @@ export function SystemStatusScreen() {
     setDefrostMsg("✓");
     window.setTimeout(() => setDefrostMsg(""), 2000);
   }
+
+  // Diagnostic du TPE : interroge réellement le lecteur, affiche le résultat et
+  // le remonte au serveur (visible à distance dans l'admin).
+  async function checkTpe(manual = false) {
+    if (manual) setTpeTesting(true);
+    try {
+      const st = await hardware.tpeStatus();
+      setTpe(st);
+      void pushStatus(setting(SETTING_KEYS.backendUrl), setting(SETTING_KEYS.frigoId), {
+        tpeOk: st.ok,
+        tpeDetail: st.detail,
+      });
+    } catch {
+      setTpe({ ok: false, detail: "Diagnostic impossible" });
+    } finally {
+      if (manual) setTpeTesting(false);
+    }
+  }
+
+  // Contrôle initial du TPE à l'ouverture de l'écran.
+  useEffect(() => {
+    void checkTpe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Température : on échantillonne souvent (30 s) mais on N'AFFICHE qu'une MOYENNE,
   // rafraîchie toutes les 5 min → valeur stable et représentative (pas de sauts).
@@ -70,7 +96,7 @@ export function SystemStatusScreen() {
 
   const rows: { icon: React.ReactNode; label: string; ok: boolean }[] = [
     { icon: <RadioTower size={20} />, label: t("comm"), ok: true },
-    { icon: <CreditCard size={20} />, label: t("payment_system"), ok: mdbEnabled },
+    { icon: <CreditCard size={20} />, label: t("payment_system"), ok: tpe ? tpe.ok : mdbEnabled },
     { icon: online ? <Wifi size={20} /> : <WifiOff size={20} />, label: t("internet"), ok: online },
     { icon: <RefreshCw size={20} />, label: t("updated"), ok: true },
   ];
@@ -105,6 +131,31 @@ export function SystemStatusScreen() {
                 <StatusDot ok={r.ok} />
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Terminal de paiement (TPE) — contrôle réel + remontée à distance */}
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-lg font-bold">{t("payment_system")}</p>
+            <button
+              onClick={() => checkTpe(true)}
+              disabled={tpeTesting}
+              className="flex items-center gap-2 rounded-xl bg-[var(--blue)] px-4 py-2 text-sm font-bold text-white active:opacity-80 disabled:opacity-50"
+            >
+              <Play size={16} />
+              {tpeTesting ? "…" : t("test")}
+            </button>
+          </div>
+          <div className="flex items-center gap-4">
+            <CreditCard size={36} className={tpe?.ok ? "text-[var(--green)]" : "text-red-500"} />
+            <div>
+              <p className="text-xl font-extrabold">
+                {tpe == null ? "…" : tpe.ok ? "TPE OK" : "TPE en erreur"}
+              </p>
+              <p className="text-sm text-[var(--ink-faint)]">{tpe?.detail ?? ""}</p>
+            </div>
+            <div className="ml-auto"><StatusDot ok={!!tpe?.ok} /></div>
           </div>
         </div>
 

@@ -121,6 +121,30 @@ pub fn enable_reader(port_name: &str, baud: u32) {
     }
 }
 
+/// Vérifie que le TPE (lecteur cashless) répond, SANS ouvrir de session de
+/// paiement : on ouvre le port et on demande le firmware (`00 01`). Renvoie
+/// `(ok, détail)`. Non destructif — sûr à appeler pour un simple diagnostic.
+pub fn check_reader(port_name: &str, baud: u32) -> (bool, String) {
+    match open_port(port_name, baud) {
+        Ok(mut port) => match send_recv(&mut *port, &[0x00, 0x01]) {
+            Some(resp) => {
+                // La réponse firmware contient l'ASCII « FW… » (ex. FW1.8.00).
+                let ascii: String = resp
+                    .iter()
+                    .map(|&b| if (0x20..0x7f).contains(&b) { b as char } else { ' ' })
+                    .collect();
+                if let Some(idx) = ascii.find("FW") {
+                    (true, ascii[idx..].trim().to_string())
+                } else {
+                    (true, "TPE connecté".to_string())
+                }
+            }
+            None => (false, format!("Aucune réponse du TPE sur {port_name}")),
+        },
+        Err(e) => (false, e),
+    }
+}
+
 /// Déroule un paiement carte complet. `on_phase` remonte les étapes à l'UI
 /// (`waiting`/`processing`/`approved`/`declined`/`cancelled`/`timeout`).
 pub fn run_payment(

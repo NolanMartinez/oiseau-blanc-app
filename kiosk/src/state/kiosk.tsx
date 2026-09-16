@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { getRepo, SETTING_KEYS, type DishCache, type Dispenser, type Locker, type Repo, type Settings } from "../db";
-import { syncMenu, syncCatalog, pushMenu, pullCommands, resyncSales, type MenuSnapshotDish } from "../sync";
+import { syncMenu, syncCatalog, pushMenu, pullCommands, resyncSales, pushStatus, type MenuSnapshotDish } from "../sync";
 import { hardware, type HwMode } from "../hardware";
 import { sortCategories, byCategoryThenName } from "../utils/categories";
 
@@ -237,6 +237,34 @@ export function KioskProvider({ children }: { children: ReactNode }) {
     const iv = window.setInterval(() => void tick(), 120000);
     return () => window.clearInterval(iv);
   }, [ready, repo, loadAll]);
+
+  // Diagnostic TPE périodique → remonté au serveur (visible à distance dans
+  // l'admin). Toutes les 5 min + une fois ~15 s après le démarrage. Le contrôle
+  // ouvre COM2 mais s'efface pendant un paiement (garde côté Rust), donc sans
+  // risque pour l'encaissement.
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    const push = async () => {
+      const s = settingsRef.current;
+      const backendUrl = s[SETTING_KEYS.backendUrl] ?? "";
+      const frigoId = s[SETTING_KEYS.frigoId] ?? "";
+      if (!backendUrl || !frigoId) return;
+      try {
+        const st = await hardware.tpeStatus();
+        if (!cancelled) await pushStatus(backendUrl, frigoId, { tpeOk: st.ok, tpeDetail: st.detail });
+      } catch {
+        /* best-effort */
+      }
+    };
+    const first = window.setTimeout(() => void push(), 15000);
+    const iv = window.setInterval(() => void push(), 5 * 60000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(first);
+      window.clearInterval(iv);
+    };
+  }, [ready]);
 
   const reload = useCallback(async () => {
     if (repo) await loadAll(repo);

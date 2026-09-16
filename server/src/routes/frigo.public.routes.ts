@@ -5,6 +5,7 @@ import {
   syncFridgeStock,
   syncFridgeMenu,
   recordSale,
+  recordFridgeStatus,
   pullFridgeCommands,
 } from '../controllers/frigo.controller';
 import { loyaltyLookup, loyaltyRedeem } from '../controllers/loyalty.controller';
@@ -20,6 +21,8 @@ router.post('/frigos/:id/stock', syncFridgeStock);
 router.post('/frigos/:id/menu', syncFridgeMenu);
 // La borne remonte une vente.
 router.post('/frigos/:id/sales', recordSale);
+// La borne remonte l'état de son TPE (visible à distance dans l'admin).
+router.post('/frigos/:id/status', recordFridgeStatus);
 // La borne récupère ses commandes d'ouverture/fermeture à distance.
 router.get('/frigos/:id/commands', pullFridgeCommands);
 // Fidélité : consultation du solde (avant paiement) et échange d'un repas offert.

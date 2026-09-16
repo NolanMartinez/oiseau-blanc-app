@@ -32,8 +32,14 @@ function fromAddress(): string {
   return process.env['SMTP_FROM'] || process.env['SMTP_USER'] || 'no-reply@friggo.fr';
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 /** Envoi générique. Renvoie true si l'email est parti, false sinon (best-effort). */
-export async function sendEmail(opts: { to: string; subject: string; html: string; text?: string }): Promise<boolean> {
+export async function sendEmail(opts: { to: string; subject: string; html: string; text?: string; attachments?: EmailAttachment[] }): Promise<boolean> {
   const tx = getTransporter();
   if (!tx) {
     logger.warn({ to: opts.to }, 'SMTP non configuré : email non envoyé (définir SMTP_HOST/USER/PASS)');
@@ -46,6 +52,7 @@ export async function sendEmail(opts: { to: string; subject: string; html: strin
       subject: opts.subject,
       text: opts.text ?? opts.html.replace(/<[^>]+>/g, ' '),
       html: opts.html,
+      ...(opts.attachments && opts.attachments.length ? { attachments: opts.attachments } : {}),
     });
     // On loggue la réponse exacte du serveur (accepté / refusé) pour diagnostiquer.
     logger.info(
@@ -212,23 +219,50 @@ export async function sendReceiptEmail(
   return sendEmail({ to, subject: `Votre reçu ${company.name} — ${eur(totalTTC)}`, html });
 }
 
+export interface DailyReportProduct {
+  name: string;
+  quantity: number;
+  revenueCents: number;
+}
+
 export interface DailyReportSite {
   site: string;
   machines: string[];
   count: number;
   revenueCents: number;
+  products: DailyReportProduct[];
   toRemove: { dishName: string; quantity: number; machine: string; expiry: string }[];
 }
 
-/** Rapport quotidien par site : ventes + produits à retirer (tournée du jour). */
+/** Rapport quotidien par site : ventes + produits à retirer (tournée du jour).
+ *  `pdf` (facultatif) = export détaillé par produit et par site, joint à l'email. */
 export async function sendDailyReportEmail(
   to: string,
-  data: { dateLabel: string; sites: DailyReportSite[]; totalCount: number; totalRevenueCents: number },
+  data: { dateLabel: string; sites: DailyReportSite[]; totalCount: number; totalRevenueCents: number; pdf?: Buffer; pdfName?: string },
 ): Promise<boolean> {
   const siteBlocks = data.sites.length
     ? data.sites
         .map((s) => {
           const machinesLbl = s.machines.length > 1 ? ` · ${s.machines.length} machines` : '';
+          const productRows = s.products.length
+            ? s.products
+                .map((p) => `<tr>
+                  <td style="padding:5px 6px;border-bottom:1px solid #f3f4f6">${p.name}</td>
+                  <td style="padding:5px 6px;border-bottom:1px solid #f3f4f6;text-align:center">${p.quantity}</td>
+                  <td style="padding:5px 6px;border-bottom:1px solid #f3f4f6;text-align:right">${eur(p.revenueCents)}</td>
+                </tr>`)
+                .join('')
+            : '';
+          const productTable = s.products.length
+            ? `<p style="margin:10px 0 4px;font-size:12px;font-weight:700;color:#374151">Détail par produit</p>
+               <table style="width:100%;border-collapse:collapse;font-size:12px">
+                 <thead><tr style="color:#9ca3af;font-size:10px;text-transform:uppercase">
+                   <th style="text-align:left;padding:4px 6px">Produit</th>
+                   <th style="text-align:center;padding:4px 6px">Vendus</th>
+                   <th style="text-align:right;padding:4px 6px">CA</th>
+                 </tr></thead><tbody>${productRows}</tbody>
+               </table>`
+            : '';
           const removeRows = s.toRemove.length
             ? s.toRemove
                 .map((r) => `<tr>
@@ -254,6 +288,7 @@ export async function sendDailyReportEmail(
                 <span style="font-size:15px;font-weight:800;color:#111827">${s.site}<span style="font-size:11px;color:#9ca3af;font-weight:500">${machinesLbl}</span></span>
                 <span style="font-size:13px;color:${BRAND};font-weight:700">${s.count} vente${s.count > 1 ? 's' : ''} · ${eur(s.revenueCents)}</span>
               </div>
+              ${productTable}
               ${removeTable}
             </div>`;
         })
@@ -275,6 +310,7 @@ export async function sendDailyReportEmail(
     to,
     subject: `Friggo — rapport du jour : ${eur(data.totalRevenueCents)} (${data.totalCount} ventes)`,
     html,
+    ...(data.pdf ? { attachments: [{ filename: data.pdfName ?? 'rapport-friggo.pdf', content: data.pdf, contentType: 'application/pdf' }] } : {}),
   });
 }
 

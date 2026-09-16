@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma';
 import { getFridgeMeta } from '../services/fridges';
-import { markSeen, getStatus } from '../services/fridgeStatus';
+import { markSeen, markTpe, getStatus } from '../services/fridgeStatus';
 import { enqueueCommand, drainCommands } from '../services/remoteCommands';
 import { scheduleNewDishNotification } from '../services/newDishNotifier';
 import { creditPurchaseByCode } from '../services/loyalty.service';
@@ -114,7 +114,15 @@ function buildFridge(f: FridgeRow, dishes: ReturnType<typeof toDishEntry>[], inc
     name: f.name,
     serialNumber: f.serialNumber,
     location: f.location,
-    ...(includePrivate ? { teamviewerId: f.teamviewerId, teamviewerPassword: f.teamviewerPassword } : {}),
+    ...(includePrivate
+      ? {
+          teamviewerId: f.teamviewerId,
+          teamviewerPassword: f.teamviewerPassword,
+          tpeOk: st.tpeOk,
+          tpeDetail: st.tpeDetail,
+          tpeAt: st.tpeAt,
+        }
+      : {}),
     online: st.online,
     temperature: st.temperature,
     lastSync: st.lastSync,
@@ -358,6 +366,36 @@ export async function syncFridgeMenu(req: Request, res: Response): Promise<void>
   }
 
   res.json({ ok: true, count: dishes.length });
+}
+
+// ── Remontée de l'état TPE (borne → serveur, visible à distance) ─────────────
+const statusSchema = z.object({
+  tpeOk: z.boolean(),
+  tpeDetail: z.string().max(200).optional(),
+  temperature: z.number().optional(),
+});
+
+// POST /api/v1/public/frigos/:id/status — la borne remonte l'état du TPE.
+export async function recordFridgeStatus(req: Request, res: Response): Promise<void> {
+  const meta = await getFridgeMeta(req.params['id'] as string);
+  if (!meta) {
+    res.status(404).json({ error: 'Frigo introuvable' });
+    return;
+  }
+  const expectedKey = process.env['KIOSK_API_KEY'];
+  if (expectedKey && req.header('x-kiosk-key') !== expectedKey) {
+    res.status(401).json({ error: 'Clé borne invalide' });
+    return;
+  }
+  const parsed = statusSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { tpeOk, tpeDetail, temperature } = parsed.data;
+  markTpe(meta.id, tpeOk, tpeDetail ?? null);
+  if (typeof temperature === 'number') markSeen(meta.id, temperature);
+  res.json({ ok: true });
 }
 
 // ── Remontée des ventes (borne → serveur) ───────────────────────────────────

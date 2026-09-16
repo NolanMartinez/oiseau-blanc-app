@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Refrigerator, Wifi, WifiOff, ChevronDown, ChevronUp, Plus, Pencil, Trash2, DoorOpen, Lock } from 'lucide-react';
+import { Refrigerator, Wifi, WifiOff, ChevronDown, ChevronUp, Plus, Pencil, Trash2, DoorOpen, Lock, CreditCard } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { StockModal } from '../../components/admin/StockModal';
 import api from '../../services/api';
@@ -290,6 +290,17 @@ function FridgeCard({
         </div>
 
         <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
+          {fridge.tpeOk != null && (
+            <div
+              title={fridge.tpeDetail ?? undefined}
+              className={`hidden sm:flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                fridge.tpeOk ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+              }`}
+            >
+              <CreditCard size={12} />
+              {fridge.tpeOk ? 'TPE OK' : 'TPE KO'}
+            </div>
+          )}
           {fridge.online && fridge.temperature !== null && (
             <div className="text-right hidden sm:block">
               <p className="text-lg font-bold text-gray-800">{fridge.temperature}°C</p>

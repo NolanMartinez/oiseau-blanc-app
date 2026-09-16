@@ -182,6 +182,30 @@ export async function pushStock(
 }
 
 /**
+ * Remonte l'état du TPE (terminal de paiement) au serveur → visible à distance
+ * dans l'admin (page Frigos). Best-effort (silencieux hors ligne).
+ */
+export async function pushStatus(
+  backendUrl: string,
+  frigoId: string,
+  status: { tpeOk: boolean; tpeDetail?: string; temperature?: number },
+  apiKey?: string,
+): Promise<boolean> {
+  if (!backendUrl || !frigoId) return false;
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(apiKey ? { "x-kiosk-key": apiKey } : {}) },
+      body: JSON.stringify(status),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Remonte une vente vers le serveur (pour le suivi des ventes sur l'app web).
  * Best-effort (silencieux hors ligne).
  */

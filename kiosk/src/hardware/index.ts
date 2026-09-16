@@ -29,6 +29,10 @@ export interface PaymentEvent {
 export interface PaymentResult {
   outcome: PaymentOutcome;
 }
+export interface TpeStatus {
+  ok: boolean;
+  detail: string;
+}
 
 export type HwMode = "sim" | "real";
 
@@ -61,6 +65,7 @@ export interface Hardware {
   readTemperature(board: string): Promise<number>;
   requestPayment(amountCents: number): Promise<PaymentResult>;
   cancelPayment(): Promise<void>;
+  tpeStatus(): Promise<TpeStatus>;
   onLockerEvent(cb: (e: LockerEvent) => void): () => void;
   onPaymentEvent(cb: (e: PaymentEvent) => void): () => void;
   // Liaisons matériel
@@ -163,6 +168,10 @@ class BrowserHardware implements Hardware {
     this.paymentCancelled = true;
   }
 
+  async tpeStatus(): Promise<TpeStatus> {
+    return { ok: true, detail: "Simulateur" };
+  }
+
   onLockerEvent(cb: (e: LockerEvent) => void): () => void {
     this.lockerCbs.add(cb);
     return () => this.lockerCbs.delete(cb);
@@ -219,6 +228,9 @@ class TauriHardware implements Hardware {
   }
   cancelPayment() {
     return this.invoke<void>("cancel_payment");
+  }
+  tpeStatus() {
+    return this.invoke<TpeStatus>("tpe_status");
   }
 
   onLockerEvent(cb: (e: LockerEvent) => void): () => void {

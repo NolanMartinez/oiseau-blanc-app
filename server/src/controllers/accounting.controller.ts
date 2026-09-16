@@ -168,6 +168,77 @@ export async function getAccountingStats(req: Request, res: Response): Promise<v
   });
 }
 
+// GET /api/v1/admin/accounting/site-sales?from=&to=&site=
+// Lignes de vente individuelles d'UN site (heure · plat · casier), pour le
+// dépliage « détail par site » de la Comptabilité. Le casier (board + boxNumber)
+// n'existe que pour les ventes borne ; les achats via l'app n'en ont pas.
+export async function getSiteSales(req: Request, res: Response): Promise<void> {
+  const range = parseRange(req.query['from'], req.query['to']);
+  const site = typeof req.query['site'] === 'string' ? (req.query['site'] as string) : '';
+  if (!range || !site) {
+    res.status(400).json({ error: 'Paramètres from, to et site requis' });
+    return;
+  }
+  const { fromDate, toDate } = range;
+
+  const fridges = await prisma.fridge.findMany({ select: { id: true, name: true, location: true } });
+  const fridgeMap = new Map(fridges.map((f) => [f.id, f]));
+  const siteOf = (frigoId: string) => {
+    const f = fridgeMap.get(frigoId);
+    return (f?.location && f.location.trim()) || f?.name || frigoId;
+  };
+  const frigoIds = fridges.filter((f) => siteOf(f.id) === site).map((f) => f.id);
+  if (frigoIds.length === 0) {
+    res.json({ site, sales: [] });
+    return;
+  }
+
+  const [sales, purchases, dishes] = await Promise.all([
+    prisma.sale.findMany({
+      where: { soldAt: { gte: fromDate, lte: toDate }, frigoId: { in: frigoIds } },
+    }),
+    prisma.purchase.findMany({
+      where: { purchasedAt: { gte: fromDate, lte: toDate }, frigoId: { in: frigoIds } },
+    }),
+    prisma.dish.findMany({ select: { id: true, name: true, price: true } }),
+  ]);
+  const dishMap = new Map(dishes.map((d) => [d.id, d]));
+
+  const lines = [
+    ...sales.map((s) => ({
+      soldAt: s.soldAt,
+      dishName: dishMap.get(s.dishId)?.name ?? s.dishId,
+      machine: fridgeMap.get(s.frigoId)?.name ?? '',
+      board: s.board ?? null,
+      boxNumber: s.boxNumber ?? null,
+      amount: Math.round(s.amount) / 100,
+      source: 'borne' as const,
+    })),
+    ...purchases.map((p) => ({
+      soldAt: p.purchasedAt,
+      dishName: dishMap.get(p.dishId)?.name ?? p.dishId,
+      machine: fridgeMap.get(p.frigoId)?.name ?? '',
+      board: null,
+      boxNumber: null,
+      amount: dishMap.get(p.dishId)?.price ?? 0,
+      source: 'app' as const,
+    })),
+  ].sort((a, b) => b.soldAt.getTime() - a.soldAt.getTime());
+
+  res.json({
+    site,
+    sales: lines.map((l) => ({
+      time: l.soldAt.toISOString(),
+      dishName: l.dishName,
+      machine: l.machine,
+      board: l.board,
+      boxNumber: l.boxNumber,
+      amount: Math.round(l.amount * 100) / 100,
+      source: l.source,
+    })),
+  });
+}
+
 // GET /api/v1/admin/accounting/export?from=&to=&granularity=detail|daily|monthly
 export async function exportAccounting(req: Request, res: Response): Promise<void> {
   const range = parseRange(req.query['from'], req.query['to']);

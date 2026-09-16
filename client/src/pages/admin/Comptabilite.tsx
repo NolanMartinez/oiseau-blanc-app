@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Download, TrendingUp, ShoppingCart, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
+import { Download, TrendingUp, ShoppingCart, AlertCircle, ChevronRight, ChevronDown } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
 
@@ -39,6 +39,16 @@ interface Stats {
 interface FridgeOption {
   id: string;
   name: string;
+}
+
+interface SiteSaleLine {
+  time: string;
+  dishName: string;
+  machine: string;
+  board: string | null;
+  boxNumber: number | null;
+  amount: number;
+  source: 'borne' | 'app';
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -123,6 +133,9 @@ export function Comptabilite() {
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState('');
   const [exporting, setExporting] = useState(false);
+  // Dépliage « détail par site » : site ouvert + cache des lignes par site.
+  const [openSite, setOpenSite] = useState<string | null>(null);
+  const [siteSales, setSiteSales] = useState<Record<string, SiteSaleLine[] | 'loading'>>({});
 
   const { from, to } = preset === 'custom'
     ? { from: customFrom, to: customTo }
@@ -164,6 +177,31 @@ export function Comptabilite() {
       window.removeEventListener('focus', onFocus);
     };
   }, [loadStats]);
+
+  // Réinitialise le dépliage quand la période change (les lignes seraient périmées).
+  useEffect(() => {
+    setOpenSite(null);
+    setSiteSales({});
+  }, [from, to, frigoId]);
+
+  async function toggleSite(site: string) {
+    if (openSite === site) {
+      setOpenSite(null);
+      return;
+    }
+    setOpenSite(site);
+    if (!siteSales[site]) {
+      setSiteSales((p) => ({ ...p, [site]: 'loading' }));
+      try {
+        const res = await api.get(
+          `/admin/accounting/site-sales?from=${from}&to=${to}&site=${encodeURIComponent(site)}`,
+        );
+        setSiteSales((p) => ({ ...p, [site]: (res.data.sales ?? []) as SiteSaleLine[] }));
+      } catch {
+        setSiteSales((p) => ({ ...p, [site]: [] }));
+      }
+    }
+  }
 
   async function handleExport() {
     if (!from || !to) return;
@@ -322,7 +360,7 @@ export function Comptabilite() {
         )}
 
         {/* Détail par site — uniquement en vue « toutes les machines ».
-            Regroupe le CA par site (location du frigo). */}
+            Chaque site est cliquable : déroule les ventes (heure · plat · casier). */}
         {!frigoId && stats && stats.bySite && stats.bySite.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100">
@@ -339,18 +377,81 @@ export function Comptabilite() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {stats.bySite.map((row) => (
-                    <tr key={row.site} className="hover:bg-gray-50">
-                      <td className="px-5 py-2.5 text-gray-800 font-medium">{row.site}</td>
-                      <td className="px-5 py-2.5 text-gray-500">
-                        {row.machines.length > 1 ? `${row.machines.length} machines` : (row.machines[0] ?? '—')}
-                      </td>
-                      <td className="px-5 py-2.5 text-right text-gray-700 font-semibold tabular-nums">{row.count}</td>
-                      <td className="px-5 py-2.5 text-right text-gray-800 font-semibold tabular-nums">
-                        {row.revenue.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
+                  {stats.bySite.map((row) => {
+                    const isOpen = openSite === row.site;
+                    const lines = siteSales[row.site];
+                    return (
+                      <Fragment key={row.site}>
+                        <tr
+                          onClick={() => toggleSite(row.site)}
+                          className="hover:bg-gray-50 cursor-pointer"
+                        >
+                          <td className="px-5 py-2.5 text-gray-800 font-medium">
+                            <span className="flex items-center gap-1.5">
+                              {isOpen ? <ChevronDown size={15} className="text-gray-400" /> : <ChevronRight size={15} className="text-gray-400" />}
+                              {row.site}
+                            </span>
+                          </td>
+                          <td className="px-5 py-2.5 text-gray-500">
+                            {row.machines.length > 1 ? `${row.machines.length} machines` : (row.machines[0] ?? '—')}
+                          </td>
+                          <td className="px-5 py-2.5 text-right text-gray-700 font-semibold tabular-nums">{row.count}</td>
+                          <td className="px-5 py-2.5 text-right text-gray-800 font-semibold tabular-nums">
+                            {row.revenue.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr>
+                            <td colSpan={4} className="bg-gray-50/60 px-5 py-3">
+                              {lines === 'loading' || lines === undefined ? (
+                                <p className="text-xs text-gray-400 py-2">Chargement des ventes…</p>
+                              ) : lines.length === 0 ? (
+                                <p className="text-xs text-gray-400 py-2">Aucune vente sur la période.</p>
+                              ) : (
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="text-gray-400">
+                                      <th className="text-left font-semibold py-1.5 pr-4">Heure</th>
+                                      <th className="text-left font-semibold py-1.5 pr-4">Plat</th>
+                                      <th className="text-left font-semibold py-1.5 pr-4">Casier</th>
+                                      <th className="text-right font-semibold py-1.5">Prix (€)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100">
+                                    {lines.map((l, i) => (
+                                      <tr key={i} className="text-gray-600">
+                                        <td className="py-1.5 pr-4 tabular-nums whitespace-nowrap">
+                                          {new Date(l.time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                        </td>
+                                        <td className="py-1.5 pr-4 text-gray-800">
+                                          {l.dishName}
+                                          {row.machines.length > 1 && l.machine && (
+                                            <span className="text-gray-400"> · {l.machine}</span>
+                                          )}
+                                        </td>
+                                        <td className="py-1.5 pr-4">
+                                          {l.board && l.boxNumber != null ? (
+                                            <span className="inline-block rounded bg-white border border-gray-200 px-1.5 py-0.5 font-mono text-gray-700">
+                                              {l.board}{l.boxNumber}
+                                            </span>
+                                          ) : (
+                                            <span className="text-gray-300">app</span>
+                                          )}
+                                        </td>
+                                        <td className="py-1.5 text-right tabular-nums text-gray-800">
+                                          {l.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -9,7 +9,8 @@ use tauri::{AppHandle, Emitter};
 
 use super::{
     frame, mdb, midalite, mock::MockHardware, serial, DoorState, HardwareController, LockerEvent,
-    Mode, PaymentEvent, PaymentOutcome, PaymentResult, SerialConfig, EVENT_LOCKER, EVENT_PAYMENT,
+    Mode, PaymentEvent, PaymentOutcome, PaymentResult, SerialConfig, TpeStatus, EVENT_LOCKER,
+    EVENT_PAYMENT,
 };
 
 #[derive(Default)]
@@ -31,6 +32,9 @@ pub struct Device {
     mock: MockHardware,
     cfg: Mutex<DeviceConfig>,
     payment_cancel: Arc<AtomicBool>,
+    // Vrai pendant qu'un paiement occupe COM2 → le diagnostic TPE ne tente pas
+    // d'ouvrir le port (il le trouverait occupé et croirait le TPE en panne).
+    payment_active: Arc<AtomicBool>,
     boards: Mutex<HashMap<String, Arc<BoardCtl>>>,
 }
 
@@ -40,6 +44,7 @@ impl Device {
             mock: MockHardware::new(),
             cfg: Mutex::new(DeviceConfig::default()),
             payment_cancel: Arc::new(AtomicBool::new(false)),
+            payment_active: Arc::new(AtomicBool::new(false)),
             boards: Mutex::new(HashMap::new()),
         }
     }
@@ -232,20 +237,27 @@ impl Device {
         }
         if mode == Mode::Real && !cfg.payment_com.trim().is_empty() {
             self.payment_cancel.store(false, Ordering::SeqCst);
+            self.payment_active.store(true, Ordering::SeqCst);
             let app2 = app.clone();
             let cancel = self.payment_cancel.clone();
+            let active = self.payment_active.clone();
             let port = cfg.payment_com.clone();
             let baud = cfg.payment_baud;
             let outcome = tauri::async_runtime::spawn_blocking(move || {
-                mdb::run_payment(&port, baud, amount_cents, &cancel, |phase| {
+                let r = mdb::run_payment(&port, baud, amount_cents, &cancel, |phase| {
                     let _ = app2.emit(
                         EVENT_PAYMENT,
                         PaymentEvent { phase: phase.to_string(), amount_cents },
                     );
-                })
+                });
+                active.store(false, Ordering::SeqCst);
+                r
             })
             .await
-            .unwrap_or(PaymentOutcome::Timeout);
+            .unwrap_or_else(|_| {
+                self.payment_active.store(false, Ordering::SeqCst);
+                PaymentOutcome::Timeout
+            });
             return PaymentResult { outcome };
         }
         self.mock.request_payment(app, amount_cents).await
@@ -253,6 +265,32 @@ impl Device {
     pub async fn cancel_payment(&self) {
         self.payment_cancel.store(true, Ordering::SeqCst);
         self.mock.cancel_payment().await
+    }
+
+    /// Diagnostic du TPE (terminal de paiement) : vérifie que le lecteur répond,
+    /// sans lancer de paiement. Sert à la page de contrôle et à la remontée
+    /// serveur (visible à distance depuis l'admin).
+    pub async fn tpe_status(&self) -> TpeStatus {
+        let (mode, cfg) = self.snapshot();
+        if cfg.payment_test {
+            return TpeStatus { ok: true, detail: "Mode test (paiement simulé)".to_string() };
+        }
+        if mode == Mode::Sim {
+            return TpeStatus { ok: true, detail: "Simulateur".to_string() };
+        }
+        if cfg.payment_com.trim().is_empty() {
+            return TpeStatus { ok: false, detail: "Aucun port de paiement configuré".to_string() };
+        }
+        // Un paiement occupe COM2 : le port est pris, mais le TPE fonctionne.
+        if self.payment_active.load(Ordering::SeqCst) {
+            return TpeStatus { ok: true, detail: "Paiement en cours".to_string() };
+        }
+        let port = cfg.payment_com.clone();
+        let baud = cfg.payment_baud;
+        let (ok, detail) = tauri::async_runtime::spawn_blocking(move || mdb::check_reader(&port, baud))
+            .await
+            .unwrap_or((false, "Diagnostic TPE interrompu".to_string()));
+        TpeStatus { ok, detail }
     }
 
     /// Aperçu (sans envoi) de la trame d'ouverture pour un casier donné.

@@ -78,6 +78,7 @@ pub fn run() {
             commands::door_state,
             commands::read_temperature,
             commands::request_payment,
+            commands::tpe_status,
             commands::cancel_payment,
             commands::list_com_ports,
             commands::set_hw_config,

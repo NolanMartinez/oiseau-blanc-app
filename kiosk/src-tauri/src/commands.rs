@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, State};
 
-use crate::hardware::{device::Device, serial, DoorState, Mode, PaymentResult, SerialConfig};
+use crate::hardware::{device::Device, serial, DoorState, Mode, PaymentResult, SerialConfig, TpeStatus};
 
 /// État partagé : la façade matérielle.
 pub struct DeviceState(pub Arc<Device>);
@@ -61,6 +61,12 @@ pub async fn request_payment(
 ) -> Result<PaymentResult, String> {
     let dev = dev.0.clone();
     Ok(dev.request_payment(&app, amount_cents).await)
+}
+
+#[tauri::command]
+pub async fn tpe_status(dev: State<'_, DeviceState>) -> Result<TpeStatus, String> {
+    let dev = dev.0.clone();
+    Ok(dev.tpe_status().await)
 }
 
 #[tauri::command]

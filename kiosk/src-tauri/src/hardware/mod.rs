@@ -47,6 +47,15 @@ pub struct PaymentResult {
     pub outcome: PaymentOutcome,
 }
 
+/// État du terminal de paiement (TPE) pour la page de contrôle + la remontée
+/// serveur (visible à distance depuis l'admin).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpeStatus {
+    pub ok: bool,
+    pub detail: String,
+}
+
 /// Mode du pilote matériel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]

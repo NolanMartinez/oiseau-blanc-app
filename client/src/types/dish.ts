@@ -24,6 +24,10 @@ export interface Fridge {
   online: boolean;
   temperature: number | null;
   lastSync: string;
+  // État du terminal de paiement (TPE) remonté par la borne (admin uniquement).
+  tpeOk?: boolean | null;
+  tpeDetail?: string | null;
+  tpeAt?: string | null;
   dishes: FridgeDish[];
 }
 
