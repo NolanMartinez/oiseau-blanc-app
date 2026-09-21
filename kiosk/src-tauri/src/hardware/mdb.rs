@@ -97,27 +97,74 @@ fn poll_devstate(port: &mut dyn SerialPort) -> Option<u8> {
     resp.get(10).copied()
 }
 
+/// Lit le nom de firmware de la carte MDB (commande `00 01`) sous forme de
+/// chaîne ASCII (ex. « FW1.8.00 », ou « …Loader… » quand la carte est dans son
+/// bootloader). `None` si aucune réponse.
+fn read_firmware(port: &mut dyn SerialPort) -> Option<String> {
+    let resp = send_recv(port, &[0x00, 0x01])?;
+    let s: String = resp
+        .iter()
+        .map(|&b| if (0x20..0x7f).contains(&b) { b as char } else { ' ' })
+        .collect();
+    let t = s.trim().to_string();
+    if t.is_empty() {
+        None
+    } else {
+        Some(t)
+    }
+}
+
+/// Fait sortir la carte MDB de son **bootloader** (« Loader ») pour démarrer le
+/// firmware applicatif. Commande passerelle = données `00 FF` (équivaut à
+/// `ExitFwLoader` de l'appli constructeur Brina, décodée dans MDBProtocol.dll).
+fn exit_loader(port: &mut dyn SerialPort) {
+    let _ = send_recv(port, &[0x00, 0xFF]);
+}
+
+/// Active le lecteur cashless (« Votre choix ») une fois le firmware démarré.
+fn enable_cashless(port: &mut dyn SerialPort) {
+    let _ = send_recv(port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable
+    let _ = send_recv(port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]); // purge session résiduelle
+    let _ = send_recv(port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // remet « Votre choix »
+}
+
 /// Met (ou remet) le lecteur en veille active : il affiche « Votre choix » et
 /// reste prêt à encaisser. À appeler au démarrage et après chaque configuration.
 ///
-/// ⚠️ Robustesse « après mise à jour » : lors d'un update, l'app se relance
-/// aussitôt et COM2 peut être encore occupé (ancien process pas totalement
-/// fermé, ou application constructeur « Brina » relancée qui reprend le port).
-/// On RÉESSAIE donc plusieurs fois (le temps que Brina soit coupé / le port
-/// libéré) au lieu d'abandonner silencieusement — c'était la cause du TPE qui
-/// restait en erreur après une mise à jour. On purge aussi toute session
-/// résiduelle (0x0D) laissée par un arrêt brutal en plein paiement.
+/// ⚠️ **Redémarrage à froid (cause du « communication impossible »)** : après une
+/// coupure de courant, la carte passerelle MDB redémarre dans son **bootloader**
+/// (le firmware répond « Loader » au lieu de « FW… »). Tant qu'on ne l'en fait
+/// pas sortir, le TPE ne communique pas — c'est ce que faisait l'appli
+/// constructeur « Brina » (et pourquoi la lancer débloquait tout). On réplique
+/// donc sa séquence : lire le firmware, envoyer `00 FF` (ExitFwLoader) si on est
+/// en « Loader », puis réessayer jusqu'à voir « FW… », et enfin activer le lecteur.
+///
+/// ⚠️ Robustesse « après mise à jour » : COM2 peut être encore occupé (ancien
+/// process pas fermé, ou Brina qui reprend le port) → on réessaie plusieurs fois.
 pub fn enable_reader(port_name: &str, baud: u32) {
-    for _ in 0..6 {
+    // Jusqu'à ~25 s : le temps que la carte s'initialise / sorte du bootloader.
+    for _ in 0..30 {
         if let Ok(mut port) = open_port(port_name, baud) {
-            let _ = send_recv(&mut *port, &[0x00, 0x01]); // firmware (ident.)
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]); // purge session résiduelle
-            let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // remet « Votre choix »
-            return;
+            match read_firmware(&mut *port) {
+                Some(fw) if fw.contains("FW") => {
+                    // Firmware démarré → on active le lecteur et c'est prêt.
+                    enable_cashless(&mut *port);
+                    return;
+                }
+                Some(fw) if fw.contains("Loader") => {
+                    // Carte en bootloader → on démarre le firmware, puis on réessaie.
+                    exit_loader(&mut *port);
+                    sleep(Duration::from_millis(600));
+                }
+                _ => {
+                    // Pas (encore) de réponse : la carte s'initialise, on patiente.
+                    sleep(Duration::from_millis(600));
+                }
+            }
+        } else {
+            // Port pas encore disponible : on attend et on retente.
+            sleep(Duration::from_millis(800));
         }
-        // Port pas encore disponible : on attend et on retente.
-        sleep(Duration::from_millis(1000));
     }
 }
 
@@ -126,20 +173,15 @@ pub fn enable_reader(port_name: &str, baud: u32) {
 /// `(ok, détail)`. Non destructif — sûr à appeler pour un simple diagnostic.
 pub fn check_reader(port_name: &str, baud: u32) -> (bool, String) {
     match open_port(port_name, baud) {
-        Ok(mut port) => match send_recv(&mut *port, &[0x00, 0x01]) {
-            Some(resp) => {
-                // La réponse firmware contient l'ASCII « FW… » (ex. FW1.8.00).
-                let ascii: String = resp
-                    .iter()
-                    .map(|&b| if (0x20..0x7f).contains(&b) { b as char } else { ' ' })
-                    .collect();
-                if let Some(idx) = ascii.find("FW") {
-                    (true, ascii[idx..].trim().to_string())
-                } else {
-                    (true, "TPE connecté".to_string())
-                }
+        Ok(mut port) => match read_firmware(&mut *port) {
+            Some(fw) if fw.contains("FW") => {
+                let idx = fw.find("FW").unwrap_or(0);
+                (true, fw[idx..].to_string())
             }
-            None => (false, format!("Aucune réponse du TPE sur {port_name}")),
+            Some(fw) if fw.contains("Loader") => {
+                (false, "Carte MDB en bootloader (réinitialisation nécessaire)".to_string())
+            }
+            Some(_) | None => (false, format!("Aucune réponse du TPE sur {port_name}")),
         },
         Err(e) => (false, e),
     }
@@ -166,7 +208,15 @@ pub fn run_payment(
     // On (ré)active par sécurité, puis on abandonne une éventuelle session restée
     // ouverte d'un paiement précédent — c'est ce qui bloquait les transactions
     // suivantes. On NE désactive JAMAIS le lecteur (pas de 0x0C).
-    let _ = send_recv(&mut *port, &[0x00, 0x01]); // firmware (ident.)
+    // Si la carte est repartie dans son bootloader (après une coupure de
+    // courant), on l'en fait sortir avant d'encaisser — sinon « communication
+    // impossible ».
+    if let Some(fw) = read_firmware(&mut *port) {
+        if fw.contains("Loader") {
+            exit_loader(&mut *port);
+            sleep(Duration::from_millis(600));
+        }
+    }
     let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable / « Votre choix »
     let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]); // annule toute session résiduelle
     let _ = port.clear(ClearBuffer::Input);

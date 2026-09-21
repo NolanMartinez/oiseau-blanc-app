@@ -287,9 +287,21 @@ impl Device {
         }
         let port = cfg.payment_com.clone();
         let baud = cfg.payment_baud;
-        let (ok, detail) = tauri::async_runtime::spawn_blocking(move || mdb::check_reader(&port, baud))
-            .await
-            .unwrap_or((false, "Diagnostic TPE interrompu".to_string()));
+        let (ok, detail) = tauri::async_runtime::spawn_blocking(move || {
+            let (ok, detail) = mdb::check_reader(&port, baud);
+            if ok {
+                (ok, detail)
+            } else {
+                // Auto-réparation : le TPE ne répond pas (souvent la carte MDB
+                // restée dans son bootloader après un redémarrage). On relance la
+                // séquence d'init (sortie bootloader + activation) puis on
+                // revérifie — plus besoin de lancer Brina à la main.
+                mdb::enable_reader(&port, baud);
+                mdb::check_reader(&port, baud)
+            }
+        })
+        .await
+        .unwrap_or((false, "Diagnostic TPE interrompu".to_string()));
         TpeStatus { ok, detail }
     }
 
