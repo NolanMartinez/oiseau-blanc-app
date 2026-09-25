@@ -85,11 +85,14 @@ impl Device {
                 // prête / sortir du bootloader).
                 mdb::enable_reader(&port, baud);
                 // Surveillance continue : tant que cette génération est la config
-                // active, on revérifie toutes les ~20 s et on répare si le TPE ne
-                // répond pas (carte retombée en bootloader, etc.). On saute la
-                // vérif pendant un paiement (COM2 occupé).
+                // active, on revérifie toutes les ~5 min et on répare si le TPE ne
+                // répond pas (carte retombée en bootloader, etc.). 5 min suffit :
+                // le bootloader n'arrive qu'au démarrage (déjà géré par l'init) et
+                // chaque paiement refait une vérif instantanée. On saute la vérif
+                // pendant un paiement (COM2 occupé). On teste la génération chaque
+                // seconde pour s'arrêter vite si la config change.
                 loop {
-                    for _ in 0..20 {
+                    for _ in 0..300 {
                         std::thread::sleep(Duration::from_secs(1));
                         if hw_gen.load(Ordering::SeqCst) != gen {
                             return; // config changée → ce gardien s'arrête
