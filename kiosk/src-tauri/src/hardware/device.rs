@@ -2,8 +2,9 @@
 //! ou le port série réel (mode Real), selon la configuration des Liaisons.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use tauri::{AppHandle, Emitter};
 
@@ -35,6 +36,10 @@ pub struct Device {
     // Vrai pendant qu'un paiement occupe COM2 → le diagnostic TPE ne tente pas
     // d'ouvrir le port (il le trouverait occupé et croirait le TPE en panne).
     payment_active: Arc<AtomicBool>,
+    // Génération de config : incrémentée à chaque set_config. Le gardien TPE
+    // capture sa génération et s'arrête dès qu'une nouvelle config est poussée
+    // (évite d'empiler plusieurs gardiens sur COM2).
+    hw_gen: Arc<AtomicU64>,
     boards: Mutex<HashMap<String, Arc<BoardCtl>>>,
 }
 
@@ -45,6 +50,7 @@ impl Device {
             cfg: Mutex::new(DeviceConfig::default()),
             payment_cancel: Arc::new(AtomicBool::new(false)),
             payment_active: Arc::new(AtomicBool::new(false)),
+            hw_gen: Arc::new(AtomicU64::new(0)),
             boards: Mutex::new(HashMap::new()),
         }
     }
@@ -61,13 +67,45 @@ impl Device {
     /// Met à jour le mode + la config série (appelé par le frontend au démarrage
     /// et à chaque modification de la page Liaisons).
     pub fn set_config(&self, mode: Mode, serial: SerialConfig) {
-        // Met le lecteur de carte sur « Votre choix » dès le démarrage / à chaque
-        // changement de config (mode réel + port paiement, hors mode test).
+        // Nouvelle config → nouvelle génération : les anciens gardiens s'arrêtent.
+        let gen = self.hw_gen.fetch_add(1, Ordering::SeqCst) + 1;
+
+        // Mode réel + port paiement (hors test) : on lance un GARDIEN TPE en tâche
+        // de fond. Il initialise le lecteur au démarrage (sortie de bootloader +
+        // activation), puis vérifie/répare le TPE en continu — comme le thread de
+        // polling de Brina. C'est ce qui garantit qu'après un redémarrage à froid
+        // le TPE revient tout seul, sans lancer Brina.
         if mode == Mode::Real && !serial.payment_test && !serial.payment_com.trim().is_empty() {
             let port = serial.payment_com.clone();
             let baud = serial.payment_baud;
-            std::thread::spawn(move || mdb::enable_reader(&port, baud));
+            let hw_gen = self.hw_gen.clone();
+            let payment_active = self.payment_active.clone();
+            std::thread::spawn(move || {
+                // Init patiente au démarrage (la carte peut mettre du temps à être
+                // prête / sortir du bootloader).
+                mdb::enable_reader(&port, baud);
+                // Surveillance continue : tant que cette génération est la config
+                // active, on revérifie toutes les ~20 s et on répare si le TPE ne
+                // répond pas (carte retombée en bootloader, etc.). On saute la
+                // vérif pendant un paiement (COM2 occupé).
+                loop {
+                    for _ in 0..20 {
+                        std::thread::sleep(Duration::from_secs(1));
+                        if hw_gen.load(Ordering::SeqCst) != gen {
+                            return; // config changée → ce gardien s'arrête
+                        }
+                    }
+                    if payment_active.load(Ordering::SeqCst) {
+                        continue;
+                    }
+                    let (ok, _) = mdb::check_reader(&port, baud);
+                    if !ok {
+                        mdb::ensure_firmware(&port, baud, 10);
+                    }
+                }
+            });
         }
+
         let mut c = self.cfg.lock().unwrap();
         c.mode = mode;
         c.serial = serial;
@@ -296,7 +334,7 @@ impl Device {
                 // restée dans son bootloader après un redémarrage). On relance la
                 // séquence d'init (sortie bootloader + activation) puis on
                 // revérifie — plus besoin de lancer Brina à la main.
-                mdb::enable_reader(&port, baud);
+                mdb::ensure_firmware(&port, baud, 10);
                 mdb::check_reader(&port, baud)
             }
         })

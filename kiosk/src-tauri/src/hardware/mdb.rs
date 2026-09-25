@@ -128,44 +128,56 @@ fn enable_cashless(port: &mut dyn SerialPort) {
     let _ = send_recv(port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // remet « Votre choix »
 }
 
-/// Met (ou remet) le lecteur en veille active : il affiche « Votre choix » et
-/// reste prêt à encaisser. À appeler au démarrage et après chaque configuration.
+/// **Cœur de la fiabilité TPE.** Garantit que la carte MDB tourne sur son
+/// firmware (pas son bootloader) et que le lecteur cashless est activé.
+/// Renvoie `true` dès que le firmware « FW… » répond (et lecteur activé).
 ///
 /// ⚠️ **Redémarrage à froid (cause du « communication impossible »)** : après une
-/// coupure de courant, la carte passerelle MDB redémarre dans son **bootloader**
-/// (le firmware répond « Loader » au lieu de « FW… »). Tant qu'on ne l'en fait
-/// pas sortir, le TPE ne communique pas — c'est ce que faisait l'appli
-/// constructeur « Brina » (et pourquoi la lancer débloquait tout). On réplique
-/// donc sa séquence : lire le firmware, envoyer `00 FF` (ExitFwLoader) si on est
-/// en « Loader », puis réessayer jusqu'à voir « FW… », et enfin activer le lecteur.
+/// coupure, la carte passerelle MDB redémarre dans son **bootloader** (répond
+/// « Loader » au lieu de « FW… »). Tant qu'on ne l'en fait pas sortir, le TPE ne
+/// communique pas — c'est ce que faisait Brina (et pourquoi la lancer débloquait
+/// tout). On réplique sa séquence : lire le firmware, envoyer `00 FF`
+/// (ExitFwLoader) si « Loader », **libérer le port** (la carte peut se
+/// ré-énumérer en USB en redémarrant sur le firmware), réessayer jusqu'à « FW… »,
+/// puis activer le lecteur.
 ///
-/// ⚠️ Robustesse « après mise à jour » : COM2 peut être encore occupé (ancien
-/// process pas fermé, ou Brina qui reprend le port) → on réessaie plusieurs fois.
-pub fn enable_reader(port_name: &str, baud: u32) {
-    // Jusqu'à ~25 s : le temps que la carte s'initialise / sorte du bootloader.
-    for _ in 0..30 {
-        if let Ok(mut port) = open_port(port_name, baud) {
-            match read_firmware(&mut *port) {
+/// `max_attempts` borne la durée : ~1 s par tentative → au démarrage on met une
+/// valeur élevée (patient), avant un paiement une valeur plus courte.
+pub fn ensure_firmware(port_name: &str, baud: u32, max_attempts: u32) -> bool {
+    for _ in 0..max_attempts {
+        match open_port(port_name, baud) {
+            Ok(mut port) => match read_firmware(&mut *port) {
                 Some(fw) if fw.contains("FW") => {
                     // Firmware démarré → on active le lecteur et c'est prêt.
                     enable_cashless(&mut *port);
-                    return;
+                    return true;
                 }
                 Some(fw) if fw.contains("Loader") => {
-                    // Carte en bootloader → on démarre le firmware, puis on réessaie.
+                    // En bootloader → on démarre le firmware, on LIBÈRE le port
+                    // (la carte peut disparaître/réapparaître en redémarrant),
+                    // puis on réessaie.
                     exit_loader(&mut *port);
-                    sleep(Duration::from_millis(600));
+                    drop(port);
+                    sleep(Duration::from_millis(1200));
                 }
                 _ => {
                     // Pas (encore) de réponse : la carte s'initialise, on patiente.
+                    drop(port);
                     sleep(Duration::from_millis(600));
                 }
-            }
-        } else {
-            // Port pas encore disponible : on attend et on retente.
-            sleep(Duration::from_millis(800));
+            },
+            // Port pas encore disponible (COM2 pas prêt au boot) : on retente.
+            Err(_) => sleep(Duration::from_millis(800)),
         }
     }
+    false
+}
+
+/// Met (ou remet) le lecteur en veille active (« Votre choix »). Appelé au
+/// démarrage et après chaque configuration. Patient : jusqu'à ~40 tentatives
+/// (le temps que la carte s'initialise / sorte du bootloader au boot à froid).
+pub fn enable_reader(port_name: &str, baud: u32) {
+    ensure_firmware(port_name, baud, 40);
 }
 
 /// Vérifie que le TPE (lecteur cashless) répond, SANS ouvrir de session de
@@ -196,6 +208,12 @@ pub fn run_payment(
     cancel: &AtomicBool,
     on_phase: impl Fn(&str),
 ) -> PaymentOutcome {
+    // ⚠️ AVANT TOUT : on garantit que la carte est sur son firmware (sortie de
+    // bootloader si besoin) et le lecteur activé — sinon « communication
+    // impossible » au moment de payer. Bornée à ~10 s pour ne pas faire trop
+    // patienter le client si le TPE est réellement débranché.
+    ensure_firmware(port_name, baud, 10);
+
     let mut port = match open_port(port_name, baud) {
         Ok(p) => p,
         Err(_) => {
@@ -208,15 +226,6 @@ pub fn run_payment(
     // On (ré)active par sécurité, puis on abandonne une éventuelle session restée
     // ouverte d'un paiement précédent — c'est ce qui bloquait les transactions
     // suivantes. On NE désactive JAMAIS le lecteur (pas de 0x0C).
-    // Si la carte est repartie dans son bootloader (après une coupure de
-    // courant), on l'en fait sortir avant d'encaisser — sinon « communication
-    // impossible ».
-    if let Some(fw) = read_firmware(&mut *port) {
-        if fw.contains("Loader") {
-            exit_loader(&mut *port);
-            sleep(Duration::from_millis(600));
-        }
-    }
     let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0B, CASHLESS_DEVICE]); // enable / « Votre choix »
     let _ = send_recv(&mut *port, &[0x00, 0x71, 0x0D, CASHLESS_DEVICE]); // annule toute session résiduelle
     let _ = port.clear(ClearBuffer::Input);
