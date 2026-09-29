@@ -8,6 +8,12 @@ function toDateKey(d: Date): string {
   return d.toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
+// Formatage à l'heure de Paris (les dates sont stockées en UTC).
+const parisDate = (d: Date): string =>
+  new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const parisTime = (d: Date): string =>
+  new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit' }).format(d);
+
 function toMonthKey(d: Date): string {
   return d.toISOString().slice(0, 7); // YYYY-MM
 }
@@ -364,8 +370,8 @@ export async function exportAccounting(req: Request, res: Response): Promise<voi
     const header = ['Date', 'Heure', 'Plat', 'Catégorie', 'Frigo', 'Casier', 'Prix (€)'].map(escape).join(',');
     const rows = purchases.map((p) => {
       const d = p.purchasedAt;
-      const date = toDateKey(d);
-      const hour = d.toISOString().slice(11, 16);
+      const date = parisDate(d);
+      const hour = parisTime(d);
       const fridgeName = getFridgeMeta(p.frigoId)?.name ?? p.frigoId;
       const casier = p.board && p.boxNumber != null ? `${p.board}${p.boxNumber}` : '';
       return [
