@@ -29,6 +29,8 @@ interface EnrichedPurchase {
   dishName: string;
   dishCategory: string;
   dishPrice: number;
+  board: string | null;
+  boxNumber: number | null;
 }
 
 // Regroupe DEUX sources : les ventes remontées par la borne (table `ventes` /
@@ -62,6 +64,8 @@ async function fetchPurchases(
       dishName: dish?.name ?? p.dishId,
       dishCategory: dish?.category ?? '',
       dishPrice: dish?.price ?? 0,
+      board: null,
+      boxNumber: null,
     };
   });
 
@@ -75,6 +79,8 @@ async function fetchPurchases(
       dishName: dish?.name ?? s.dishId,
       dishCategory: dish?.category ?? '',
       dishPrice: s.amount / 100, // montant réellement payé (centimes → euros)
+      board: s.board ?? null,
+      boxNumber: s.boxNumber ?? null,
     };
   });
 
@@ -239,6 +245,60 @@ export async function getSiteSales(req: Request, res: Response): Promise<void> {
   });
 }
 
+// GET /api/v1/admin/accounting/machine-sales?from=&to=&frigoId=
+// Lignes de vente individuelles d'UNE machine (heure · plat · casier), pour le
+// détail « ventes par machine » de la Comptabilité.
+export async function getMachineSales(req: Request, res: Response): Promise<void> {
+  const range = parseRange(req.query['from'], req.query['to']);
+  const frigoId = typeof req.query['frigoId'] === 'string' ? (req.query['frigoId'] as string) : '';
+  if (!range || !frigoId) {
+    res.status(400).json({ error: 'Paramètres from, to et frigoId requis' });
+    return;
+  }
+  const { fromDate, toDate } = range;
+
+  const [sales, purchases, dishes, fridge] = await Promise.all([
+    prisma.sale.findMany({ where: { soldAt: { gte: fromDate, lte: toDate }, frigoId } }),
+    prisma.purchase.findMany({ where: { purchasedAt: { gte: fromDate, lte: toDate }, frigoId } }),
+    prisma.dish.findMany({ select: { id: true, name: true, price: true } }),
+    prisma.fridge.findUnique({ where: { id: frigoId }, select: { name: true } }),
+  ]);
+  const dishMap = new Map(dishes.map((d) => [d.id, d]));
+  const machine = fridge?.name ?? '';
+
+  const lines = [
+    ...sales.map((s) => ({
+      soldAt: s.soldAt,
+      dishName: dishMap.get(s.dishId)?.name ?? s.dishId,
+      board: s.board ?? null,
+      boxNumber: s.boxNumber ?? null,
+      amount: Math.round(s.amount) / 100,
+      source: 'borne' as const,
+    })),
+    ...purchases.map((p) => ({
+      soldAt: p.purchasedAt,
+      dishName: dishMap.get(p.dishId)?.name ?? p.dishId,
+      board: null,
+      boxNumber: null,
+      amount: dishMap.get(p.dishId)?.price ?? 0,
+      source: 'app' as const,
+    })),
+  ].sort((a, b) => b.soldAt.getTime() - a.soldAt.getTime());
+
+  res.json({
+    machine,
+    sales: lines.map((l) => ({
+      time: l.soldAt.toISOString(),
+      dishName: l.dishName,
+      machine,
+      board: l.board,
+      boxNumber: l.boxNumber,
+      amount: Math.round(l.amount * 100) / 100,
+      source: l.source,
+    })),
+  });
+}
+
 // GET /api/v1/admin/accounting/export?from=&to=&granularity=detail|daily|monthly
 export async function exportAccounting(req: Request, res: Response): Promise<void> {
   const range = parseRange(req.query['from'], req.query['to']);
@@ -301,18 +361,20 @@ export async function exportAccounting(req: Request, res: Response): Promise<voi
 
   } else {
     // detail (default)
-    const header = ['Date', 'Heure', 'Plat', 'Catégorie', 'Frigo', 'Prix (€)'].map(escape).join(',');
+    const header = ['Date', 'Heure', 'Plat', 'Catégorie', 'Frigo', 'Casier', 'Prix (€)'].map(escape).join(',');
     const rows = purchases.map((p) => {
       const d = p.purchasedAt;
       const date = toDateKey(d);
       const hour = d.toISOString().slice(11, 16);
       const fridgeName = getFridgeMeta(p.frigoId)?.name ?? p.frigoId;
+      const casier = p.board && p.boxNumber != null ? `${p.board}${p.boxNumber}` : '';
       return [
         date,
         hour,
         p.dishName,
         p.dishCategory,
         fridgeName,
+        casier,
         p.dishPrice.toFixed(2),
       ].map(escape).join(',');
     });

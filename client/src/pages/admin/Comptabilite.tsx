@@ -136,6 +136,8 @@ export function Comptabilite() {
   // Dépliage « détail par site » : site ouvert + cache des lignes par site.
   const [openSite, setOpenSite] = useState<string | null>(null);
   const [siteSales, setSiteSales] = useState<Record<string, SiteSaleLine[] | 'loading'>>({});
+  // Détail des ventes quand UNE machine est sélectionnée (heure · plat · casier).
+  const [machineSales, setMachineSales] = useState<SiteSaleLine[] | 'loading' | null>(null);
 
   const { from, to } = preset === 'custom'
     ? { from: customFrom, to: customTo }
@@ -183,6 +185,19 @@ export function Comptabilite() {
     setOpenSite(null);
     setSiteSales({});
   }, [from, to, frigoId]);
+
+  // Quand une machine précise est sélectionnée : charge le détail de ses ventes
+  // (heure · plat · casier) sur la période.
+  useEffect(() => {
+    if (!frigoId || !from || !to || from > to) {
+      setMachineSales(null);
+      return;
+    }
+    setMachineSales('loading');
+    api.get(`/admin/accounting/machine-sales?from=${from}&to=${to}&frigoId=${frigoId}`)
+      .then((res) => setMachineSales((res.data.sales ?? []) as SiteSaleLine[]))
+      .catch(() => setMachineSales([]));
+  }, [frigoId, from, to]);
 
   async function toggleSite(site: string) {
     if (openSite === site) {
@@ -458,6 +473,60 @@ export function Comptabilite() {
           </div>
         )}
 
+        {/* Détail des ventes d'UNE machine (heure · plat · casier) — quand une
+            machine précise est sélectionnée. Sert à retrouver les casiers vendus
+            sur un frigo sur une période donnée. */}
+        {frigoId && machineSales !== null && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Détail des ventes (casiers)</p>
+              {Array.isArray(machineSales) && (
+                <span className="text-xs text-gray-400">{machineSales.length} vente{machineSales.length > 1 ? 's' : ''}</span>
+              )}
+            </div>
+            {machineSales === 'loading' ? (
+              <p className="px-5 py-4 text-xs text-gray-400">Chargement…</p>
+            ) : machineSales.length === 0 ? (
+              <p className="px-5 py-4 text-xs text-gray-400">Aucune vente sur la période.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date / heure</th>
+                      <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Plat</th>
+                      <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Casier</th>
+                      <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Prix (€)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {machineSales.map((l, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="px-5 py-2.5 text-gray-600 tabular-nums whitespace-nowrap">
+                          {new Date(l.time).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="px-5 py-2.5 text-gray-800 font-medium">{l.dishName}</td>
+                        <td className="px-5 py-2.5">
+                          {l.board && l.boxNumber != null ? (
+                            <span className="inline-block rounded bg-gray-100 border border-gray-200 px-1.5 py-0.5 font-mono text-gray-700">
+                              {l.board}{l.boxNumber}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">app</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-2.5 text-right text-gray-800 font-semibold tabular-nums">
+                          {l.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Détail par produit (combien de fois chaque plat a été vendu) */}
         {stats && stats.byProduct.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -511,7 +580,7 @@ export function Comptabilite() {
           </div>
 
           <p className="text-xs text-gray-400 mb-4">
-            {granularity === 'detail' && 'Une ligne par transaction — Date, Heure, Plat, Catégorie, Frigo, Prix'}
+            {granularity === 'detail' && 'Une ligne par transaction — Date, Heure, Plat, Catégorie, Frigo, Casier, Prix'}
             {granularity === 'daily' && 'Agrégé par jour — Date, Nb ventes, CA total'}
             {granularity === 'monthly' && 'Agrégé par mois — Mois, Nb ventes, CA total'}
           </p>

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth';
-import { getAccountingStats, exportAccounting, getSiteSales } from '../controllers/accounting.controller';
+import { getAccountingStats, exportAccounting, getSiteSales, getMachineSales } from '../controllers/accounting.controller';
 import { runDailyReport } from '../services/dailyReport.service';
 
 const router = Router();
@@ -8,6 +8,7 @@ router.use(requireAuth);
 
 router.get('/stats', getAccountingStats);
 router.get('/site-sales', getSiteSales);
+router.get('/machine-sales', getMachineSales);
 router.get('/export', exportAccounting);
 
 // Déclenche manuellement l'envoi du rapport quotidien (test sans attendre minuit).
