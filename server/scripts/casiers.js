@@ -11,7 +11,11 @@
  * date/heure (Europe/Paris), machine, plat, casier (ex. A3) et prix.
  */
 const { PrismaClient } = require('@prisma/client');
+const fs = require('fs');
 const p = new PrismaClient();
+
+const parisDate = (d) => new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const parisTime = (d) => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit' }).format(d);
 
 (async () => {
   const [q, from, to] = process.argv.slice(2);
@@ -22,6 +26,36 @@ const p = new PrismaClient();
     console.table(fridges);
     console.log('\nUsage : node scripts/casiers.js "<nom machine>" 2026-09-27 2026-09-29');
     console.log('Resume toutes machines : node scripts/casiers.js --resume 2026-09-01 2026-10-05');
+    return p.$disconnect();
+  }
+
+  // Mode export CSV COMPLET : toutes les machines. Sans dates = depuis le début.
+  // Ecrit un fichier CSV (Excel FR) avec Date, Heure (Paris), Machine, Plat,
+  // Casier, Prix. node scripts/casiers.js --csv [from] [to]
+  if (q === '--csv') {
+    const start = from ? new Date(from + 'T00:00:00') : new Date(0);
+    const end = to ? new Date(to + 'T23:59:59') : new Date();
+    const sales = await p.sale.findMany({ where: { soldAt: { gte: start, lte: end } }, orderBy: { soldAt: 'asc' } });
+    const dishes = await p.dish.findMany({ select: { id: true, name: true } });
+    const dn = new Map(dishes.map((d) => [d.id, d.name]));
+    const fn = new Map(fridges.map((f) => [f.id, f.name]));
+    const esc = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+    const header = ['Date', 'Heure', 'Machine', 'Plat', 'Casier', 'Prix (€)'].map(esc).join(';');
+    const lines = sales.map((s) =>
+      [
+        parisDate(s.soldAt),
+        parisTime(s.soldAt),
+        fn.get(s.frigoId) || s.frigoId,
+        dn.get(s.dishId) || s.dishId,
+        s.board && s.boxNumber != null ? s.board + String(s.boxNumber) : '',
+        (s.amount / 100).toFixed(2).replace('.', ','),
+      ].map(esc).join(';'),
+    );
+    const file = 'ventes-casiers.csv';
+    fs.writeFileSync(file, '﻿' + [header, ...lines].join('\r\n'), 'utf8');
+    console.log('Fichier ecrit :', process.cwd() + '/' + file);
+    console.log('Total ventes :', sales.length, '| avec casier :', sales.filter((s) => s.board && s.boxNumber != null).length);
+    console.log('Periode :', start.getTime() === 0 ? 'depuis le debut' : parisDate(start), '->', parisDate(end));
     return p.$disconnect();
   }
 
