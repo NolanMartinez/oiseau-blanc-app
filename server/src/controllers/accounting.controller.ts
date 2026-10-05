@@ -8,10 +8,13 @@ function toDateKey(d: Date): string {
 }
 
 // Formatage à l'heure de Paris (les dates sont stockées en UTC).
+// Date en JJ/MM/AAAA (reconnue comme date par Excel français).
 const parisDate = (d: Date): string =>
-  new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
 const parisTime = (d: Date): string =>
   new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit' }).format(d);
+// Prix avec décimale virgule (nombre pour Excel français).
+const eurFr = (n: number): string => n.toFixed(2).replace('.', ',');
 
 function toMonthKey(d: Date): string {
   return d.toISOString().slice(0, 7); // YYYY-MM
@@ -337,11 +340,11 @@ export async function exportAccounting(req: Request, res: Response): Promise<voi
       e.revenue += p.dishPrice;
       map.set(key, e);
     }
-    const header = ['Date', 'Nb ventes', 'CA (€)'].map(escape).join(',');
+    const header = ['Date', 'Nb ventes', 'CA (€)'].map(escape).join(';');
     const rows = Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, { count, revenue }]) =>
-        [date, String(count), (Math.round(revenue * 100) / 100).toFixed(2)].map(escape).join(','),
+        [date.split('-').reverse().join('/'), String(count), eurFr(Math.round(revenue * 100) / 100)].map(escape).join(';'),
       );
     csv = [header, ...rows].join('\r\n');
     res.setHeader('Content-Disposition', `attachment; filename="ventes_par_jour_${fileDate}.csv"`);
@@ -356,13 +359,13 @@ export async function exportAccounting(req: Request, res: Response): Promise<voi
       map.set(key, e);
     }
     const MONTHS_FR = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-    const header = ['Mois', 'Nb ventes', 'CA (€)'].map(escape).join(',');
+    const header = ['Mois', 'Nb ventes', 'CA (€)'].map(escape).join(';');
     const rows = Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([ym, { count, revenue }]) => {
         const [year, month] = ym.split('-');
         const label = `${MONTHS_FR[parseInt(month) - 1]} ${year}`;
-        return [label, String(count), (Math.round(revenue * 100) / 100).toFixed(2)].map(escape).join(',');
+        return [label, String(count), eurFr(Math.round(revenue * 100) / 100)].map(escape).join(';');
       });
     csv = [header, ...rows].join('\r\n');
     res.setHeader('Content-Disposition', `attachment; filename="ventes_par_mois_${fileDate}.csv"`);
@@ -372,7 +375,7 @@ export async function exportAccounting(req: Request, res: Response): Promise<voi
     const fridges = await prisma.fridge.findMany({ select: { id: true, name: true, location: true } });
     const fmap = new Map(fridges.map((f) => [f.id, f]));
     const modeLabel = (m: string) => (m === 'free' ? 'Offert' : m === 'app' ? 'Application' : 'Payé');
-    const header = ['Date', 'Heure', 'Machine', 'Site', 'Plat', 'Catégorie', 'Casier', 'Mode', 'Prix (€)'].map(escape).join(',');
+    const header = ['Date', 'Heure', 'Machine', 'Site', 'Plat', 'Catégorie', 'Casier', 'Mode', 'Prix (€)'].map(escape).join(';');
     const rows = purchases.map((p) => {
       const d = p.purchasedAt;
       const f = fmap.get(p.frigoId);
@@ -386,8 +389,8 @@ export async function exportAccounting(req: Request, res: Response): Promise<voi
         p.dishCategory,
         casier,
         modeLabel(p.mode),
-        p.dishPrice.toFixed(2),
-      ].map(escape).join(',');
+        eurFr(p.dishPrice),
+      ].map(escape).join(';');
     });
     csv = [header, ...rows].join('\r\n');
     res.setHeader('Content-Disposition', `attachment; filename="ventes_${fileDate}.csv"`);
