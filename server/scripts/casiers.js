@@ -21,6 +21,29 @@ const p = new PrismaClient();
     console.log('Machines disponibles :');
     console.table(fridges);
     console.log('\nUsage : node scripts/casiers.js "<nom machine>" 2026-09-27 2026-09-29');
+    console.log('Resume toutes machines : node scripts/casiers.js --resume 2026-09-01 2026-10-05');
+    return p.$disconnect();
+  }
+
+  // Mode résumé : nb de ventes (et avec casier) par machine sur la période.
+  if (q === '--resume' || q === '--all') {
+    const start = from ? new Date(from + 'T00:00:00') : new Date(Date.now() - 30 * 86400000);
+    const end = to ? new Date(to + 'T23:59:59') : new Date();
+    const sales = await p.sale.findMany({
+      where: { soldAt: { gte: start, lte: end } },
+      select: { frigoId: true, board: true, boxNumber: true },
+    });
+    const fn = new Map(fridges.map((f) => [f.id, f.name]));
+    const agg = new Map();
+    for (const s of sales) {
+      const e = agg.get(s.frigoId) || { machine: fn.get(s.frigoId) || s.frigoId, ventes: 0, avecCasier: 0 };
+      e.ventes += 1;
+      if (s.board && s.boxNumber != null) e.avecCasier += 1;
+      agg.set(s.frigoId, e);
+    }
+    console.log('Resume du', start.toLocaleDateString('fr-FR'), 'au', end.toLocaleDateString('fr-FR'), ':');
+    console.table([...agg.values()].sort((a, b) => b.ventes - a.ventes));
+    console.log('Total ventes (toutes machines) :', sales.length);
     return p.$disconnect();
   }
 
