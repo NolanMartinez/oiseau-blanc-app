@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
-import { getFridgeMeta } from '../services/bicom.mock';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -37,6 +36,7 @@ interface EnrichedPurchase {
   dishPrice: number;
   board: string | null;
   boxNumber: number | null;
+  mode: string; // 'paid' | 'free' (borne) | 'app' (achat via l'application)
 }
 
 // Regroupe DEUX sources : les ventes remontées par la borne (table `ventes` /
@@ -72,6 +72,7 @@ async function fetchPurchases(
       dishPrice: dish?.price ?? 0,
       board: null,
       boxNumber: null,
+      mode: 'app',
     };
   });
 
@@ -87,6 +88,7 @@ async function fetchPurchases(
       dishPrice: s.amount / 100, // montant réellement payé (centimes → euros)
       board: s.board ?? null,
       boxNumber: s.boxNumber ?? null,
+      mode: s.mode,
     };
   });
 
@@ -366,21 +368,24 @@ export async function exportAccounting(req: Request, res: Response): Promise<voi
     res.setHeader('Content-Disposition', `attachment; filename="ventes_par_mois_${fileDate}.csv"`);
 
   } else {
-    // detail (default)
-    const header = ['Date', 'Heure', 'Plat', 'Catégorie', 'Frigo', 'Casier', 'Prix (€)'].map(escape).join(',');
+    // detail (default) — toutes les infos, vrais noms de machine (BDD, pas mock).
+    const fridges = await prisma.fridge.findMany({ select: { id: true, name: true, location: true } });
+    const fmap = new Map(fridges.map((f) => [f.id, f]));
+    const modeLabel = (m: string) => (m === 'free' ? 'Offert' : m === 'app' ? 'Application' : 'Payé');
+    const header = ['Date', 'Heure', 'Machine', 'Site', 'Plat', 'Catégorie', 'Casier', 'Mode', 'Prix (€)'].map(escape).join(',');
     const rows = purchases.map((p) => {
       const d = p.purchasedAt;
-      const date = parisDate(d);
-      const hour = parisTime(d);
-      const fridgeName = getFridgeMeta(p.frigoId)?.name ?? p.frigoId;
+      const f = fmap.get(p.frigoId);
       const casier = p.board && p.boxNumber != null ? `${p.board}${p.boxNumber}` : '';
       return [
-        date,
-        hour,
+        parisDate(d),
+        parisTime(d),
+        f?.name ?? p.frigoId,
+        f?.location ?? '',
         p.dishName,
         p.dishCategory,
-        fridgeName,
         casier,
+        modeLabel(p.mode),
         p.dishPrice.toFixed(2),
       ].map(escape).join(',');
     });

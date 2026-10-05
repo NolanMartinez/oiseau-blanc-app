@@ -580,7 +580,7 @@ export function Comptabilite() {
           </div>
 
           <p className="text-xs text-gray-400 mb-4">
-            {granularity === 'detail' && 'Une ligne par transaction — Date, Heure, Plat, Catégorie, Frigo, Casier, Prix'}
+            {granularity === 'detail' && 'Une ligne par transaction — Date, Heure, Machine, Site, Plat, Catégorie, Casier, Mode, Prix'}
             {granularity === 'daily' && 'Agrégé par jour — Date, Nb ventes, CA total'}
             {granularity === 'monthly' && 'Agrégé par mois — Mois, Nb ventes, CA total'}
           </p>
