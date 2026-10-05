@@ -426,7 +426,7 @@ export function Comptabilite() {
                                 <table className="w-full text-xs">
                                   <thead>
                                     <tr className="text-gray-400">
-                                      <th className="text-left font-semibold py-1.5 pr-4">Heure</th>
+                                      <th className="text-left font-semibold py-1.5 pr-4">Date / heure</th>
                                       <th className="text-left font-semibold py-1.5 pr-4">Plat</th>
                                       <th className="text-left font-semibold py-1.5 pr-4">Casier</th>
                                       <th className="text-right font-semibold py-1.5">Prix (€)</th>
@@ -436,7 +436,7 @@ export function Comptabilite() {
                                     {lines.map((l, i) => (
                                       <tr key={i} className="text-gray-600">
                                         <td className="py-1.5 pr-4 tabular-nums whitespace-nowrap">
-                                          {new Date(l.time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                          {new Date(l.time).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                         </td>
                                         <td className="py-1.5 pr-4 text-gray-800">
                                           {l.dishName}
@@ -503,7 +503,7 @@ export function Comptabilite() {
                     {machineSales.map((l, i) => (
                       <tr key={i} className="hover:bg-gray-50">
                         <td className="px-5 py-2.5 text-gray-600 tabular-nums whitespace-nowrap">
-                          {new Date(l.time).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          {new Date(l.time).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="px-5 py-2.5 text-gray-800 font-medium">{l.dishName}</td>
                         <td className="px-5 py-2.5">
