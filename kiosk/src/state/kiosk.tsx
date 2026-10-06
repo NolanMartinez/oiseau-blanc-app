@@ -44,6 +44,10 @@ interface KioskContextType {
   categories: string[];
   imageUrls: Record<string, string | null>;
   reload: () => Promise<void>;
+  // Retire IMMÉDIATEMENT un casier vendu de la liste en mémoire (sans attendre le
+  // rafraîchissement périodique) → évite qu'un 2e client se voie attribuer le même
+  // casier déjà vidé juste après une vente.
+  markLockerSold: (lockerId: number) => void;
   setSetting: (key: string, value: string) => Promise<void>;
   runSync: () => Promise<{ ok: boolean; dishCount: number; error?: string }>;
   setting: (key: string, fallback?: string) => string;
@@ -270,6 +274,17 @@ export function KioskProvider({ children }: { children: ReactNode }) {
     if (repo) await loadAll(repo);
   }, [repo, loadAll]);
 
+  // Vide un casier en mémoire dès qu'il est vendu (optimiste) : il disparaît
+  // instantanément de la carte, donc il ne peut plus être réattribué à la vente
+  // suivante. La base est déjà mise à jour par repo.clearLocker().
+  const markLockerSold = useCallback((lockerId: number) => {
+    setLockers((prev) =>
+      prev.map((l) =>
+        l.id === lockerId ? { ...l, dishId: null, price: null, expiryDate: null, state: "idle" } : l,
+      ),
+    );
+  }, []);
+
   const setSetting = useCallback(
     async (key: string, value: string) => {
       if (!repo) return;
@@ -357,6 +372,7 @@ export function KioskProvider({ children }: { children: ReactNode }) {
     categories,
     imageUrls,
     reload,
+    markLockerSold,
     setSetting,
     runSync,
     setting,

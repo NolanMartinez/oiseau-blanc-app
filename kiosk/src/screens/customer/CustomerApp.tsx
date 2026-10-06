@@ -34,7 +34,7 @@ const IDLE_TIMEOUT_MS = 60_000;
 const SHOPPING_SCREENS: Screen[] = ["categories", "menu", "detail", "cart"];
 
 export function CustomerApp() {
-  const { repo, reload, setting } = useKiosk();
+  const { repo, reload, markLockerSold, setting } = useKiosk();
   const { t } = useLang();
   const [screen, setScreen] = useState<Screen>("idle");
   const [category, setCategory] = useState("");
@@ -172,8 +172,11 @@ export function CustomerApp() {
         if (ok) await repo.markSaleSynced(saleId);
       })();
       await repo.clearLocker(line.lockerId);
+      // Retire le casier de la carte TOUT DE SUITE (sans attendre le reload
+      // périodique) → il ne peut plus être réattribué à la vente suivante.
+      markLockerSold(line.lockerId);
     },
-    [repo, requiresPayment, setting, freeLockerId, code],
+    [repo, requiresPayment, setting, freeLockerId, code, markLockerSold],
   );
 
   // ── Ouverture des casiers : un casier à la fois, avec bouton SUIVANT ───────
