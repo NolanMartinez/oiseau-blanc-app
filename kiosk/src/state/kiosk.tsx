@@ -162,9 +162,11 @@ export function KioskProvider({ children }: { children: ReactNode }) {
       const backend = s[SETTING_KEYS.backendUrl] ?? "";
       const frigo = s[SETTING_KEYS.frigoId] ?? "";
       if (backend && frigo) {
-        const res = await syncMenu(r, backend, frigo);
-        // Catalogue complet (pour la liste « ajouter un plat au casier »).
+        // Catalogue complet D'ABORD (prix de base), puis menu du frigo ENSUITE :
+        // le menu porte les prix PROMO (finalPrice) et doit l'emporter sur le
+        // prix de base du catalogue — sinon la promo du frigo est écrasée.
         await syncCatalog(r, backend);
+        const res = await syncMenu(r, backend, frigo);
         if (res.ok) await loadAll(r);
       }
     })();
@@ -298,9 +300,10 @@ export function KioskProvider({ children }: { children: ReactNode }) {
     if (!repo) return { ok: false, dishCount: 0, error: "Repo non prêt" };
     const backend = settings[SETTING_KEYS.backendUrl] ?? "";
     const frigo = settings[SETTING_KEYS.frigoId] ?? "";
-    const res = await syncMenu(repo, backend, frigo);
-    // Catalogue complet → la liste d'affectation des casiers = la BDD serveur.
+    // Catalogue D'ABORD (prix de base + liste d'affectation), menu du frigo
+    // ENSUITE (prix PROMO) pour qu'il l'emporte sur le prix de base.
     const cat = await syncCatalog(repo, backend);
+    const res = await syncMenu(repo, backend, frigo);
     if (res.ok || cat.ok) await loadAll(repo);
     // On renvoie le nombre de plats du catalogue (plus parlant pour « MAJ produits »).
     return cat.ok ? cat : res;
@@ -324,6 +327,11 @@ export function KioskProvider({ children }: { children: ReactNode }) {
           locker: l,
           dish,
           imageUrl: imageUrls[dish.id] ?? null,
+          // Prix : le prix PERSONNALISÉ du casier (ex. promo DLC proche) s'il est
+          // défini, sinon le prix de la fiche (promo admin + changements de prix
+          // synchronisés depuis le serveur). Le prix du casier n'est plus recopié
+          // automatiquement à chaque remplissage (cf. MappingScreen) → il ne
+          // bloque plus les promos/changements de prix pour les casiers normaux.
           priceCents: l.price ?? dish.price,
         };
       });

@@ -255,7 +255,9 @@ export function MappingScreen() {
               onChange={(e) => {
                 setDishId(e.target.value);
                 const d = dishById.get(e.target.value);
-                if (d && !priceEuros) setPriceEuros((d.price / 100).toFixed(2));
+                // On NE recopie PLUS le prix de la fiche (ça le figeait et bloquait
+                // les promos admin + changements de prix). Le champ prix reste vide
+                // = « prix de la fiche ». On ne le remplit que pour une promo (DLC).
                 // DLC : pré-remplit la date limite = aujourd'hui + DLC (jours) de la
                 // fiche produit, bornée à 10 jours max.
                 if (d && d.dlcDays != null) {
@@ -278,7 +280,7 @@ export function MappingScreen() {
             </select>
 
             <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">
-              {t("price")} ({currency})
+              {t("price")} ({currency}) — promo (optionnel)
             </label>
             <input
               type="number"
@@ -286,9 +288,12 @@ export function MappingScreen() {
               min="0"
               value={priceEuros}
               onChange={(e) => setPriceEuros(e.target.value)}
-              className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2.5"
-              placeholder="0.00"
+              className="mb-1 w-full rounded-xl border border-gray-300 px-3 py-2.5"
+              placeholder={dishById.get(dishId) ? `Prix fiche : ${(dishById.get(dishId)!.price / 100).toFixed(2)}` : "0.00"}
             />
+            <p className="mb-4 text-xs text-[var(--ink-faint)]">
+              Laisser vide = prix de la fiche (promos et changements de prix appliqués). Remplir uniquement pour une promo sur ce casier (ex. DLC proche).
+            </p>
 
             <label className="mb-1 block text-sm font-semibold text-[var(--ink-faint)]">
               {t("expiry")} <span className="text-red-500">*</span>
