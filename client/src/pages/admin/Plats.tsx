@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Plus, Pencil, Trash2, X, UtensilsCrossed, ImagePlus, Languages, Sparkles,
-  Star, TrendingUp, Tag, ChevronUp, ChevronDown,
+  Star, TrendingUp, Tag, ChevronUp, ChevronDown, Search,
 } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
@@ -428,6 +428,30 @@ function CategoryManager({
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 
+type SortKey = 'name' | 'rating' | 'salesCount' | 'price' | 'fridges' | 'status';
+
+// En-tête de colonne cliquable (tri). Flèche affichée sur la colonne active.
+function SortTh({ label, k, sortKey, sortDir, onSort }: {
+  label: string; k: SortKey; sortKey: SortKey; sortDir: 'asc' | 'desc'; onSort: (k: SortKey) => void;
+}) {
+  const active = sortKey === k;
+  return (
+    <th className="text-left px-4 py-3">
+      <button
+        onClick={() => onSort(k)}
+        className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide transition-colors ${active ? 'text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+      >
+        {label}
+        {active ? (
+          sortDir === 'asc' ? <ChevronUp size={13} /> : <ChevronDown size={13} />
+        ) : (
+          <ChevronDown size={13} className="text-gray-300" />
+        )}
+      </button>
+    </th>
+  );
+}
+
 export function Plats() {
   const [dishes, setDishes] = useState<CatalogDish[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -438,6 +462,15 @@ export function Plats() {
   const [editingDish, setEditingDish] = useState<CatalogDish | null>(null);
   const [translating, setTranslating] = useState(false);
   const [translateResult, setTranslateResult] = useState<string | null>(null);
+  // Recherche + tri de la carte (demande Frédéric).
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key); setSortDir(key === 'name' ? 'asc' : 'desc'); }
+  }
 
   async function fetchDishes() {
     setLoading(true);
@@ -458,8 +491,23 @@ export function Plats() {
 
   useEffect(() => { fetchDishes(); fetchCategories(); }, []);
 
-  // Plats filtrés par la catégorie sélectionnée.
-  const visibleDishes = filterCat === 'all' ? dishes : dishes.filter((d) => d.category === filterCat);
+  // Plats filtrés (catégorie + recherche) puis triés selon la colonne choisie.
+  const q = search.trim().toLowerCase();
+  const visibleDishes = [...dishes]
+    .filter((d) => filterCat === 'all' || d.category === filterCat)
+    .filter((d) => !q || d.name.toLowerCase().includes(q) || (d.category ?? '').toLowerCase().includes(q))
+    .sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      switch (sortKey) {
+        case 'name': return a.name.localeCompare(b.name, 'fr') * dir;
+        case 'rating': return ((a.rating ?? 0) - (b.rating ?? 0)) * dir;
+        case 'salesCount': return (a.salesCount - b.salesCount) * dir;
+        case 'price': return (a.price - b.price) * dir;
+        case 'fridges': return (a._count.fridgeStocks - b._count.fridgeStocks) * dir;
+        case 'status': return ((a.isActive ? 1 : 0) - (b.isActive ? 1 : 0)) * dir;
+        default: return 0;
+      }
+    });
   // Meilleures ventes : les 3 plats les plus vendus (ventes > 0) → badge « Top ».
   const topSellerIds = new Set(
     [...dishes].filter((d) => d.salesCount > 0).sort((a, b) => b.salesCount - a.salesCount).slice(0, 3).map((d) => d.id),
@@ -567,6 +615,18 @@ export function Plats() {
         </button>
       </div>
 
+      {/* Recherche (demande Frédéric) */}
+      <div className="relative mb-4 max-w-sm">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher un plat…"
+          className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-sm text-gray-400">Chargement…</div>
@@ -584,12 +644,12 @@ export function Plats() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3" />
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nom</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Note</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ventes</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Prix</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Frigos</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Statut</th>
+                  <SortTh label="Nom" k="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortTh label="Note" k="rating" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortTh label="Ventes" k="salesCount" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortTh label="Prix" k="price" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortTh label="Frigos" k="fridges" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortTh label="Statut" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
