@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Grid3x3, DoorOpen, Activity, Settings as SettingsIcon, LogOut, Power, Cable } from "lucide-react";
 import { useLang } from "../../i18n";
+import { useKiosk } from "../../state/kiosk";
+import { SETTING_KEYS } from "../../db";
+import { flushNotifications } from "../../sync";
 import { quitApp } from "../../platform/app";
 import { MappingScreen } from "./MappingScreen";
 import { BoxControlScreen } from "./BoxControlScreen";
@@ -18,8 +21,17 @@ const LIVREUR_TABS: Tab[] = ["mapping", "box"];
 
 export function AdminApp({ role, onExit }: { role: AdminRole; onExit: () => void }) {
   const { t } = useLang();
+  const { setting } = useKiosk();
   const isLivreur = role === "livreur";
   const [tab, setTab] = useState<Tab>("mapping");
+
+  // En quittant l'admin : on demande au serveur d'envoyer TOUT DE SUITE la notif
+  // des nouveaux plats (le réassort est fini). Sans effet s'il n'y a rien en
+  // attente. Best-effort → n'empêche jamais de sortir.
+  function handleExit() {
+    void flushNotifications(setting(SETTING_KEYS.backendUrl), setting(SETTING_KEYS.frigoId));
+    onExit();
+  }
 
   const allNav: { id: Tab; icon: React.ReactNode; label: string }[] = [
     { id: "mapping", icon: <Grid3x3 size={22} />, label: t("nav_mapping") },
@@ -62,7 +74,7 @@ export function AdminApp({ role, onExit }: { role: AdminRole; onExit: () => void
         </nav>
 
         <button
-          onClick={onExit}
+          onClick={handleExit}
           className="mx-3 mt-3 flex items-center gap-2 rounded-lg px-3 py-3 text-sm text-gray-400 active:bg-gray-800"
         >
           <LogOut size={20} />

@@ -58,6 +58,17 @@ async function flush(frigoId: string): Promise<void> {
 }
 
 /**
+ * Envoie IMMÉDIATEMENT la notif groupée en attente pour ce frigo, sans attendre
+ * le délai de 20 min. Appelé quand le livreur a fini et quitte l'admin de la
+ * borne (bouton « Terminer ») → les clients sont prévenus tout de suite.
+ */
+export async function flushNewDishNotifications(frigoId: string): Promise<void> {
+  const entry = pending.get(frigoId);
+  if (entry) clearTimeout(entry.timer);
+  await flush(frigoId);
+}
+
+/**
  * Signale l'ajout de nouveaux plats dans un frigo. N'envoie rien tout de suite :
  * accumule et (re)programme l'envoi groupé 20 min après le dernier ajout.
  */

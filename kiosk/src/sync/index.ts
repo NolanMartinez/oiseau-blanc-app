@@ -182,6 +182,28 @@ export async function pushStock(
 }
 
 /**
+ * Demande au serveur d'envoyer TOUT DE SUITE la notif « nouveaux plats » en
+ * attente (le livreur a fini le réassort et quitte l'admin). Best-effort.
+ */
+export async function flushNotifications(
+  backendUrl: string,
+  frigoId: string,
+  apiKey?: string,
+): Promise<boolean> {
+  if (!backendUrl || !frigoId) return false;
+  const base = backendUrl.replace(/\/$/, "");
+  try {
+    const res = await kioskFetch(`${base}/api/v1/public/frigos/${frigoId}/flush-notifications`, {
+      method: "POST",
+      headers: apiKey ? { "x-kiosk-key": apiKey } : undefined,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Remonte l'état du TPE (terminal de paiement) au serveur → visible à distance
  * dans l'admin (page Frigos). Best-effort (silencieux hors ligne).
  */
