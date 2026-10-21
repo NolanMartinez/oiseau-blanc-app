@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Star, Trash2, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
-import { MOCK_DISHES } from '../../utils/mockDishes';
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -16,6 +15,7 @@ function downloadBlob(blob: Blob, filename: string) {
 interface Review {
   id: string;
   dishId: string;
+  dishName?: string;
   rating: number;
   comment: string | null;
   createdAt: string;
@@ -42,10 +42,6 @@ function Stars({ rating }: { rating: number }) {
       ))}
     </div>
   );
-}
-
-function getDishName(dishId: string) {
-  return MOCK_DISHES.find((d) => d.id === dishId)?.name ?? dishId;
 }
 
 export function Reviews() {
@@ -133,7 +129,7 @@ export function Reviews() {
               {data?.reviews.map((r) => (
                 <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 font-medium text-gray-800">
-                    {getDishName(r.dishId)}
+                    {r.dishName ?? r.dishId}
                   </td>
                   <td className="px-4 py-3">
                     <Stars rating={r.rating} />

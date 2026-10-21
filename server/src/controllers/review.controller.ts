@@ -73,8 +73,13 @@ export async function listReviews(req: Request, res: Response): Promise<void> {
     _count: true,
   });
 
+  // Nom réel du plat (depuis la table dishes) — évite d'afficher l'id brut.
+  const dishes = await prisma.dish.findMany({ select: { id: true, name: true } });
+  const dishNameMap = new Map(dishes.map((d) => [d.id, d.name]));
+  const reviewsWithName = reviews.map((r) => ({ ...r, dishName: dishNameMap.get(r.dishId) ?? r.dishId }));
+
   res.json({
-    reviews,
+    reviews: reviewsWithName,
     total,
     page,
     pages: Math.ceil(total / limit),
