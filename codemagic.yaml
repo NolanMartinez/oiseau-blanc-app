@@ -14,6 +14,12 @@ workflows:
     integrations:
       app_store_connect: Friggo ASC
     environment:
+      # Groupe de variables défini dans Codemagic (UI). Doit contenir
+      # CERTIFICATE_PRIVATE_KEY = clé privée RSA (PEM) servant à créer le
+      # certificat de distribution. Sans elle : « Cannot save Signing
+      # Certificates without certificate private key ».
+      groups:
+        - ios_credentials
       vars:
         # URL de l'API (serveur VPS) intégrée au build web.
         VITE_API_URL: "https://164.132.96.144.sslip.io"
@@ -22,7 +28,6 @@ workflows:
         XCODE_PROJECT: "client/ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
       xcode: latest
-      cocoapods: default
       node: 22
     scripts:
       - name: Dépendances web
@@ -38,6 +43,7 @@ workflows:
           # s'ils n'existent pas encore (corrige « No matching profiles found »).
           app-store-connect fetch-signing-files "fr.oiseaublanc.friggo" \
             --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
             --create \
             --verbose
           keychain add-certificates
