@@ -17,7 +17,9 @@ workflows:
       vars:
         # URL de l'API (serveur VPS) intégrée au build web.
         VITE_API_URL: "https://164.132.96.144.sslip.io"
-        XCODE_WORKSPACE: "client/ios/App/App.xcworkspace"
+        # Capacitor 8 = Swift Package Manager (SPM) : pas de Podfile ni de
+        # .xcworkspace, on build directement le .xcodeproj.
+        XCODE_PROJECT: "client/ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
       xcode: latest
       cocoapods: default
@@ -39,8 +41,6 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles
-      - name: CocoaPods
-        script: cd client/ios/App && pod install
       - name: Numéro de build (basé sur Codemagic)
         script: |
           cd client/ios/App
@@ -48,7 +48,7 @@ workflows:
       - name: Construire l'IPA
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
