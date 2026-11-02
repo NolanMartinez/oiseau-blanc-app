@@ -68,9 +68,11 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        # Envoi automatique sur TestFlight (test interne). Mets true pour soumettre
-        # directement à la revue App Store une fois que tu es prêt.
-        submit_to_testflight: true
+        # On se contente d'UPLOADER le build sur App Store Connect (il apparaît
+        # dans la version pour soumission manuelle à la revue App Store).
+        # submit_to_testflight exige des "Test Information" (email de feedback,
+        # coordonnées du testeur) dont on n'a pas besoin pour publier → false.
+        submit_to_testflight: false
         submit_to_app_store: false
 
   # ── ANDROID → Google Play ───────────────────────────────────────────────────
