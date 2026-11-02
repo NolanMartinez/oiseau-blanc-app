@@ -38,9 +38,16 @@ workflows:
           # s'ils n'existent pas encore (corrige « No matching profiles found »).
           app-store-connect fetch-signing-files "fr.oiseaublanc.friggo" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --verbose
           keychain add-certificates
-          xcode-project use-profiles
+          # On cible explicitement le .xcodeproj imbriqué (sinon use-profiles ne
+          # patche pas la bonne cible → « requires a provisioning profile »).
+          # use-profiles passe la cible App en signature MANUELLE et y inscrit
+          # l'équipe + le profil téléchargés ci-dessus.
+          xcode-project use-profiles \
+            --project "client/ios/App/App.xcodeproj" \
+            --verbose
       - name: Numéro de build (basé sur Codemagic)
         script: |
           cd client/ios/App
