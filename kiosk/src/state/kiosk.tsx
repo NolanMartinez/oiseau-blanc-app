@@ -132,7 +132,9 @@ export function KioskProvider({ children }: { children: ReactNode }) {
           name: dish.name,
           category: dish.category,
           description: dish.description,
-          price: l.price ?? dish.price,
+          // Prix le plus avantageux : promo admin (dish.price synchronisé) OU
+          // prix promo figé du casier — on prend le plus bas (cf. menuItems).
+          price: l.price != null ? Math.min(l.price, dish.price) : dish.price,
           allergens: dish.allergens,
           dlcDays: dish.dlcDays,
           expiryDate: l.expiryDate,
@@ -327,12 +329,12 @@ export function KioskProvider({ children }: { children: ReactNode }) {
           locker: l,
           dish,
           imageUrl: imageUrls[dish.id] ?? null,
-          // Prix : le prix PERSONNALISÉ du casier (ex. promo DLC proche) s'il est
-          // défini, sinon le prix de la fiche (promo admin + changements de prix
-          // synchronisés depuis le serveur). Le prix du casier n'est plus recopié
-          // automatiquement à chaque remplissage (cf. MappingScreen) → il ne
-          // bloque plus les promos/changements de prix pour les casiers normaux.
-          priceCents: l.price ?? dish.price,
+          // Prix facturé = LE PLUS BAS entre le prix PERSONNALISÉ du casier (promo
+          // DLC proche saisie au remplissage) et le prix de la fiche (promo admin
+          // + changements de prix synchronisés depuis le serveur). On prend le min
+          // → une promo admin s'applique TOUJOURS, même sur un casier dont le prix
+          // a été figé à un ancien montant (sinon le prix figé écrasait la promo).
+          priceCents: l.price != null ? Math.min(l.price, dish.price) : dish.price,
         };
       });
   }, [lockers, dishes, imageUrls]);
