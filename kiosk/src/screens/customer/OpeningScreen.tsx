@@ -50,7 +50,7 @@ export function OpeningScreen({
             onClick={onNext}
             className="flex items-center gap-3 rounded-2xl bg-[var(--green)] px-12 py-5 text-2xl font-extrabold text-white shadow-lg active:scale-[0.98]"
           >
-            {isLast ? t("finish") : t("next")}
+            {isLast ? t("picked_up") : t("next")}
             <ChevronRight size={28} />
           </button>
         </>

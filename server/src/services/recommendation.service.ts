@@ -71,10 +71,16 @@ export async function getRecommendations(): Promise<{
   const promoSuggestions: PromoSuggestion[] = [];
   for (const s of activeStocks) {
     if (s.quantity <= 0 || !s.expiryDate || s.promoPercent != null) continue;
-    const daysLeft = Math.ceil((s.expiryDate.getTime() - now.getTime()) / DAY_MS);
+    // DLC comparée en JOURS CALENDAIRES (indépendant de l'heure). Un plat dont la
+    // DLC est AUJOURD'HUI reste vendable et REMISABLE (daysLeft = 0) ; « périmé »
+    // (= retirer uniquement, pas de remise) ne s'applique qu'à partir de J+1,
+    // c.-à-d. quand la DLC est strictement passée (hier ou avant).
+    const todayStr = now.toISOString().slice(0, 10);
+    const expiryStr = s.expiryDate.toISOString().slice(0, 10);
+    const daysLeft = Math.round((Date.parse(expiryStr) - Date.parse(todayStr)) / DAY_MS);
     if (daysLeft > PROMO_HORIZON_DAYS) continue;
 
-    const expired = daysLeft <= 0;
+    const expired = daysLeft < 0;
     const pct = expired ? null : suggestedPromo(daysLeft);
     promoSuggestions.push({
       stockId: s.id,

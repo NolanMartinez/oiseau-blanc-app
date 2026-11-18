@@ -64,6 +64,7 @@ export async function listSubscribers(req: Request, res: Response): Promise<void
         id: true,
         email: true,
         phone: true,
+        favoriId: true,
         consentEmail: true,
         consentPush: true,
         loyaltyPoints: true,
@@ -75,7 +76,19 @@ export async function listSubscribers(req: Request, res: Response): Promise<void
     prisma.subscriber.count(),
   ]);
 
-  res.json({ subscribers, total, page, pages: Math.ceil(total / limit) });
+  // Résout le nom du frigo favori (favoriId → fridge.name). Pas de relation Prisma
+  // déclarée sur favoriId, donc on charge les frigos référencés en une requête.
+  const favIds = [...new Set(subscribers.map((s) => s.favoriId).filter((v): v is string => !!v))];
+  const fridges = favIds.length
+    ? await prisma.fridge.findMany({ where: { id: { in: favIds } }, select: { id: true, name: true } })
+    : [];
+  const nameById = new Map(fridges.map((f) => [f.id, f.name]));
+  const withFavori = subscribers.map((s) => ({
+    ...s,
+    favoriName: s.favoriId ? nameById.get(s.favoriId) ?? null : null,
+  }));
+
+  res.json({ subscribers: withFavori, total, page, pages: Math.ceil(total / limit) });
 }
 
 // DELETE /api/v1/admin/subscribers/:id

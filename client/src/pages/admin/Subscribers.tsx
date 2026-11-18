@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Mail, Phone, Trash2, ChevronLeft, ChevronRight, Download, Gift } from 'lucide-react';
+import { Mail, Phone, Trash2, ChevronLeft, ChevronRight, Download, Gift, Refrigerator } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import api from '../../services/api';
 
@@ -7,6 +7,7 @@ interface Subscriber {
   id: string;
   email: string | null;
   phone: string | null;
+  favoriName: string | null;
   consentEmail: boolean;
   consentPush: boolean;
   loyaltyPoints: number;
@@ -96,6 +97,7 @@ export function Subscribers() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Frigo favori</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Consentements</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Fidélité</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Avis</th>
@@ -121,6 +123,16 @@ export function Subscribers() {
                         </div>
                       )}
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {s.favoriName ? (
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        <Refrigerator size={13} className="text-[#319966]" />
+                        {s.favoriName}
+                      </div>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
